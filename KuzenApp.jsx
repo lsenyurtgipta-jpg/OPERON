@@ -4152,13 +4152,40 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
 /* --- Dosya Kategori Yönetim --- */
 /* --- Bütçe Kalem Modal --- */
 const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler})=>{
-  const[fm,setFm]=useState({...kalem,detaylar:kalem.detaylar||[]});
+  const[fm,setFm]=useState({
+    ...kalem,
+    detaylar:kalem.detaylar||[],
+    ilkPlanlananFiyat:kalem.ilkPlanlananFiyat||kalem.planlananBirimFiyat||"",
+    piyasaFiyat:kalem.piyasaFiyat||"",
+    firmaFiyat:kalem.firmaFiyat||"",
+    revizyonlar:kalem.revizyonlar||[],
+  });
   const uf=(f,v)=>setFm(p=>({...p,[f]:v}));
+
+  // Fiyat değişikliğinde revizyon ekle
+  const fiyatDegistir=(yeniFiyat)=>{
+    const eskiFiyat=fm.planlananBirimFiyat;
+    if(eskiFiyat&&eskiFiyat!==yeniFiyat&&parseFloat(eskiFiyat)>0){
+      const revizyon={id:Date.now(),tarih:new Date().toISOString().split("T")[0],eskiFiyat,yeniFiyat,sebep:""};
+      uf("revizyonlar",[...(fm.revizyonlar||[]),revizyon]);
+    }
+    uf("planlananBirimFiyat",yeniFiyat);
+    // İlk planlanan fiyatı koru
+    if(!fm.ilkPlanlananFiyat||parseFloat(fm.ilkPlanlananFiyat)===0){uf("ilkPlanlananFiyat",yeniFiyat);}
+  };
 
   // Detay satırları toplamı
   const detayToplam=useMemo(()=>(fm.detaylar||[]).reduce((s,d)=>s+parseFloat(d.toplam||0),0),[fm.detaylar]);
-  // Ana toplam: detay varsa detay toplamı, yoksa miktar*fiyat
   const toplam=(fm.detaylar||[]).length>0?detayToplam:parseFloat(fm.planlananMiktar||0)*parseFloat(fm.planlananBirimFiyat||0);
+
+  // Sapma hesaplamaları
+  const ilkFiyat=parseFloat(fm.ilkPlanlananFiyat||0);
+  const guncelFiyat=parseFloat(fm.planlananBirimFiyat||0);
+  const piyasaF=parseFloat(fm.piyasaFiyat||0);
+  const firmaF=parseFloat(fm.firmaFiyat||0);
+  const miktar=parseFloat(fm.planlananMiktar||0);
+  const sapmaIlk=ilkFiyat>0&&guncelFiyat>0?((guncelFiyat-ilkFiyat)/ilkFiyat*100):0;
+  const tasarruf=piyasaF>0&&firmaF>0?(piyasaF-firmaF)*miktar:0;
 
   // Detay satır ekleme
   const addDetay=()=>uf("detaylar",[...(fm.detaylar||[]),{id:Date.now(),aciklama:"",miktar:"",birimFiyat:"",toplam:0}]);
@@ -4196,14 +4223,45 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler})=>{
           <div style={{...iS,background:"#fafafa",cursor:"default"}}>{fm.birim||"—"}</div>
         </div>
 
-        {/* TOPLAM BÜTÇE - detay yoksa basit giriş */}
+        {/* MİKTAR + 3 FİYAT SİSTEMİ */}
         {(fm.detaylar||[]).length===0&&<>
-          <div style={{display:"grid",gridTemplateColumns:"140px 1fr 140px 1fr",gap:"12px",alignItems:"center"}}>
+          <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
             <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Planlanan Miktar</label>
             <input style={iS} type="number" value={fm.planlananMiktar||""} onChange={e=>uf("planlananMiktar",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
-            <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Birim Fiyat</label>
-            <input style={iS} type="number" value={fm.planlananBirimFiyat||""} onChange={e=>uf("planlananBirimFiyat",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
           </div>
+          {/* 3 FİYAT KOLONU */}
+          <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden",marginTop:"4px"}}>
+            <div style={{display:"grid",gridTemplateColumns:"140px 1fr 1fr 1fr",gap:"0",background:"#384248",padding:"8px 12px"}}>
+              <div></div>
+              <div style={{fontSize:"12px",fontWeight:600,color:"#8799a3",textAlign:"center"}}>Piyasa Fiyatı</div>
+              <div style={{fontSize:"12px",fontWeight:600,color:"#8799a3",textAlign:"center"}}>Firma Fiyatı</div>
+              <div style={{fontSize:"12px",fontWeight:600,color:"#8799a3",textAlign:"center"}}>Planlanan Fiyat</div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"140px 1fr 1fr 1fr",gap:"8px",padding:"8px 12px",alignItems:"center"}}>
+              <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right"}}>Birim Fiyat</label>
+              <input style={{...iS,textAlign:"center"}} type="number" value={fm.piyasaFiyat||""} onChange={e=>uf("piyasaFiyat",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
+              <input style={{...iS,textAlign:"center"}} type="number" value={fm.firmaFiyat||""} onChange={e=>uf("firmaFiyat",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
+              <input style={{...iS,textAlign:"center",fontWeight:700}} type="number" value={fm.planlananBirimFiyat||""} onChange={e=>fiyatDegistir(e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"140px 1fr 1fr 1fr",gap:"8px",padding:"4px 12px 8px",alignItems:"center"}}>
+              <label style={{fontSize:"12px",fontWeight:600,color:T.t3,textAlign:"right"}}>Toplam</label>
+              <div style={{fontSize:"14px",fontWeight:600,color:T.t2,textAlign:"center"}}>{piyasaF>0&&miktar>0?(piyasaF*miktar).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+              <div style={{fontSize:"14px",fontWeight:600,color:T.t2,textAlign:"center"}}>{firmaF>0&&miktar>0?(firmaF*miktar).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+              <div style={{fontSize:"14px",fontWeight:700,color:T.text,textAlign:"center"}}>{toplam>0?toplam.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+            </div>
+            {/* TASARRUF */}
+            {tasarruf>0&&<div style={{padding:"6px 12px",background:"#f6ffed",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{fontSize:"12px",color:"#389e0d",fontWeight:600}}>Firma fiyatı ile tasarruf</span>
+              <span style={{fontSize:"14px",color:"#389e0d",fontWeight:700}}>{tasarruf.toLocaleString("tr-TR",{minimumFractionDigits:2})} ₺</span>
+            </div>}
+          </div>
+
+          {/* İLK PLANLANAN & SAPMA */}
+          {ilkFiyat>0&&guncelFiyat>0&&ilkFiyat!==guncelFiyat&&<div style={{display:"grid",gridTemplateColumns:"140px 1fr 1fr",gap:"12px",alignItems:"center",marginTop:"4px",padding:"8px 12px",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffe58f"}}>
+            <label style={{fontSize:"12px",fontWeight:600,color:"#d48806",textAlign:"right"}}>İlk Planlanan</label>
+            <div style={{fontSize:"14px",fontWeight:600,color:"#d48806"}}>{ilkFiyat.toLocaleString("tr-TR")} ₺ / {fm.birim||"birim"}</div>
+            <div style={{fontSize:"14px",fontWeight:700,color:sapmaIlk>0?"#ff4d4f":"#52c41a"}}>Sapma: {sapmaIlk>0?"+":""}{sapmaIlk.toFixed(1)}% ({((guncelFiyat-ilkFiyat)*miktar).toLocaleString("tr-TR",{minimumFractionDigits:2})} ₺)</div>
+          </div>}
         </>}
 
         {/* DETAY SATIRLARI — alt kalem girişi (demir çapları, SGK kalemleri vb.) */}
@@ -4238,6 +4296,22 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler})=>{
           <label style={{fontSize:"14px",fontWeight:700,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>PLANLANAN TOPLAM</label>
           <div style={{...iS,background:"#384248",color:"#fff",fontWeight:700,fontSize:"18px",cursor:"default"}}>{toplam>0?toplam.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺":"—"}</div>
         </div>
+
+        {/* REVİZYON TARİHÇESİ */}
+        {(fm.revizyonlar||[]).length>0&&<div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
+          <div style={{padding:"6px 12px",background:"#384248",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <span style={{fontSize:"12px",fontWeight:600,color:"#8799a3"}}>Revizyon Tarihçesi ({(fm.revizyonlar||[]).length})</span>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"90px 100px 100px 1fr",gap:"8px",padding:"4px 12px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
+            {["Tarih","Eski Fiyat","Yeni Fiyat","Sebep"].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t3,textTransform:"uppercase"}}>{h}</div>)}
+          </div>
+          {(fm.revizyonlar||[]).map((r,idx)=><div key={r.id} style={{display:"grid",gridTemplateColumns:"90px 100px 100px 1fr",gap:"8px",padding:"4px 12px",alignItems:"center",borderBottom:idx<(fm.revizyonlar||[]).length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa"}}>
+            <div style={{fontSize:"13px",color:T.t2}}>{fmtDate(r.tarih)}</div>
+            <div style={{fontSize:"13px",color:T.t3}}>{Number(r.eskiFiyat).toLocaleString("tr-TR")}</div>
+            <div style={{fontSize:"13px",fontWeight:600,color:parseFloat(r.yeniFiyat)>parseFloat(r.eskiFiyat)?"#ff4d4f":"#52c41a"}}>{Number(r.yeniFiyat).toLocaleString("tr-TR")}</div>
+            <input style={{...iS,fontSize:"12px",height:"28px",lineHeight:"28px"}} value={r.sebep||""} onChange={e=>{const arr=[...(fm.revizyonlar||[])];arr[idx]={...arr[idx],sebep:e.target.value};uf("revizyonlar",arr);}} placeholder="Artış sebebi..." onFocus={foc} onBlur={blr}/>
+          </div>)}
+        </div>}
 
         {/* AÇIKLAMA */}
         <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
