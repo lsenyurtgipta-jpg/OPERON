@@ -1108,36 +1108,32 @@ const MalzemeKarti=({malzeme,initData,isNew,onSave,onBack,firmalar,altKategorile
   const tedOptions=firmalar?.filter(f=>f.turler.includes("tedarikci"))||[];
 
   const tabs=[
-    {id:"genel",label:"Malzeme Bilgileri",icon:"🧱"},
-    {id:"gorseller",label:`Görseller (${form.resimler.length})`,icon:"📷"},
-    {id:"fiyat",label:"Fiyat & Tedarik",icon:"💰"},
-    {id:"notlar",label:`Notlar (${form.notlar.length})`,icon:"📝"}
+    {id:"genel",label:"Malzeme Bilgileri"},
+    {id:"gorseller",label:`Görseller (${form.resimler.length})`},
+    {id:"fiyat",label:"Fiyat & Tedarik"},
+    {id:"notlar",label:`Notlar (${form.notlar.length})`}
   ];
 
   return <div>
     {/* HEADER */}
-    <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"20px"}}>
-      <button onClick={onBack} style={{background:"#fff",border:`1px solid ${T.bDark}`,borderRadius:"6px",padding:"7px 14px",cursor:"pointer",color:T.t2,fontSize:"14px",display:"flex",alignItems:"center",gap:"6px",transition:"all .2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=T.primary;e.currentTarget.style.color=T.primary;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bDark;e.currentTarget.style.color=T.t2;}}>← Malzemeler</button>
-      <div style={{flex:1}}>
-        <div style={{display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap"}}>
-          <h2 style={{fontSize:"20px",fontWeight:600,color:T.text,margin:0}}>{isNew?"Yeni Malzeme Kartı":form.ad||"Malzeme Kartı"}</h2>
-          <span style={{fontFamily:"monospace",fontSize:"12px",color:T.primary,background:T.pBg,padding:"2px 8px",borderRadius:"4px",fontWeight:600}}>{form.malzemeKodu}</span>
-          {katObj&&<span style={{display:"inline-flex",alignItems:"center",gap:"4px",padding:"0 8px",height:"22px",borderRadius:"4px",fontSize:"12px",fontWeight:500,color:katObj.color,background:katObj.bg,border:`1px solid ${katObj.color}33`}}>{katObj.icon} {katObj.label}</span>}
-        </div>
+    <div style={{display:"flex",alignItems:"center",gap:"16px",marginBottom:"0",padding:"12px 20px",background:"#384248",borderRadius:"8px 8px 0 0",paddingBottom:"8px"}}>
+      <button onClick={onBack} title="Geri" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={32}/></button>
+      <div style={{flex:1,textAlign:"center"}}>
+        <span style={{fontSize:"20px",fontWeight:600,color:"#8799a3",letterSpacing:"0.3px"}}>{form.malzemeKodu?`${form.malzemeKodu} - `:""}{form.ad||"Yeni Malzeme"}</span>
       </div>
-      <div style={{display:"flex",gap:"8px"}}>
-        {saved&&<div style={{padding:"7px 16px",borderRadius:"6px",background:"#f6ffed",border:"1px solid #b7eb8f",color:"#389e0d",fontSize:"14px",fontWeight:500}}>✓ Kaydedildi</div>}
-        <button onClick={save} style={{padding:"7px 24px",borderRadius:"6px",border:"none",background:T.primary,color:"#fff",cursor:"pointer",fontWeight:500,fontSize:"14px",transition:"all .2s"}} onMouseEnter={e=>e.currentTarget.style.background=T.pDark} onMouseLeave={e=>e.currentTarget.style.background=T.primary}>💾 {isNew?"Kaydet":"Güncelle"}</button>
-      </div>
+      <button onClick={save} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={32}/></button>
     </div>
 
     {/* SEKMELER */}
-    <div style={{background:T.card,borderRadius:`${T.rl} ${T.rl} 0 0`,border:`1px solid ${T.border}`,borderBottom:"none",display:"flex",overflow:"auto"}}>
-      {tabs.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{flex:"0 0 auto",padding:"14px 24px",border:"none",cursor:"pointer",background:tab===t.id?"#fff":"#fafafa",color:tab===t.id?T.primary:T.t2,fontWeight:tab===t.id?600:400,fontSize:"14px",borderBottom:tab===t.id?`2px solid ${T.primary}`:"2px solid transparent",transition:"all .2s",display:"flex",alignItems:"center",gap:"8px",whiteSpace:"nowrap"}} onMouseEnter={e=>{if(tab!==t.id)e.currentTarget.style.background="#f0f0f0";}} onMouseLeave={e=>{if(tab!==t.id)e.currentTarget.style.background="#fafafa";}}><span>{t.icon}</span>{t.label}</button>)}
+    <div style={{display:"flex",gap:"0",marginBottom:"0",background:"#384248"}}>
+      {tabs.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:"10px 0",border:`1px solid #8799a3`,borderBottom:"none",borderRadius:"12px 12px 0 0",background:tab===t.id?"#8799a3":"#384248",color:tab===t.id?"#000":"#fff",fontWeight:tab===t.id?600:400,fontSize:"14px",fontFamily:"'Inter',sans-serif",cursor:"pointer",whiteSpace:"nowrap",transition:"all .15s",letterSpacing:"0.2px"}}
+        onMouseEnter={e=>{if(tab!==t.id){e.currentTarget.style.background="#8799a3";e.currentTarget.style.color="#000";}}}
+        onMouseLeave={e=>{if(tab!==t.id){e.currentTarget.style.background="#384248";e.currentTarget.style.color="#fff";}}}
+      >{t.label}</button>)}
     </div>
 
     {/* FORM İÇERİĞİ */}
-    <div style={{background:T.card,borderRadius:`0 0 ${T.rl} ${T.rl}`,border:`1px solid ${T.border}`,boxShadow:T.sh,minHeight:"400px"}}>
+    <div style={{background:"#fff",borderRadius:"0 0 8px 8px",border:`1px solid ${T.border}`,borderTop:"none",minHeight:"400px"}}>
       <div style={{padding:"24px"}}>
 
         {/* MALZEME BİLGİLERİ */}
@@ -1327,39 +1323,56 @@ const AltKategoriYonetim=({altKategoriler,setAltKategoriler,onSave,onDel})=>{
   }).sort((a,b)=>a.kod.localeCompare(b.kod));
 
   return <div>
-    <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,boxShadow:T.sh,overflow:"hidden"}}>
-      {/* Ekleme formu */}
-      <div style={{padding:"16px 20px",borderBottom:`1px solid ${T.border}`,background:"#fafafa"}}>
-        <div style={{display:"grid",gridTemplateColumns:"100px 1fr 120px",gap:"12px",alignItems:"end"}}>
-          <div><div style={{color:T.text,fontSize:"12px",fontWeight:500,marginBottom:"6px"}}>Kod (3 hane)</div><input style={{width:"100%",padding:"7px 11px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"14px",outline:"none",boxSizing:"border-box",fontFamily:"monospace",textAlign:"center",fontWeight:600}} value={yeniKod} onChange={e=>setYeniKod(e.target.value.replace(/\D/g,"").slice(0,3))} placeholder="001" maxLength={3}/></div>
-          <div><div style={{color:T.text,fontSize:"12px",fontWeight:500,marginBottom:"6px"}}>Kategori Adı</div><input style={{width:"100%",padding:"7px 11px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"14px",outline:"none",boxSizing:"border-box"}} value={yeniAd} onChange={e=>setYeniAd(e.target.value)} placeholder="Örn: Çimento/Bağlayıcı" onKeyDown={e=>e.key==="Enter"&&ekle()}/></div>
-          <div><button onClick={ekle} style={{width:"100%",padding:"8px 0",borderRadius:"6px",border:"none",background:T.primary,color:"#fff",cursor:"pointer",fontWeight:600,fontSize:"14px"}}>+ Ekle</button></div>
+    {/* FİLTRE */}
+    {altKategoriler.length>5&&<div style={{marginBottom:"16px"}}>
+      <input style={{...iS,maxWidth:"260px"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Kod veya isim ara..." onFocus={foc} onBlur={blr}/>
+    </div>}
+
+    {/* PORTAL */}
+    <div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#384248"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+          <span style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>Kategoriler</span>
+          <span style={{fontSize:"13px",color:"#8799a3"}}>{filtered.length}</span>
         </div>
+        <button onClick={ekle} title="Kategori Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
       </div>
-
-      {/* Arama */}
-      {altKategoriler.length>5&&<div style={{padding:"10px 20px",borderBottom:`1px solid ${T.border}`}}>
-        <div style={{display:"flex",alignItems:"center",border:`1px solid ${T.bDark}`,borderRadius:"6px",padding:"0 10px",background:"#fff"}}><span style={{color:T.t3,marginRight:"6px"}}>🔍</span><input style={{flex:1,padding:"6px 0",border:"none",background:"transparent",color:T.text,fontSize:"13px",outline:"none"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Kod veya isim ara..."/></div>
-      </div>}
-
-      {/* Liste */}
-      {filtered.length===0?<div style={{textAlign:"center",padding:"40px",color:T.t3}}><div style={{fontSize:"32px",marginBottom:"8px"}}>📂</div>{search?"Sonuç bulunamadı":"Henüz kategori eklenmemiş"}</div>:
-      <div>{filtered.map((a,i)=><div key={a.id} style={{borderBottom:i<filtered.length-1?`1px solid ${T.border}`:"none"}}>
-        {editId===a.id
-          ?<div style={{display:"flex",alignItems:"center",padding:"10px 20px",gap:"10px",background:T.pBg}}>
-            <input style={{width:"70px",padding:"5px 8px",borderRadius:T.r,border:`1px solid ${T.primary}`,fontFamily:"monospace",fontWeight:700,fontSize:"14px",textAlign:"center",outline:"none",color:T.primary,boxSizing:"border-box"}} value={editKod} onChange={e=>setEditKod(e.target.value.replace(/\D/g,"").slice(0,3))} maxLength={3}/>
-            <input style={{flex:1,padding:"5px 10px",borderRadius:T.r,border:`1px solid ${T.primary}`,fontSize:"14px",outline:"none",color:T.text,boxSizing:"border-box"}} value={editAd} onChange={e=>setEditAd(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")duzenlemeKaydet(a);if(e.key==="Escape")duzenlemeIptal();}} autoFocus/>
-            <button onClick={()=>duzenlemeKaydet(a)} style={{height:"30px",padding:"0 14px",borderRadius:"6px",border:"none",background:T.primary,color:"#fff",cursor:"pointer",fontSize:"12px",fontWeight:600,whiteSpace:"nowrap"}}>✓ Kaydet</button>
-            <button onClick={duzenlemeIptal} style={{height:"30px",padding:"0 12px",borderRadius:"6px",border:`1px solid ${T.bDark}`,background:"#fff",color:T.t2,cursor:"pointer",fontSize:"12px"}}>İptal</button>
+      {/* EKLEME FORMU */}
+      <div style={{padding:"8px 12px",borderBottom:`1px solid ${T.border}`,display:"grid",gridTemplateColumns:"100px 1fr",gap:"8px"}}>
+        <input style={iS} value={yeniKod} onChange={e=>setYeniKod(e.target.value.replace(/\D/g,"").slice(0,3))} placeholder="Kod" maxLength={3} onFocus={foc} onBlur={blr}/>
+        <input style={iS} value={yeniAd} onChange={e=>setYeniAd(e.target.value)} placeholder="Kategori adı..." onKeyDown={e=>e.key==="Enter"&&ekle()} onFocus={foc} onBlur={blr}/>
+      </div>
+      {/* LİSTE */}
+      {filtered.length===0
+        ?<div style={{padding:"40px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{search?"Sonuç bulunamadı":"Henüz kategori eklenmemiş."}</div>
+        :<>
+          <div style={{display:"grid",gridTemplateColumns:"80px 1fr auto",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
+            {["Kod","Kategori Adı",""].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>{h}</div>)}
           </div>
-          :<div style={{display:"flex",alignItems:"center",padding:"12px 20px",gap:"12px"}}>
-            <div style={{width:"56px",height:"32px",borderRadius:"6px",background:"#f0f5ff",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"monospace",fontWeight:700,fontSize:"14px",color:T.primary}}>{a.kod}</div>
-            <div style={{flex:1,fontWeight:500,fontSize:"14px",color:T.text}}>{a.ad}</div>
-            <button onClick={()=>duzenlemeBaslat(a)} style={{height:"30px",padding:"0 12px",borderRadius:"6px",border:`1px solid ${T.bDark}`,background:"#fff",cursor:"pointer",color:T.t2,fontSize:"12px",fontWeight:500}} onMouseEnter={e=>e.currentTarget.style.background="#f5f5f5"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>✏️ Düzenle</button>
-            <button onClick={()=>sil(a.id)} style={{height:"30px",padding:"0 12px",borderRadius:"6px",border:`1px solid ${T.err}33`,background:"#fff1f0",cursor:"pointer",color:T.err,fontSize:"12px",fontWeight:500}} onMouseEnter={e=>{e.currentTarget.style.background=T.err;e.currentTarget.style.color="#fff";}} onMouseLeave={e=>{e.currentTarget.style.background="#fff1f0";e.currentTarget.style.color=T.err;}}>✕ Sil</button>
-          </div>
-        }
-      </div>)}</div>}
+          {filtered.map((a,idx)=><div key={a.id}>
+            {editId===a.id
+              ?<div style={{display:"grid",gridTemplateColumns:"80px 1fr auto",padding:"8px 12px",gap:"8px",alignItems:"center",background:T.pBg}}>
+                <input style={{...iS,fontFamily:"monospace",fontWeight:700,textAlign:"center"}} value={editKod} onChange={e=>setEditKod(e.target.value.replace(/\D/g,"").slice(0,3))} maxLength={3}/>
+                <input style={iS} value={editAd} onChange={e=>setEditAd(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")duzenlemeKaydet(a);if(e.key==="Escape")duzenlemeIptal();}} autoFocus onFocus={foc} onBlur={blr}/>
+                <div style={{display:"flex",gap:"8px"}}>
+                  <button onClick={()=>duzenlemeKaydet(a)} title="Kaydet" style={{padding:"0",border:"none",background:"transparent",color:"#384248",cursor:"pointer",display:"flex",alignItems:"center"}}><Save size={20}/></button>
+                  <button onClick={duzenlemeIptal} title="İptal" style={{padding:"0",border:"none",background:"transparent",color:T.t3,cursor:"pointer",display:"flex",alignItems:"center"}}><X size={20}/></button>
+                </div>
+              </div>
+              :<div style={{display:"grid",gridTemplateColumns:"80px 1fr auto",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtered.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer"}}
+                onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
+                onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
+                <div style={{fontSize:"14px",fontFamily:"monospace",fontWeight:700,color:"#384248"}}>{a.kod}</div>
+                <div style={{fontSize:"14px",fontWeight:500,color:T.text}}>{a.ad}</div>
+                <div style={{display:"flex",gap:"8px"}}>
+                  <button onClick={()=>duzenlemeBaslat(a)} title="Düzenle" style={{padding:"0",border:"none",background:"transparent",color:"#384248",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePen size={18}/></button>
+                  <button onClick={()=>sil(a.id)} title="Sil" style={{padding:"0",border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={18}/></button>
+                </div>
+              </div>
+            }
+          </div>)}
+        </>
+      }
     </div>
   </div>;
 };
@@ -1404,56 +1417,65 @@ const AltGrupYonetim=({altKategoriler,altGruplar,setAltGruplar,onSave,onDel})=>{
   const allAltKat=altKategoriler.slice().sort((a,b)=>a.kod.localeCompare(b.kod));
   const grpFiltered=selAltKat?altGruplar.filter(g=>g.altKategoriKod===selAltKat.kod).sort((a,b)=>a.kod.localeCompare(b.kod)):[];
 
-  return <div>
-    <div style={{display:"grid",gridTemplateColumns:"280px 1fr",gap:"16px"}}>
-      {/* Sol: Tüm alt kategoriler */}
-      <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,boxShadow:T.sh,overflow:"hidden"}}>
-        <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`,background:"#fafafa"}}><div style={{fontSize:"13px",fontWeight:600,color:T.text}}>📂 Kategoriler</div><div style={{fontSize:"11px",color:T.t3}}>Birini seçin → alt kategorilerini görün</div></div>
-        {allAltKat.length===0?<div style={{padding:"20px",textAlign:"center",color:T.t3,fontSize:"13px"}}>Önce "Kategoriler" sekmesinden kategori ekleyin</div>:
-        <div style={{maxHeight:"500px",overflow:"auto"}}>{allAltKat.map(a=>{
-          const sel=selAltKat?.id===a.id;
-          const grpCount=altGruplar.filter(g=>g.altKategoriKod===a.kod).length;
-          return <button key={a.id} onClick={()=>{setSelAltKat(a);setYeniKod("");setYeniAd("");duzenlemeIptal();}} style={{width:"100%",padding:"10px 16px",border:"none",borderBottom:`1px solid ${T.border}`,cursor:"pointer",background:sel?T.pBg:"#fff",display:"flex",alignItems:"center",gap:"10px",textAlign:"left"}} onMouseEnter={e=>{if(!sel)e.currentTarget.style.background="#fafafa";}} onMouseLeave={e=>{if(!sel)e.currentTarget.style.background="#fff";}}>
-            <span style={{fontFamily:"monospace",fontWeight:700,fontSize:"13px",color:sel?T.primary:T.t2,background:sel?T.primary+"11":"#f0f0f0",padding:"2px 8px",borderRadius:"4px"}}>{a.kod}</span>
-            <span style={{flex:1,fontSize:"13px",fontWeight:sel?600:400,color:sel?T.primary:T.text}}>{a.ad}</span>
-            <span style={{fontSize:"11px",color:T.t3,background:"#f0f0f0",padding:"0 6px",borderRadius:"10px"}}>{grpCount}</span>
-          </button>;
-        })}</div>}
+  return <div style={{display:"grid",gridTemplateColumns:"375px 375px",gap:"16px",minHeight:"400px"}}>
+    {/* SOL: KATEGORİLER */}
+    <div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#384248"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+          <span style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>Kategoriler</span>
+          <span style={{fontSize:"13px",color:"#8799a3"}}>{allAltKat.length}</span>
+        </div>
       </div>
+      {allAltKat.length===0?<div style={{padding:"40px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>Önce "Kategoriler" sekmesinden kategori ekleyin</div>:
+      <div style={{maxHeight:"500px",overflow:"auto"}}>{allAltKat.map(a=>{
+        const sel=selAltKat?.id===a.id;
+        const grpCount=altGruplar.filter(g=>g.altKategoriKod===a.kod).length;
+        return <div key={a.id} onClick={()=>{setSelAltKat(a);setYeniKod("");setYeniAd("");duzenlemeIptal();}} style={{display:"flex",alignItems:"center",gap:"8px",padding:"10px 14px",cursor:"pointer",borderBottom:`1px solid ${T.border}`,background:sel?"#384248":"#fff",borderLeft:sel?"3px solid #8799a3":"3px solid transparent"}}>
+          <span style={{fontFamily:"monospace",fontWeight:700,fontSize:"14px",color:sel?"#8799a3":T.t2}}>{a.kod}</span>
+          <span style={{flex:1,fontSize:"14px",fontWeight:sel?600:400,color:sel?"#fff":T.text}}>{a.ad}</span>
+          <span style={{fontSize:"12px",color:sel?"#8799a3":T.t3}}>{grpCount}</span>
+        </div>;
+      })}</div>}
+    </div>
 
-      {/* Sağ: Seçili kategorinin alt grupları */}
-      <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,boxShadow:T.sh,overflow:"hidden"}}>
-        {!selAltKat?<div style={{textAlign:"center",padding:"60px",color:T.t3}}><div style={{fontSize:"32px",marginBottom:"8px"}}>👈</div>Sol taraftan bir kategori seçin</div>:<>
-          {/* Ekleme formu */}
-          <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`,background:"#fafafa"}}>
-            <div style={{fontSize:"11px",color:T.t2,marginBottom:"8px"}}>Seçili: <strong style={{color:T.primary}}>{selAltKat.kod} - {selAltKat.ad}</strong></div>
-            <div style={{display:"grid",gridTemplateColumns:"80px 1fr 100px",gap:"12px",alignItems:"end"}}>
-              <div><div style={{color:T.text,fontSize:"11px",fontWeight:500,marginBottom:"4px"}}>Kod (3 hane)</div><input style={{width:"100%",padding:"5px 8px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"13px",outline:"none",boxSizing:"border-box",fontFamily:"monospace",textAlign:"center",fontWeight:600}} value={yeniKod} onChange={e=>setYeniKod(e.target.value.replace(/\D/g,"").slice(0,3))} placeholder="001" maxLength={3}/></div>
-              <div><div style={{color:T.text,fontSize:"11px",fontWeight:500,marginBottom:"4px"}}>Alt Kategori Adı</div><input style={{width:"100%",padding:"5px 8px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"13px",outline:"none",boxSizing:"border-box"}} value={yeniAd} onChange={e=>setYeniAd(e.target.value)} placeholder="Örn: Portland Çimento" onKeyDown={e=>e.key==="Enter"&&ekle()}/></div>
-              <div><button onClick={ekle} style={{width:"100%",padding:"6px 0",borderRadius:"6px",border:"none",background:T.primary,color:"#fff",cursor:"pointer",fontWeight:600,fontSize:"13px"}}>+ Ekle</button></div>
-            </div>
+    {/* SAĞ: ALT GRUPLAR */}
+    <div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden"}}>
+      {!selAltKat?<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"60px",color:T.t3,fontSize:"14px",background:"#fff"}}>Kategori seçiniz</div>:<>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#384248"}}>
+          <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+            <span style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{selAltKat.ad}</span>
+            <span style={{fontSize:"13px",color:"#8799a3"}}>{grpFiltered.length} alt kategori</span>
           </div>
-
-          {grpFiltered.length===0?<div style={{textAlign:"center",padding:"40px",color:T.t3}}><div style={{fontSize:"28px",marginBottom:"8px"}}>📁</div>Bu kategoride henüz alt kategori yok</div>:
-          <div>{grpFiltered.map((g,i)=><div key={g.id} style={{borderBottom:i<grpFiltered.length-1?`1px solid ${T.border}`:"none"}}>
-            {editId===g.id
-              ?<div style={{display:"flex",alignItems:"center",padding:"8px 16px",gap:"8px",background:T.pBg}}>
-                <input style={{width:"60px",padding:"4px 6px",borderRadius:T.r,border:`1px solid ${T.primary}`,fontFamily:"monospace",fontWeight:700,fontSize:"13px",textAlign:"center",outline:"none",color:T.primary,boxSizing:"border-box"}} value={editKod} onChange={e=>setEditKod(e.target.value.replace(/\D/g,"").slice(0,3))} maxLength={3}/>
-                <input style={{flex:1,padding:"4px 8px",borderRadius:T.r,border:`1px solid ${T.primary}`,fontSize:"13px",outline:"none",color:T.text,boxSizing:"border-box"}} value={editAd} onChange={e=>setEditAd(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")duzenlemeKaydet(g);if(e.key==="Escape")duzenlemeIptal();}} autoFocus/>
-                <button onClick={()=>duzenlemeKaydet(g)} style={{height:"28px",padding:"0 12px",borderRadius:"6px",border:"none",background:T.primary,color:"#fff",cursor:"pointer",fontSize:"12px",fontWeight:600,whiteSpace:"nowrap"}}>✓ Kaydet</button>
-                <button onClick={duzenlemeIptal} style={{height:"28px",padding:"0 10px",borderRadius:"6px",border:`1px solid ${T.bDark}`,background:"#fff",color:T.t2,cursor:"pointer",fontSize:"12px"}}>İptal</button>
+          <button onClick={ekle} title="Alt Kategori Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
+        </div>
+        <div style={{padding:"8px 12px",borderBottom:`1px solid ${T.border}`,display:"grid",gridTemplateColumns:"80px 1fr",gap:"8px"}}>
+          <input style={iS} value={yeniKod} onChange={e=>setYeniKod(e.target.value.replace(/\D/g,"").slice(0,3))} placeholder="Kod" maxLength={3} onFocus={foc} onBlur={blr}/>
+          <input style={iS} value={yeniAd} onChange={e=>setYeniAd(e.target.value)} placeholder="Alt kategori adı..." onKeyDown={e=>e.key==="Enter"&&ekle()} onFocus={foc} onBlur={blr}/>
+        </div>
+        {grpFiltered.length===0?<div style={{padding:"40px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>Bu kategoride henüz alt kategori yok.</div>:
+        grpFiltered.map((g,idx)=><div key={g.id}>
+          {editId===g.id
+            ?<div style={{display:"grid",gridTemplateColumns:"80px 1fr auto",padding:"8px 12px",gap:"8px",alignItems:"center",background:T.pBg}}>
+              <input style={{...iS,fontFamily:"monospace",fontWeight:700,textAlign:"center"}} value={editKod} onChange={e=>setEditKod(e.target.value.replace(/\D/g,"").slice(0,3))} maxLength={3}/>
+              <input style={iS} value={editAd} onChange={e=>setEditAd(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")duzenlemeKaydet(g);if(e.key==="Escape")duzenlemeIptal();}} autoFocus onFocus={foc} onBlur={blr}/>
+              <div style={{display:"flex",gap:"8px"}}>
+                <button onClick={()=>duzenlemeKaydet(g)} title="Kaydet" style={{padding:"0",border:"none",background:"transparent",color:"#384248",cursor:"pointer",display:"flex",alignItems:"center"}}><Save size={20}/></button>
+                <button onClick={duzenlemeIptal} title="İptal" style={{padding:"0",border:"none",background:"transparent",color:T.t3,cursor:"pointer",display:"flex",alignItems:"center"}}><X size={20}/></button>
               </div>
-              :<div style={{display:"flex",alignItems:"center",padding:"10px 16px",gap:"10px"}}>
-                <div style={{width:"48px",height:"28px",borderRadius:"6px",background:"#fff7e6",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"monospace",fontWeight:700,fontSize:"13px",color:"#fa8c16"}}>{g.kod}</div>
-                <div style={{flex:1,fontSize:"13px",fontWeight:500,color:T.text}}>{g.ad}</div>
-                <span style={{fontFamily:"monospace",fontSize:"11px",color:T.t3}}>{g.altKategoriKod}.{g.kod}</span>
-                <button onClick={()=>duzenlemeBaslat(g)} style={{height:"26px",padding:"0 10px",borderRadius:"6px",border:`1px solid ${T.bDark}`,background:"#fff",cursor:"pointer",color:T.t2,fontSize:"11px",fontWeight:500}} onMouseEnter={e=>e.currentTarget.style.background="#f5f5f5"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>✏️</button>
-                <button onClick={()=>sil(g.id)} style={{height:"26px",padding:"0 10px",borderRadius:"6px",border:`1px solid ${T.err}33`,background:"#fff1f0",cursor:"pointer",color:T.err,fontSize:"11px",fontWeight:500}} onMouseEnter={e=>{e.currentTarget.style.background=T.err;e.currentTarget.style.color="#fff";}} onMouseLeave={e=>{e.currentTarget.style.background="#fff1f0";e.currentTarget.style.color=T.err;}}>✕</button>
+            </div>
+            :<div style={{display:"grid",gridTemplateColumns:"80px 1fr auto",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<grpFiltered.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer"}}
+              onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
+              onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
+              <div style={{fontSize:"14px",fontFamily:"monospace",fontWeight:700,color:"#384248"}}>{g.kod}</div>
+              <div style={{fontSize:"14px",fontWeight:500,color:T.text}}>{g.ad}</div>
+              <div style={{display:"flex",gap:"8px"}}>
+                <button onClick={()=>duzenlemeBaslat(g)} title="Düzenle" style={{padding:"0",border:"none",background:"transparent",color:"#384248",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePen size={18}/></button>
+                <button onClick={()=>sil(g.id)} title="Sil" style={{padding:"0",border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={18}/></button>
               </div>
-            }
-          </div>)}</div>}
-        </>}
-      </div>
+            </div>
+          }
+        </div>)}
+      </>}
     </div>
   </div>;
 };
@@ -2577,53 +2599,58 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
   ];
 
   return <div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"20px"}}><div><h2 style={{fontSize:"20px",fontWeight:600,color:T.text,margin:0}}>Malzemeler</h2><p style={{color:T.t2,fontSize:"14px",margin:"4px 0 0"}}>{malzemeler.length} malzeme • {teklifler.length} teklif • {altKategoriler.length} kategori • {altGruplar.length} alt kategori</p></div>{mainTab==="liste"&&<button onClick={()=>setShowKod(true)} style={{padding:"7px 20px",borderRadius:"6px",border:"none",background:T.primary,color:"#fff",cursor:"pointer",fontWeight:500,fontSize:"14px",display:"flex",alignItems:"center",gap:"6px"}}>+ Yeni Malzeme</button>}</div>
-
     {/* ÜST SEKMELER */}
-    <div style={{display:"flex",gap:"4px",marginBottom:"16px"}}>
-      {mainTabs.map(t=><button key={t.id} onClick={()=>setMainTab(t.id)} style={{padding:"10px 20px",borderRadius:`${T.r} ${T.r} 0 0`,cursor:"pointer",border:`1px solid ${mainTab===t.id?T.primary:T.bDark}`,borderBottom:mainTab===t.id?"2px solid #fff":"1px solid "+T.bDark,background:mainTab===t.id?"#fff":"#fafafa",color:mainTab===t.id?T.primary:T.t2,fontWeight:mainTab===t.id?600:400,fontSize:"14px",display:"flex",alignItems:"center",gap:"8px",marginBottom:"-1px",position:"relative",zIndex:mainTab===t.id?1:0}}><span>{t.icon}</span>{t.label}<span style={{background:mainTab===t.id?T.pBg:"#f0f0f0",color:mainTab===t.id?T.primary:T.t3,padding:"0 8px",borderRadius:"10px",fontSize:"12px",fontWeight:600}}>{t.count}</span></button>)}
+    <div style={{display:"flex",gap:"0",marginBottom:"0"}}>
+      {mainTabs.map(t=><button key={t.id} onClick={()=>setMainTab(t.id)} style={{flex:1,padding:"10px 0",border:`1px solid #8799a3`,borderBottom:"none",borderRadius:"12px 12px 0 0",background:mainTab===t.id?"#8799a3":"#384248",color:mainTab===t.id?"#000":"#fff",fontWeight:mainTab===t.id?600:400,fontSize:"14px",fontFamily:"'Inter',sans-serif",cursor:"pointer",whiteSpace:"nowrap",transition:"all .15s"}}
+        onMouseEnter={e=>{if(mainTab!==t.id){e.currentTarget.style.background="#8799a3";e.currentTarget.style.color="#000";}}}
+        onMouseLeave={e=>{if(mainTab!==t.id){e.currentTarget.style.background="#384248";e.currentTarget.style.color="#fff";}}}
+      >{t.label} ({t.count})</button>)}
     </div>
 
     {/* MALZEME LİSTESİ */}
     {mainTab==="liste"&&<>
-    <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,boxShadow:T.sh,overflow:"hidden"}}>
-      <div style={{padding:"16px 20px",borderBottom:`1px solid ${T.border}`,display:"flex",gap:"12px",alignItems:"center",flexWrap:"wrap"}}>
-        <div style={{flex:1,minWidth:"200px",display:"flex",alignItems:"center",border:`1px solid ${T.bDark}`,borderRadius:"6px",padding:"0 10px",background:"#fff"}}><span style={{color:T.t3,marginRight:"6px"}}>🔍</span><input style={{flex:1,padding:"7px 0",border:"none",background:"transparent",color:T.text,fontSize:"14px",outline:"none"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Malzeme adı, kod veya marka ara..."/></div>
-        <div style={{display:"flex",gap:"4px"}}><button onClick={()=>setFKat("all")} style={{padding:"5px 12px",borderRadius:"6px",cursor:"pointer",border:`1px solid ${fKat==="all"?T.primary:T.bDark}`,background:fKat==="all"?T.pBg:"#fff",color:fKat==="all"?T.primary:T.t2,fontWeight:500,fontSize:"13px"}}>Tümü</button>{MLZ_KATEGORILER.map(k=><button key={k.id} onClick={()=>setFKat(k.id)} style={{padding:"5px 12px",borderRadius:"6px",cursor:"pointer",border:`1px solid ${fKat===k.id?k.color:T.bDark}`,background:fKat===k.id?k.bg:"#fff",color:fKat===k.id?k.color:T.t2,fontWeight:500,fontSize:"13px"}}>{k.icon} {k.label}</button>)}</div>
+    {/* FİLTRE BAR */}
+    <div style={{display:"flex",gap:"10px",marginBottom:"16px",marginTop:"16px",flexWrap:"wrap",alignItems:"center"}}>
+      <input style={{...iS,maxWidth:"260px"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Malzeme adı, kod veya marka ara..." onFocus={foc} onBlur={blr}/>
+      <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+        <button onClick={()=>setFKat("all")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fKat==="all"?"#384248":T.bDark}`,background:fKat==="all"?"#384248":"#fff",color:fKat==="all"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Tümü</button>
+        {MLZ_KATEGORILER.map(k=><button key={k.id} onClick={()=>setFKat(fKat===k.id?"all":k.id)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fKat===k.id?"#384248":T.bDark}`,background:fKat===k.id?"#384248":"#fff",color:fKat===k.id?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>{k.label}</button>)}
       </div>
+    </div>
 
-      {filtered.length===0?<div style={{textAlign:"center",padding:"48px",color:T.t3}}>{search||fKat!=="all"?"Sonuç bulunamadı":"Henüz malzeme eklenmemiş"}</div>:
-      <div>{filtered.map((m,i)=>{
-        const kat=MLZ_KATEGORILER.find(k=>k.id===m.kategori);
-        const para=PARA_BIRIMLERI.find(p=>p.id===m.paraBirimi);
-        const mlzTek=[];teklifler.forEach(t=>{if(t.durum==="aktif")t.kalemler.forEach(k=>{if(k.malzemeId===m.id)mlzTek.push({...k,paraBirimi:t.paraBirimi});});});
-        const enUygun=mlzTek.length>0?mlzTek.reduce((min,k)=>k.netFiyat<min.netFiyat?k:min,mlzTek[0]):null;
-        const enUygunPara=enUygun?PARA_BIRIMLERI.find(p=>p.id===enUygun.paraBirimi):null;
-        const topTeklif=[];teklifler.forEach(t=>{t.kalemler.forEach(k=>{if(k.malzemeId===m.id)topTeklif.push(k);});});
-        return <div key={m.id} onClick={()=>handleEdit(m)} style={{display:"flex",alignItems:"center",padding:"14px 20px",borderBottom:i<filtered.length-1?`1px solid ${T.border}`:"none",cursor:"pointer",transition:"background .2s",gap:"12px"}} onMouseEnter={e=>e.currentTarget.style.background="#fafafa"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
-          <div style={{width:"40px",height:"40px",borderRadius:T.r,background:kat?.bg||T.pBg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:0}}>{kat?.icon||"📦"}</div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"2px",flexWrap:"wrap"}}>
-              <span style={{fontWeight:500,fontSize:"14px",color:T.text}}>{m.ad}</span>
-              <span style={{fontFamily:"monospace",fontSize:"11px",color:T.primary,background:T.pBg,padding:"0 6px",borderRadius:"3px"}}>{m.malzemeKodu}</span>
-              {kat&&<span style={{fontSize:"11px",color:kat.color,background:kat.bg,padding:"0 6px",borderRadius:"3px",border:`1px solid ${kat.color}33`}}>{kat.label}</span>}
-              {topTeklif.length>0&&<span style={{fontSize:"11px",color:"#389e0d",background:"#f6ffed",padding:"0 6px",borderRadius:"3px",border:"1px solid #b7eb8f"}}>{topTeklif.length} teklif</span>}
-              {m.durum==="pasif"&&<span style={{fontSize:"11px",color:T.err,background:"#fff1f0",padding:"0 6px",borderRadius:"3px",border:`1px solid ${T.err}33`}}>Pasif</span>}
-            </div>
-            <div style={{display:"flex",gap:"16px",color:T.t3,fontSize:"12px"}}>
-              {m.altKategoriAd&&<span>📂 {m.altKategoriAd}</span>}
-              {m.altGrupAd&&<span>→ {m.altGrupAd}</span>}
-              {m.marka&&<span>🏷️ {m.marka}</span>}
-            </div>
+    {/* PORTAL */}
+    <div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#384248"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+          <span style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>Malzemeler</span>
+          <span style={{fontSize:"13px",color:"#8799a3"}}>{filtered.length} malzeme</span>
+        </div>
+        <button onClick={()=>setShowKod(true)} title="Yeni Malzeme" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
+      </div>
+      {filtered.length===0
+        ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{search||fKat!=="all"?"Sonuç bulunamadı":"Henüz malzeme eklenmemiş."}</div>
+        :<>
+          <div style={{display:"grid",gridTemplateColumns:"90px 1fr 120px 120px 80px 100px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
+            {["Kod","Malzeme Adı","Kategori","Alt Kategori","Birim","En Uygun Fiyat"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
           </div>
-          <div style={{textAlign:"right",flexShrink:0,minWidth:"130px"}}>
-            {enUygun?<><div style={{fontWeight:700,fontSize:"15px",color:"#389e0d"}}>{enUygunPara?.symbol}{enUygun.netFiyat.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div><div style={{color:T.t3,fontSize:"11px"}}>en uygun / {m.birim}</div></>:<><div style={{fontWeight:500,fontSize:"13px",color:T.t3}}>—</div><div style={{color:T.t3,fontSize:"11px"}}>teklif yok</div></>}
-          </div>
-          <div style={{display:"flex",gap:"8px",flexShrink:0,marginLeft:"8px"}}>
-            <button onClick={e=>{e.stopPropagation();handleEdit(m);}} style={{height:"36px",padding:"0 14px",borderRadius:"6px",border:`1px solid ${T.primary}33`,background:T.pBg,cursor:"pointer",color:T.primary,fontSize:"14px",fontWeight:500,transition:"all .2s"}} onMouseEnter={e=>{e.currentTarget.style.background=T.primary;e.currentTarget.style.color="#fff";}} onMouseLeave={e=>{e.currentTarget.style.background=T.pBg;e.currentTarget.style.color=T.primary;}}>✏ Düzenle</button>
-            <button onClick={e=>{e.stopPropagation();handleDel(m.id);}} style={{height:"36px",padding:"0 14px",borderRadius:"6px",border:`1px solid ${T.err}33`,background:"#fff1f0",cursor:"pointer",color:T.err,fontSize:"14px",fontWeight:500,transition:"all .2s"}} onMouseEnter={e=>{e.currentTarget.style.background=T.err;e.currentTarget.style.color="#fff";}} onMouseLeave={e=>{e.currentTarget.style.background="#fff1f0";e.currentTarget.style.color=T.err;}}>🗑 Sil</button>
-          </div>
-        </div>})}</div>}
+          {filtered.map((m,idx)=>{
+            const kat=MLZ_KATEGORILER.find(k=>k.id===m.kategori);
+            const mlzTek=[];teklifler.forEach(t=>{if(t.durum==="aktif")t.kalemler.forEach(k=>{if(k.malzemeId===m.id)mlzTek.push({...k,paraBirimi:t.paraBirimi});});});
+            const enUygun=mlzTek.length>0?mlzTek.reduce((min,k)=>k.netFiyat<min.netFiyat?k:min,mlzTek[0]):null;
+            const enUygunPara=enUygun?PARA_BIRIMLERI.find(p=>p.id===enUygun.paraBirimi):null;
+            return <div key={m.id} onClick={()=>handleEdit(m)} style={{display:"grid",gridTemplateColumns:"90px 1fr 120px 120px 80px 100px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtered.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
+              onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
+              onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
+              <div style={{fontSize:"13px",color:T.t3,fontWeight:500}}>{m.malzemeKodu||"—"}</div>
+              <div style={{fontSize:"14px",fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.ad}{m.marka?` (${m.marka})`:""}</div>
+              <div style={{fontSize:"14px",color:T.t2}}>{kat?kat.label:"—"}</div>
+              <div style={{fontSize:"14px",color:T.t2}}>{m.altKategoriAd||"—"}</div>
+              <div style={{fontSize:"14px",color:T.t2}}>{m.birim||"—"}</div>
+              <div style={{fontSize:"14px",fontWeight:600,color:enUygun?"#389e0d":T.t3}}>{enUygun?`${enUygunPara?.symbol||""}${enUygun.netFiyat.toLocaleString("tr-TR",{minimumFractionDigits:2})}`:"—"}</div>
+            </div>;
+          })}
+        </>
+      }
     </div>
     </>}
 
