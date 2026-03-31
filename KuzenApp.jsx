@@ -130,6 +130,7 @@ const Sidebar=({page,setPage,open})=>{
       {id:"alis_fatura",label:"Alış Faturaları"},
       {id:"satis_fatura",label:"Satış Faturaları"},
     ]},
+    {id:"maliyet",label:"MALİYET"},
   ];
 
   const SB={
@@ -4149,6 +4150,186 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
 };
 
 /* --- Dosya Kategori Yönetim --- */
+/* --- Bütçe Kalem Modal --- */
+const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler})=>{
+  const[fm,setFm]=useState({...kalem});
+  const uf=(f,v)=>setFm(p=>({...p,[f]:v}));
+  const toplam=parseFloat(fm.planlananMiktar||0)*parseFloat(fm.planlananBirimFiyat||0);
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+    <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"540px",maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      <div style={{padding:"12px 20px",background:"#384248",display:"flex",alignItems:"center",gap:"16px",borderRadius:`${T.rl} ${T.rl} 0 0`}}>
+        <button onClick={onClose} title="Kapat" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={28}/></button>
+        <div style={{flex:1,textAlign:"center"}}><span style={{fontSize:"16px",fontWeight:600,color:"#8799a3",textTransform:"uppercase"}}>{fm.malzemeAd||"Bütçe Kalemi"}</span></div>
+        <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
+          <button onClick={()=>onSave({...fm,planlananToplam:toplam})} title="Kaydet" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><Save size={30}/></button>
+          {onDel&&<button onClick={()=>{if(!confirm("Bu bütçe kalemini silmek istiyor musunuz?"))return;onDel(fm.id);onClose();}} title="Sil" style={{padding:"0",border:"none",background:"transparent",color:"#ff6b6b",cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={30}/></button>}
+        </div>
+      </div>
+      <div style={{flex:1,overflow:"auto",padding:"20px",display:"flex",flexDirection:"column",gap:"14px"}}>
+        <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
+          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Malzeme/Hizmet</label>
+          <select style={iS} value={fm.malzemeId||""} onChange={e=>{const m=malzemeler.find(x=>x.id===parseInt(e.target.value));uf("malzemeId",m?m.id:"");uf("malzemeAd",m?m.ad:"");uf("malzemeKodu",m?m.malzemeKodu:"");uf("birim",m?m.birim:"");}}>
+            <option value="">— Seçiniz —</option>
+            {malzemeler.map(m=><option key={m.id} value={m.id}>{m.malzemeKodu} - {m.ad}</option>)}
+          </select>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
+          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Birim</label>
+          <div style={{...iS,background:"#fafafa",cursor:"default"}}>{fm.birim||"—"}</div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
+          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Planlanan Miktar</label>
+          <input style={iS} type="number" value={fm.planlananMiktar||""} onChange={e=>uf("planlananMiktar",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
+          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Planlanan B.Fiyat</label>
+          <input style={iS} type="number" value={fm.planlananBirimFiyat||""} onChange={e=>uf("planlananBirimFiyat",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
+          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Planlanan Toplam</label>
+          <div style={{...iS,background:"#fafafa",fontWeight:700,cursor:"default"}}>{toplam>0?toplam.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺":"—"}</div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
+          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Açıklama</label>
+          <input style={iS} value={fm.aciklama||""} onChange={e=>uf("aciklama",e.target.value)} placeholder="Not..." onFocus={foc} onBlur={blr}/>
+        </div>
+      </div>
+    </div>
+  </div>;
+};
+
+/* ========== MALİYET YÖNETİMİ ========== */
+const MaliyetPage=({projeler,malzemeler,faturalar=[],siparisler=[]})=>{
+  const[selProjeId,setSelProjeId]=useState(null);
+  const[butceModal,setButceModal]=useState(null);
+  const selProje=projeler.find(p=>p.id===selProjeId);
+  const butceKalemleri=selProje?.butceKalemleri||[];
+
+  // Gerçekleşen: alış faturalarından proje bazlı toplam
+  const gerceklesen=useMemo(()=>{
+    if(!selProjeId)return[];
+    return faturalar.filter(f=>f.projeId===selProjeId).flatMap(f=>(f.kalemler||[]).map(k=>({...k,faturaNo:f.faturaNo||"",faturaTarihi:f.faturaTarihi||"",firmaAd:f.firmaAd||""})));
+  },[selProjeId,faturalar]);
+
+  // Taahhüt: satınalma siparişlerinden proje bazlı toplam
+  const taahhut=useMemo(()=>{
+    if(!selProjeId)return[];
+    return siparisler.filter(s=>s.projeId===selProjeId).flatMap(s=>(s.kalemler||[]).map(k=>({...k,spNo:s.spNo||"",firmaAd:s.firmaAd||""})));
+  },[selProjeId,siparisler]);
+
+  // Bütçe özet hesaplamaları
+  const ozet=useMemo(()=>{
+    const planlananTop=butceKalemleri.reduce((s,k)=>s+parseFloat(k.planlananToplam||0),0);
+    const gerceklesenTop=gerceklesen.reduce((s,k)=>s+(parseFloat(k.netFiyat||0)*parseFloat(k.miktar||0)),0);
+    const taahhutTop=taahhut.reduce((s,k)=>s+(parseFloat(k.netFiyat||0)*parseFloat(k.miktar||0)),0);
+    const brutM2=selProje?(selProje.bolumler||[]).reduce((s,b)=>s+parseFloat(b.brutM2||0),0):0;
+    const m2Maliyet=brutM2>0?gerceklesenTop/brutM2:0;
+    return{planlananTop,gerceklesenTop,taahhutTop,kalanButce:planlananTop-taahhutTop-gerceklesenTop,brutM2,m2Maliyet};
+  },[butceKalemleri,gerceklesen,taahhut,selProje]);
+
+  // Bütçe kalemi ekle
+  const addButceKalemi=()=>{
+    setButceModal({id:Date.now(),malzemeId:"",malzemeAd:"",malzemeKodu:"",birim:"",planlananMiktar:"",planlananBirimFiyat:"",planlananToplam:0,aciklama:"",_isNew:true});
+  };
+
+  const saveButceKalemi=(kalem)=>{
+    if(!selProje)return;
+    const toplam=parseFloat(kalem.planlananMiktar||0)*parseFloat(kalem.planlananBirimFiyat||0);
+    const kayit={...kalem,planlananToplam:toplam};
+    const mevcutKalemler=selProje.butceKalemleri||[];
+    const exists=mevcutKalemler.find(k=>k.id===kayit.id);
+    const yeniKalemler=exists?mevcutKalemler.map(k=>k.id===kayit.id?kayit:k):[...mevcutKalemler,kayit];
+    // Projeyi güncelle (local state - Supabase'e kayıt ana save ile gider)
+    selProje.butceKalemleri=yeniKalemler;
+    setButceModal(null);
+  };
+
+  const delButceKalemi=(id)=>{
+    if(!selProje||!confirm("Bu bütçe kalemini silmek istiyor musunuz?"))return;
+    selProje.butceKalemleri=(selProje.butceKalemleri||[]).filter(k=>k.id!==id);
+    setButceModal(null);
+  };
+
+  return <div>
+    {/* PROJE SEÇİMİ */}
+    <div style={{display:"flex",gap:"10px",marginBottom:"16px",alignItems:"center"}}>
+      <select style={{...iS,maxWidth:"400px"}} value={selProjeId||""} onChange={e=>setSelProjeId(e.target.value?parseInt(e.target.value):null)}>
+        <option value="">— Proje Seçiniz —</option>
+        {projeler.map(p=><option key={p.id} value={p.id}>{p.projeKodu?`[${p.projeKodu}] `:""}{p.ad}</option>)}
+      </select>
+    </div>
+
+    {!selProje
+      ?<div style={{padding:"80px",textAlign:"center",color:T.t3,fontSize:"16px",border:`1px dashed ${T.border}`,borderRadius:T.r}}>Maliyet takibi için bir proje seçiniz.</div>
+      :<div>
+        {/* BÜTÇE KALEM MODAL */}
+        {butceModal&&<ButceKalemModal kalem={butceModal} onSave={saveButceKalemi} onDel={butceModal._isNew?null:delButceKalemi} onClose={()=>setButceModal(null)} malzemeler={malzemeler}/>}
+
+        {/* ÖZET KARTLAR */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:"12px",marginBottom:"16px"}}>
+          {[
+            {label:"Planlanan Bütçe",value:ozet.planlananTop,color:"#384248"},
+            {label:"Taahhüt (Sipariş)",value:ozet.taahhutTop,color:"#fa8c16"},
+            {label:"Gerçekleşen",value:ozet.gerceklesenTop,color:"#1677ff"},
+            {label:"Kalan Bütçe",value:ozet.kalanButce,color:ozet.kalanButce>=0?"#52c41a":"#ff4d4f"},
+            {label:"m² Maliyet",value:ozet.m2Maliyet,color:"#722ed1",isM2:true},
+          ].map((c,i)=><div key={i} style={{padding:"16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff"}}>
+            <div style={{fontSize:"12px",color:T.t3,marginBottom:"6px",textTransform:"uppercase"}}>{c.label}</div>
+            <div style={{fontSize:"20px",fontWeight:700,color:c.color}}>{c.isM2?(c.value>0?c.value.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺/m²":"—"):c.value?c.value.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺":"—"}</div>
+            {c.label==="m² Maliyet"&&<div style={{fontSize:"11px",color:T.t3,marginTop:"2px"}}>Brüt: {ozet.brutM2.toLocaleString("tr-TR")} m²</div>}
+          </div>)}
+        </div>
+
+        {/* BÜTÇE KALEMLERİ PORTAL */}
+        <div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#384248"}}>
+            <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+              <span style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>Bütçe Kalemleri</span>
+              <span style={{fontSize:"13px",color:"#8799a3"}}>{butceKalemleri.length} kalem</span>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
+              <button onClick={addButceKalemi} title="Kalem Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
+              <button onClick={()=>{
+                const rows=[["Kod","Malzeme/Hizmet","Birim","Pl. Miktar","Pl. B.Fiyat","Pl. Toplam","Açıklama"]];
+                butceKalemleri.forEach(k=>rows.push([k.malzemeKodu||"",k.malzemeAd||"",k.birim||"",k.planlananMiktar||"",k.planlananBirimFiyat||"",k.planlananToplam||"",k.aciklama||""]));
+                const csv=rows.map(r=>r.map(c=>`"${c}"`).join(";")).join("\n");
+                const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+                const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${selProje.ad||"proje"}_butce.csv`;a.click();
+              }} title="Excel'e Aktar" style={{padding:"0",border:"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center"}}><img src="/icons8-excel-48.png" alt="Excel" style={{width:"35px",height:"35px"}}/></button>
+            </div>
+          </div>
+          {butceKalemleri.length===0
+            ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>Henüz bütçe kalemi eklenmemiş.</div>
+            :<>
+              <div style={{display:"grid",gridTemplateColumns:"120px 1fr 80px 100px 100px 120px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"12px"}}>
+                {["Kod","Malzeme/Hizmet","Birim","Miktar","B.Fiyat","Toplam"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>{h}</div>)}
+              </div>
+              {butceKalemleri.map((k,idx)=>
+                <div key={k.id} onClick={()=>setButceModal(k)} style={{display:"grid",gridTemplateColumns:"120px 1fr 80px 100px 100px 120px",padding:"8px 12px",gap:"12px",alignItems:"center",borderBottom:idx<butceKalemleri.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
+                  onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
+                  onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
+                  <div style={{fontSize:"13px",color:T.t3}}>{k.malzemeKodu||"—"}</div>
+                  <div style={{fontSize:"15px",fontWeight:500,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{k.malzemeAd||"—"}</div>
+                  <div style={{fontSize:"15px",color:T.t2}}>{k.birim||"—"}</div>
+                  <div style={{fontSize:"15px",color:T.text}}>{k.planlananMiktar?Number(k.planlananMiktar).toLocaleString("tr-TR"):"—"}</div>
+                  <div style={{fontSize:"15px",color:T.text}}>{k.planlananBirimFiyat?Number(k.planlananBirimFiyat).toLocaleString("tr-TR"):"—"}</div>
+                  <div style={{fontSize:"15px",fontWeight:700,color:T.text}}>{k.planlananToplam?Number(k.planlananToplam).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                </div>
+              )}
+              {/* ALT TOPLAM */}
+              <div style={{display:"grid",gridTemplateColumns:"120px 1fr 80px 100px 100px 120px",padding:"8px 12px",gap:"12px",alignItems:"center",background:"#8799a3"}}>
+                <div></div><div></div><div></div><div></div>
+                <div style={{fontSize:"14px",fontWeight:700,color:"#fff",textAlign:"right"}}>Toplam</div>
+                <div style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{ozet.planlananTop>0?ozet.planlananTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+              </div>
+            </>
+          }
+        </div>
+      </div>
+    }
+  </div>;
+};
+
 const DosyaKategoriYonetim=({dosyaKategorileri,setDosyaKategorileri})=>{
   const kategoriler=dosyaKategorileri&&dosyaKategorileri.length>0?dosyaKategorileri:DOSYA_KATEGORILERI.map(k=>({...k,altKategoriler:[...k.altKategoriler]}));
   const[seciliKat,setSeciliKat]=useState(kategoriler[0]?.id||null);
@@ -4689,7 +4870,7 @@ export default function App(){
         {page==="teklifler"&&<AlinanTekliflerYonetim teklifler={teklifler} setTeklifler={setTeklifler} onSave={saveTeklif} onDel={delTeklif} malzemeler={malzemeler} firmalar={firmalar} projeler={projeler} onSpOlustur={spOlusturTeklifden}/>}
         {page==="satinalma"&&<SatinalmaSiparisleriPage siparisler={siparisler} setSiparisler={setSiparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler}/>}
         {page==="alis_fatura"&&<AlisFaturalariPage faturalar={faturalar} setFaturalar={setFaturalar} siparisler={siparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler}/>}
-        {(page==="maliyet"||page==="surec")&&<div style={{textAlign:"center",padding:"60px",background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`}}><div style={{fontSize:"48px",marginBottom:"12px"}}>🚧</div><h3 style={{color:T.text,fontWeight:600,marginBottom:"4px"}}>Bu modül yakında aktif olacak</h3><p style={{color:T.t2,fontSize:"14px"}}>Yakında geliştireceğiz.</p></div>}
+        {page==="maliyet"&&<MaliyetPage projeler={projeler} malzemeler={malzemeler} faturalar={faturalar} siparisler={siparisler}/>}
       </div>
     </div>
   </div>;
