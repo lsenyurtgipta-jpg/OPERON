@@ -4152,44 +4152,95 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
 /* --- Dosya Kategori Yönetim --- */
 /* --- Bütçe Kalem Modal --- */
 const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler})=>{
-  const[fm,setFm]=useState({...kalem});
+  const[fm,setFm]=useState({...kalem,detaylar:kalem.detaylar||[]});
   const uf=(f,v)=>setFm(p=>({...p,[f]:v}));
-  const toplam=parseFloat(fm.planlananMiktar||0)*parseFloat(fm.planlananBirimFiyat||0);
+
+  // Detay satırları toplamı
+  const detayToplam=useMemo(()=>(fm.detaylar||[]).reduce((s,d)=>s+parseFloat(d.toplam||0),0),[fm.detaylar]);
+  // Ana toplam: detay varsa detay toplamı, yoksa miktar*fiyat
+  const toplam=(fm.detaylar||[]).length>0?detayToplam:parseFloat(fm.planlananMiktar||0)*parseFloat(fm.planlananBirimFiyat||0);
+
+  // Detay satır ekleme
+  const addDetay=()=>uf("detaylar",[...(fm.detaylar||[]),{id:Date.now(),aciklama:"",miktar:"",birimFiyat:"",toplam:0}]);
+  const upDetay=(idx,f,v)=>{
+    const arr=[...(fm.detaylar||[])];
+    arr[idx]={...arr[idx],[f]:v};
+    if(f==="miktar"||f==="birimFiyat"){arr[idx].toplam=parseFloat(arr[idx].miktar||0)*parseFloat(arr[idx].birimFiyat||0);}
+    uf("detaylar",arr);
+  };
+  const delDetay=(idx)=>uf("detaylar",(fm.detaylar||[]).filter((_,i)=>i!==idx));
+
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-    <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"540px",maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+    <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"800px",maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <div style={{padding:"12px 20px",background:"#384248",display:"flex",alignItems:"center",gap:"16px",borderRadius:`${T.rl} ${T.rl} 0 0`}}>
         <button onClick={onClose} title="Kapat" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={28}/></button>
         <div style={{flex:1,textAlign:"center"}}><span style={{fontSize:"16px",fontWeight:600,color:"#8799a3",textTransform:"uppercase"}}>{fm.malzemeAd||"Bütçe Kalemi"}</span></div>
         <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
-          <button onClick={()=>onSave({...fm,planlananToplam:toplam})} title="Kaydet" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><Save size={30}/></button>
+          <button onClick={()=>onSave({...fm,planlananToplam:toplam,planlananMiktar:fm.planlananMiktar||(fm.detaylar||[]).length>0?"1":"",planlananBirimFiyat:fm.planlananBirimFiyat||(fm.detaylar||[]).length>0?String(detayToplam):""})} title="Kaydet" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><Save size={30}/></button>
           {onDel&&<button onClick={()=>{if(!confirm("Bu bütçe kalemini silmek istiyor musunuz?"))return;onDel(fm.id);onClose();}} title="Sil" style={{padding:"0",border:"none",background:"transparent",color:"#ff6b6b",cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={30}/></button>}
         </div>
       </div>
       <div style={{flex:1,overflow:"auto",padding:"20px",display:"flex",flexDirection:"column",gap:"14px"}}>
-        <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
+        {/* MALZEME BİLGİSİ */}
+        <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
           <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Malzeme/Hizmet</label>
           <select style={iS} value={fm.malzemeId||""} onChange={e=>{const m=malzemeler.find(x=>x.id===parseInt(e.target.value));uf("malzemeId",m?m.id:"");uf("malzemeAd",m?m.ad:"");uf("malzemeKodu",m?m.malzemeKodu:"");uf("birim",m?m.birim:"");}}>
             <option value="">— Seçiniz —</option>
             {malzemeler.map(m=><option key={m.id} value={m.id}>{m.malzemeKodu} - {m.ad}</option>)}
           </select>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
+        <div style={{display:"grid",gridTemplateColumns:"140px 1fr 140px 1fr",gap:"12px",alignItems:"center"}}>
+          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Kod</label>
+          <div style={{...iS,background:"#fafafa",cursor:"default",fontSize:"13px"}}>{fm.malzemeKodu||"—"}</div>
           <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Birim</label>
           <div style={{...iS,background:"#fafafa",cursor:"default"}}>{fm.birim||"—"}</div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
-          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Planlanan Miktar</label>
-          <input style={iS} type="number" value={fm.planlananMiktar||""} onChange={e=>uf("planlananMiktar",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
+
+        {/* TOPLAM BÜTÇE - detay yoksa basit giriş */}
+        {(fm.detaylar||[]).length===0&&<>
+          <div style={{display:"grid",gridTemplateColumns:"140px 1fr 140px 1fr",gap:"12px",alignItems:"center"}}>
+            <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Planlanan Miktar</label>
+            <input style={iS} type="number" value={fm.planlananMiktar||""} onChange={e=>uf("planlananMiktar",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
+            <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Birim Fiyat</label>
+            <input style={iS} type="number" value={fm.planlananBirimFiyat||""} onChange={e=>uf("planlananBirimFiyat",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
+          </div>
+        </>}
+
+        {/* DETAY SATIRLARI — alt kalem girişi (demir çapları, SGK kalemleri vb.) */}
+        <div style={{borderTop:`1px solid ${T.border}`,paddingTop:"12px"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}}>
+            <span style={{fontSize:"13px",fontWeight:600,color:T.t2}}>Detay Kalemleri</span>
+            <button onClick={addDetay} title="Detay Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#384248",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={24}/></button>
+          </div>
+          {(fm.detaylar||[]).length>0&&<>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 100px 100px 120px 30px",gap:"8px",padding:"4px 0",marginBottom:"4px"}}>
+              {["Açıklama","Miktar","B.Fiyat","Toplam",""].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t3,textTransform:"uppercase"}}>{h}</div>)}
+            </div>
+            {(fm.detaylar||[]).map((d,idx)=><div key={d.id} style={{display:"grid",gridTemplateColumns:"1fr 100px 100px 120px 30px",gap:"8px",marginBottom:"4px",alignItems:"center"}}>
+              <input style={{...iS,fontSize:"14px"}} value={d.aciklama||""} onChange={e=>upDetay(idx,"aciklama",e.target.value)} placeholder="Örn: Ø8 demir, SGK işçi primi..." onFocus={foc} onBlur={blr}/>
+              <input style={{...iS,fontSize:"14px"}} type="number" value={d.miktar||""} onChange={e=>upDetay(idx,"miktar",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
+              <input style={{...iS,fontSize:"14px"}} type="number" value={d.birimFiyat||""} onChange={e=>upDetay(idx,"birimFiyat",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
+              <div style={{...iS,background:"#fafafa",fontWeight:600,cursor:"default",fontSize:"14px"}}>{d.toplam?Number(d.toplam).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+              <button onClick={()=>delDetay(idx)} style={{padding:"0",border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={18}/></button>
+            </div>)}
+            {/* DETAY TOPLAMI */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 100px 100px 120px 30px",gap:"8px",padding:"6px 0",borderTop:`1px solid ${T.border}`,marginTop:"4px"}}>
+              <div></div><div></div>
+              <div style={{fontSize:"13px",fontWeight:700,color:T.t2,textAlign:"right"}}>Toplam</div>
+              <div style={{fontSize:"15px",fontWeight:700,color:T.text}}>{detayToplam>0?detayToplam.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺":"—"}</div>
+              <div></div>
+            </div>
+          </>}
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
-          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Planlanan B.Fiyat</label>
-          <input style={iS} type="number" value={fm.planlananBirimFiyat||""} onChange={e=>uf("planlananBirimFiyat",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
+
+        {/* PLANLANAN TOPLAM */}
+        <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center",borderTop:`1px solid ${T.border}`,paddingTop:"12px"}}>
+          <label style={{fontSize:"14px",fontWeight:700,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>PLANLANAN TOPLAM</label>
+          <div style={{...iS,background:"#384248",color:"#fff",fontWeight:700,fontSize:"18px",cursor:"default"}}>{toplam>0?toplam.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺":"—"}</div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
-          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Planlanan Toplam</label>
-          <div style={{...iS,background:"#fafafa",fontWeight:700,cursor:"default"}}>{toplam>0?toplam.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺":"—"}</div>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
+
+        {/* AÇIKLAMA */}
+        <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
           <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Açıklama</label>
           <input style={iS} value={fm.aciklama||""} onChange={e=>uf("aciklama",e.target.value)} placeholder="Not..." onFocus={foc} onBlur={blr}/>
         </div>
