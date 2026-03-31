@@ -4202,35 +4202,63 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler})=>{
 const MaliyetPage=({projeler,malzemeler,faturalar=[],siparisler=[]})=>{
   const[selProjeId,setSelProjeId]=useState(null);
   const[butceModal,setButceModal]=useState(null);
+  const[filtre,setFiltre]=useState("hepsi"); // hepsi, butcelenmemis, butcelenmis
   const selProje=projeler.find(p=>p.id===selProjeId);
   const butceKalemleri=selProje?.butceKalemleri||[];
 
-  // Gerçekleşen: alış faturalarından proje bazlı toplam
+  // Proje koduna göre malzeme kartlarını çek
+  const projeMalzemeleri=useMemo(()=>{
+    if(!selProje)return[];
+    const pk=selProje.projeKodu;
+    if(!pk)return[];
+    // Hizmet kartları (4.projeKodu.xxx) + tüm malzemeler (1,2,3 kategorisi)
+    return malzemeler.filter(m=>{
+      if(m.kategori==="4"){
+        // Hizmet: malzemeKodu içinde proje kodu geçiyor mu
+        return m.malzemeKodu.startsWith(`4.${pk}.`);
+      }
+      return false; // Şimdilik sadece hizmet kartları
+    });
+  },[selProje,malzemeler]);
+
+  // Bütçelenmiş/bütçelenmemiş kontrolü
+  const kalemDurumu=(mlzId)=>{
+    const bk=butceKalemleri.find(k=>k.malzemeId===mlzId);
+    return bk?{butcelendi:true,miktar:bk.planlananMiktar,fiyat:bk.planlananBirimFiyat,toplam:bk.planlananToplam,kalem:bk}:{butcelendi:false};
+  };
+
+  // Filtrelenmiş malzeme listesi
+  const filtrelenmis=useMemo(()=>{
+    return projeMalzemeleri.filter(m=>{
+      const d=kalemDurumu(m.id);
+      if(filtre==="butcelenmemis")return !d.butcelendi;
+      if(filtre==="butcelenmis")return d.butcelendi;
+      return true;
+    });
+  },[projeMalzemeleri,filtre,butceKalemleri]);
+
+  // Gerçekleşen
   const gerceklesen=useMemo(()=>{
     if(!selProjeId)return[];
-    return faturalar.filter(f=>f.projeId===selProjeId).flatMap(f=>(f.kalemler||[]).map(k=>({...k,faturaNo:f.faturaNo||"",faturaTarihi:f.faturaTarihi||"",firmaAd:f.firmaAd||""})));
+    return faturalar.filter(f=>f.projeId===selProjeId).flatMap(f=>(f.kalemler||[]).map(k=>({...k,faturaNo:f.faturaNo||"",firmaAd:f.firmaAd||""})));
   },[selProjeId,faturalar]);
 
-  // Taahhüt: satınalma siparişlerinden proje bazlı toplam
+  // Taahhüt
   const taahhut=useMemo(()=>{
     if(!selProjeId)return[];
     return siparisler.filter(s=>s.projeId===selProjeId).flatMap(s=>(s.kalemler||[]).map(k=>({...k,spNo:s.spNo||"",firmaAd:s.firmaAd||""})));
   },[selProjeId,siparisler]);
 
-  // Bütçe özet hesaplamaları
+  // Özet
   const ozet=useMemo(()=>{
     const planlananTop=butceKalemleri.reduce((s,k)=>s+parseFloat(k.planlananToplam||0),0);
     const gerceklesenTop=gerceklesen.reduce((s,k)=>s+(parseFloat(k.netFiyat||0)*parseFloat(k.miktar||0)),0);
     const taahhutTop=taahhut.reduce((s,k)=>s+(parseFloat(k.netFiyat||0)*parseFloat(k.miktar||0)),0);
     const brutM2=selProje?(selProje.bolumler||[]).reduce((s,b)=>s+parseFloat(b.brutM2||0),0):0;
     const m2Maliyet=brutM2>0?gerceklesenTop/brutM2:0;
-    return{planlananTop,gerceklesenTop,taahhutTop,kalanButce:planlananTop-taahhutTop-gerceklesenTop,brutM2,m2Maliyet};
-  },[butceKalemleri,gerceklesen,taahhut,selProje]);
-
-  // Bütçe kalemi ekle
-  const addButceKalemi=()=>{
-    setButceModal({id:Date.now(),malzemeId:"",malzemeAd:"",malzemeKodu:"",birim:"",planlananMiktar:"",planlananBirimFiyat:"",planlananToplam:0,aciklama:"",_isNew:true});
-  };
+    const butcelenmemisSayisi=projeMalzemeleri.filter(m=>!kalemDurumu(m.id).butcelendi).length;
+    return{planlananTop,gerceklesenTop,taahhutTop,kalanButce:planlananTop-taahhutTop-gerceklesenTop,brutM2,m2Maliyet,butcelenmemisSayisi};
+  },[butceKalemleri,gerceklesen,taahhut,selProje,projeMalzemeleri]);
 
   const saveButceKalemi=(kalem)=>{
     if(!selProje)return;
@@ -4238,9 +4266,7 @@ const MaliyetPage=({projeler,malzemeler,faturalar=[],siparisler=[]})=>{
     const kayit={...kalem,planlananToplam:toplam};
     const mevcutKalemler=selProje.butceKalemleri||[];
     const exists=mevcutKalemler.find(k=>k.id===kayit.id);
-    const yeniKalemler=exists?mevcutKalemler.map(k=>k.id===kayit.id?kayit:k):[...mevcutKalemler,kayit];
-    // Projeyi güncelle (local state - Supabase'e kayıt ana save ile gider)
-    selProje.butceKalemleri=yeniKalemler;
+    selProje.butceKalemleri=exists?mevcutKalemler.map(k=>k.id===kayit.id?kayit:k):[...mevcutKalemler,kayit];
     setButceModal(null);
   };
 
@@ -4248,6 +4274,16 @@ const MaliyetPage=({projeler,malzemeler,faturalar=[],siparisler=[]})=>{
     if(!selProje||!confirm("Bu bütçe kalemini silmek istiyor musunuz?"))return;
     selProje.butceKalemleri=(selProje.butceKalemleri||[]).filter(k=>k.id!==id);
     setButceModal(null);
+  };
+
+  // Satıra tıklayınca: bütçelenmemişse yeni kalem oluştur, bütçelenmişse düzenle
+  const satirTikla=(m)=>{
+    const d=kalemDurumu(m.id);
+    if(d.butcelendi){
+      setButceModal(d.kalem);
+    } else {
+      setButceModal({id:Date.now(),malzemeId:m.id,malzemeAd:m.ad,malzemeKodu:m.malzemeKodu,birim:m.birim,planlananMiktar:"",planlananBirimFiyat:"",planlananToplam:0,aciklama:"",_isNew:true});
+    }
   };
 
   return <div>
@@ -4262,7 +4298,6 @@ const MaliyetPage=({projeler,malzemeler,faturalar=[],siparisler=[]})=>{
     {!selProje
       ?<div style={{padding:"80px",textAlign:"center",color:T.t3,fontSize:"16px",border:`1px dashed ${T.border}`,borderRadius:T.r}}>Maliyet takibi için bir proje seçiniz.</div>
       :<div>
-        {/* BÜTÇE KALEM MODAL */}
         {butceModal&&<ButceKalemModal kalem={butceModal} onSave={saveButceKalemi} onDel={butceModal._isNew?null:delButceKalemi} onClose={()=>setButceModal(null)} malzemeler={malzemeler}/>}
 
         {/* ÖZET KARTLAR */}
@@ -4280,47 +4315,56 @@ const MaliyetPage=({projeler,malzemeler,faturalar=[],siparisler=[]})=>{
           </div>)}
         </div>
 
-        {/* BÜTÇE KALEMLERİ PORTAL */}
+        {/* FİLTRE BUTONLARI */}
+        <div style={{display:"flex",gap:"8px",marginBottom:"16px",alignItems:"center"}}>
+          <button onClick={()=>setFiltre("hepsi")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="hepsi"?"#384248":T.bDark}`,background:filtre==="hepsi"?"#384248":"#fff",color:filtre==="hepsi"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Tümü ({projeMalzemeleri.length})</button>
+          <button onClick={()=>setFiltre("butcelenmemis")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="butcelenmemis"?"#ff4d4f":T.bDark}`,background:filtre==="butcelenmemis"?"#ff4d4f":"#fff",color:filtre==="butcelenmemis"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Bütçelenmemiş ({ozet.butcelenmemisSayisi})</button>
+          <button onClick={()=>setFiltre("butcelenmis")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="butcelenmis"?"#52c41a":T.bDark}`,background:filtre==="butcelenmis"?"#52c41a":"#fff",color:filtre==="butcelenmis"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Bütçelenmiş ({projeMalzemeleri.length-ozet.butcelenmemisSayisi})</button>
+        </div>
+
+        {/* MALİYET PORTAL */}
         <div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#384248"}}>
             <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
-              <span style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>Bütçe Kalemleri</span>
-              <span style={{fontSize:"13px",color:"#8799a3"}}>{butceKalemleri.length} kalem</span>
+              <span style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>Maliyet Kalemleri</span>
+              <span style={{fontSize:"13px",color:"#8799a3"}}>{filtrelenmis.length} kalem</span>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
-              <button onClick={addButceKalemi} title="Kalem Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
               <button onClick={()=>{
-                const rows=[["Kod","Malzeme/Hizmet","Birim","Pl. Miktar","Pl. B.Fiyat","Pl. Toplam","Açıklama"]];
-                butceKalemleri.forEach(k=>rows.push([k.malzemeKodu||"",k.malzemeAd||"",k.birim||"",k.planlananMiktar||"",k.planlananBirimFiyat||"",k.planlananToplam||"",k.aciklama||""]));
+                const rows=[["Kod","Malzeme/Hizmet","Birim","Pl. Miktar","Pl. B.Fiyat","Pl. Toplam","Durum"]];
+                filtrelenmis.forEach(m=>{const d=kalemDurumu(m.id);rows.push([m.malzemeKodu||"",m.ad||"",m.birim||"",d.miktar||"",d.fiyat||"",d.toplam||"",d.butcelendi?"Bütçelenmiş":"Bütçelenmemiş"]);});
                 const csv=rows.map(r=>r.map(c=>`"${c}"`).join(";")).join("\n");
                 const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
-                const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${selProje.ad||"proje"}_butce.csv`;a.click();
+                const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${selProje.ad||"proje"}_maliyet.csv`;a.click();
               }} title="Excel'e Aktar" style={{padding:"0",border:"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center"}}><img src="/icons8-excel-48.png" alt="Excel" style={{width:"35px",height:"35px"}}/></button>
             </div>
           </div>
-          {butceKalemleri.length===0
-            ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>Henüz bütçe kalemi eklenmemiş.</div>
+          {filtrelenmis.length===0
+            ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{projeMalzemeleri.length===0?"Bu projeye bağlı malzeme/hizmet kartı bulunamadı.":"Filtreye uygun kalem yok."}</div>
             :<>
-              <div style={{display:"grid",gridTemplateColumns:"120px 1fr 80px 100px 100px 120px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"12px"}}>
-                {["Kod","Malzeme/Hizmet","Birim","Miktar","B.Fiyat","Toplam"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>{h}</div>)}
+              <div style={{display:"grid",gridTemplateColumns:"150px 1fr 80px 100px 100px 120px 100px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"12px"}}>
+                {["Kod","Malzeme/Hizmet","Birim","Pl. Miktar","Pl. B.Fiyat","Pl. Toplam","Durum"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>{h}</div>)}
               </div>
-              {butceKalemleri.map((k,idx)=>
-                <div key={k.id} onClick={()=>setButceModal(k)} style={{display:"grid",gridTemplateColumns:"120px 1fr 80px 100px 100px 120px",padding:"8px 12px",gap:"12px",alignItems:"center",borderBottom:idx<butceKalemleri.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
+              {filtrelenmis.map((m,idx)=>{
+                const d=kalemDurumu(m.id);
+                return <div key={m.id} onClick={()=>satirTikla(m)} style={{display:"grid",gridTemplateColumns:"150px 1fr 80px 100px 100px 120px 100px",padding:"8px 12px",gap:"12px",alignItems:"center",borderBottom:idx<filtrelenmis.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
                   onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
                   onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
-                  <div style={{fontSize:"13px",color:T.t3}}>{k.malzemeKodu||"—"}</div>
-                  <div style={{fontSize:"15px",fontWeight:500,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{k.malzemeAd||"—"}</div>
-                  <div style={{fontSize:"15px",color:T.t2}}>{k.birim||"—"}</div>
-                  <div style={{fontSize:"15px",color:T.text}}>{k.planlananMiktar?Number(k.planlananMiktar).toLocaleString("tr-TR"):"—"}</div>
-                  <div style={{fontSize:"15px",color:T.text}}>{k.planlananBirimFiyat?Number(k.planlananBirimFiyat).toLocaleString("tr-TR"):"—"}</div>
-                  <div style={{fontSize:"15px",fontWeight:700,color:T.text}}>{k.planlananToplam?Number(k.planlananToplam).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                </div>
-              )}
+                  <div style={{fontSize:"13px",color:T.t3}}>{m.malzemeKodu||"—"}</div>
+                  <div style={{fontSize:"15px",fontWeight:500,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.ad}</div>
+                  <div style={{fontSize:"15px",color:T.t2}}>{m.birim||"—"}</div>
+                  <div style={{fontSize:"15px",color:d.butcelendi?T.text:T.t3}}>{d.miktar?Number(d.miktar).toLocaleString("tr-TR"):"—"}</div>
+                  <div style={{fontSize:"15px",color:d.butcelendi?T.text:T.t3}}>{d.fiyat?Number(d.fiyat).toLocaleString("tr-TR"):"—"}</div>
+                  <div style={{fontSize:"15px",fontWeight:700,color:d.butcelendi?T.text:T.t3}}>{d.toplam?Number(d.toplam).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                  <div style={{fontSize:"12px",fontWeight:600,color:d.butcelendi?"#52c41a":"#ff4d4f"}}>{d.butcelendi?"Bütçelenmiş":"Bekliyor"}</div>
+                </div>;
+              })}
               {/* ALT TOPLAM */}
-              <div style={{display:"grid",gridTemplateColumns:"120px 1fr 80px 100px 100px 120px",padding:"8px 12px",gap:"12px",alignItems:"center",background:"#8799a3"}}>
+              <div style={{display:"grid",gridTemplateColumns:"150px 1fr 80px 100px 100px 120px 100px",padding:"8px 12px",gap:"12px",alignItems:"center",background:"#8799a3"}}>
                 <div></div><div></div><div></div><div></div>
                 <div style={{fontSize:"14px",fontWeight:700,color:"#fff",textAlign:"right"}}>Toplam</div>
                 <div style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{ozet.planlananTop>0?ozet.planlananTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                <div></div>
               </div>
             </>
           }
