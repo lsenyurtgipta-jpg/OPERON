@@ -859,8 +859,7 @@ const MalzemeKoduCreator=({malzemeler,altKategoriler,altGruplar,onComplete,onClo
   const[manuelSiraNo,setManuelSiraNo]=useState("");
 
   const isHizmet=selKat==="4";
-  // Toplam adım sayısı: hizmet ise 4, değilse 3
-  const toplamAdim=isHizmet?4:3;
+  const toplamAdim=3; // Tüm kategoriler 3 adım (proje seçimi kaldırıldı)
 
   const katObj=MLZ_KATEGORILER.find(k=>k.id===selKat);
 
@@ -873,33 +872,28 @@ const MalzemeKoduCreator=({malzemeler,altKategoriler,altGruplar,onComplete,onClo
   };
   const nextNum=getNext();
 
-  // Kod önizleme
+  // Kod önizleme — tüm kategoriler aynı format, hizmet sıra no yok
   const kodPreview=isHizmet
-    ?`${selKat||"_"}.${selProje?.projeKodu||"______"}.${altKat||"___"}.${altGrp||"___"}`
+    ?`${selKat||"_"}.${altKat||"___"}.${altGrp||"___"}`
     :`${selKat||"_"}.${altKat||"___"}.${altGrp||"___"}.${(selKat&&altKat&&altGrp)?nextNum:"_____"}`;
 
-  // Adım 1'den sonra: hizmet ise adım 2=proje, değilse adım 2=altKat
+  // Tüm kategoriler aynı akış: 1=kategori, 2=altKat, 3=altGrp
   const ileriGit=()=>{
-    if(step===1){if(!selKat){alert("Kategori seçiniz!");return;}setStep(isHizmet?2:2);}
-    else if(step===2&&isHizmet){if(!selProje){alert("Proje seçiniz!");return;}setSrcPrj("");setStep(3);}
-    else if(step===2&&!isHizmet){if(!altKat||!altKatAd){alert("Listeden bir kategori seçiniz!");return;}setSrcAK("");setStep(3);}
-    else if(step===3&&isHizmet){if(!altKat||!altKatAd){alert("Listeden bir kategori seçiniz!");return;}setSrcAK("");setStep(4);}
+    if(step===1){if(!selKat){alert("Kategori seçiniz!");return;}setStep(2);}
+    else if(step===2){if(!altKat||!altKatAd){alert("Listeden bir kategori seçiniz!");return;}setSrcAK("");setStep(3);}
   };
   const geriGit=()=>{
     if(step===2){setStep(1);}
-    else if(step===3&&isHizmet){setSrcPrj("");setStep(2);}
-    else if(step===3&&!isHizmet){setSrcAG("");setStep(2);}
-    else if(step===4){setSrcAG("");setStep(3);}
+    else if(step===3){setSrcAG("");setStep(2);}
   };
 
   const projeFil=projeler.filter(p=>!srcPrj||(p.ad||"").toLowerCase().includes(srcPrj.toLowerCase())||(p.projeKodu||"").toLowerCase().includes(srcPrj.toLowerCase()));
 
-  // Hangi adımda altKat ve altGrp seçimi yapılıyor
-  const altKatStep=isHizmet?3:2;
-  const altGrpStep=isHizmet?4:3;
+  const altKatStep=2;
+  const altGrpStep=3;
 
   const sonKod=isHizmet
-    ?`${selKat}.${selProje?.projeKodu}.${altKat}.${altGrp}`
+    ?`${selKat}.${altKat}.${altGrp}`
     :`${selKat}.${altKat}.${altGrp}.${nextNum}`;
 
   return <div style={{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.45)"}} onClick={onClose}><div onClick={e=>e.stopPropagation()} style={{width:"560px",background:"#fff",borderRadius:T.rl,boxShadow:T.shM,overflow:"hidden"}}>
@@ -911,14 +905,13 @@ const MalzemeKoduCreator=({malzemeler,altKategoriler,altGruplar,onComplete,onClo
     {/* KOD ÖNİZLEME */}
     <div style={{padding:"14px 24px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",gap:"2px",fontFamily:"'SF Mono','Courier New',monospace",flexWrap:"wrap"}}>
       <span style={{fontSize:"26px",fontWeight:700,color:selKat?katObj?.color:"#d9d9d9"}}>{selKat||"_"}</span>
-      {isHizmet&&<><span style={{fontSize:"26px",color:"#d9d9d9"}}>.</span>
-      <span style={{fontSize:"26px",fontWeight:700,color:selProje?"#13c2c2":"#d9d9d9"}}>{selProje?.projeKodu||"______"}</span></>}
       <span style={{fontSize:"26px",color:"#d9d9d9"}}>.</span>
       <span style={{fontSize:"26px",fontWeight:700,color:altKat?"#722ED1":"#d9d9d9"}}>{altKat||"___"}</span>
       <span style={{fontSize:"26px",color:"#d9d9d9"}}>.</span>
       <span style={{fontSize:"26px",fontWeight:700,color:altGrp?"#fa8c16":"#d9d9d9"}}>{altGrp||"___"}</span>
       {!isHizmet&&<><span style={{fontSize:"26px",color:"#d9d9d9"}}>.</span>
       <span style={{fontSize:"26px",fontWeight:700,color:(selKat&&altKat&&altGrp)?T.primary:"#d9d9d9"}}>{(selKat&&altKat&&altGrp)?nextNum:"_____"}</span></>}
+      {isHizmet&&<span style={{fontSize:"13px",color:T.t3,marginLeft:"12px"}}>(sıra no yok)</span>}
     </div>
 
     <div style={{padding:"24px"}}>
@@ -942,37 +935,6 @@ const MalzemeKoduCreator=({malzemeler,altKategoriler,altGruplar,onComplete,onClo
       </div>}
 
       {/* ADIM 2 (hizmet): PROJE SEÇİMİ */}
-      {step===2&&isHizmet&&<div>
-        <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"4px"}}>Proje Seçin</div>
-        <div style={{fontSize:"12px",color:T.t2,marginBottom:"10px"}}>Alınan hizmet kodu ilgili projeye bağlanacak</div>
-        {projeler.length===0
-          ?<div style={{padding:"24px",textAlign:"center",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffe58f"}}>
-            <div style={{fontSize:"28px",marginBottom:"8px"}}>⚠️</div>
-            <div style={{color:"#d48806",fontSize:"13px",fontWeight:500}}>Henüz proje tanımlanmamış.</div>
-            <div style={{color:T.t3,fontSize:"12px",marginTop:"4px"}}>Önce Projeler bölümünden proje ekleyin.</div>
-          </div>
-          :<div>
-            <div style={{marginBottom:"8px"}}><input style={{width:"100%",padding:"7px 10px",borderRadius:"6px",border:`1px solid ${T.bDark}`,fontSize:"13px",outline:"none",boxSizing:"border-box"}} value={srcPrj} onChange={e=>setSrcPrj(e.target.value)} placeholder="🔍 Proje adı veya kodu ara..." onFocus={foc} onBlur={blr} autoFocus/></div>
-            <div style={{display:"flex",flexDirection:"column",gap:"4px",maxHeight:"240px",overflow:"auto"}}>
-              {projeFil.length===0
-                ?<div style={{padding:"16px",textAlign:"center",color:T.t3,fontSize:"13px"}}>Sonuç bulunamadı</div>
-                :projeFil.map(p=>{const sel=selProje?.id===p.id;return <button key={p.id} onClick={()=>setSelProje(p)} style={{display:"flex",alignItems:"center",gap:"10px",padding:"10px 14px",borderRadius:"6px",border:`1px solid ${sel?"#13c2c2":T.border}`,background:sel?"#e6fffb":"#fff",cursor:"pointer",textAlign:"left",transition:"all .15s"}}>
-                  <span style={{fontFamily:"monospace",fontWeight:700,fontSize:"13px",color:sel?"#13c2c2":T.t2,background:sel?"#13c2c211":"#f5f5f5",padding:"2px 10px",borderRadius:"4px",whiteSpace:"nowrap"}}>{p.projeKodu||"—"}</span>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:"14px",color:sel?"#13c2c2":T.text,fontWeight:sel?600:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.ad}</div>
-                    {(p.il||p.ilce)&&<div style={{fontSize:"11px",color:T.t3}}>📍 {[p.ilce,p.il].filter(Boolean).join(", ")}</div>}
-                  </div>
-                  {sel&&<span style={{color:"#13c2c2",fontSize:"16px"}}>✓</span>}
-                </button>;})}
-            </div>
-          </div>
-        }
-        <div style={{display:"flex",justifyContent:"space-between",marginTop:"20px"}}>
-          <button onClick={geriGit} style={{padding:"8px 20px",borderRadius:"6px",border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontWeight:500,fontSize:"14px",cursor:"pointer"}}>← Geri</button>
-          <button onClick={ileriGit} style={{padding:"8px 24px",borderRadius:"6px",border:"none",background:selProje?T.primary:"#d9d9d9",color:"#fff",fontWeight:500,fontSize:"14px",cursor:selProje?"pointer":"not-allowed"}}>Devam →</button>
-        </div>
-      </div>}
-
       {/* ALT KATEGORİ ADIMI */}
       {step===altKatStep&&<div>
         <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"4px"}}>Kategori Seçin</div>
@@ -1017,7 +979,7 @@ const MalzemeKoduCreator=({malzemeler,altKategoriler,altGruplar,onComplete,onClo
               :<div style={{display:"flex",flexDirection:"column",gap:"4px",maxHeight:"200px",overflow:"auto"}}>
                 {mevcutlar.map(g=>{const sel=altGrp===g.kod&&altGrpAd===g.ad;return <button key={g.id} onClick={()=>{
                   setAltGrp(g.kod);setAltGrpAd(g.ad);
-                  setMlzAd([isHizmet&&selProje?selProje.ad:"",altKatAd,g.ad].filter(Boolean).join(" - "));
+                  setMlzAd([altKatAd,g.ad].filter(Boolean).join(" - "));
                 }} style={{display:"flex",alignItems:"center",gap:"10px",padding:"10px 14px",borderRadius:"6px",border:`1px solid ${sel?"#fa8c16":T.border}`,background:sel?"#fff7e6":"#fff",cursor:"pointer",textAlign:"left",transition:"all .15s"}}>
                   <span style={{fontFamily:"monospace",fontWeight:700,fontSize:"14px",color:sel?"#fa8c16":T.t2,background:sel?"#fa8c1611":"#f5f5f5",padding:"2px 10px",borderRadius:"4px"}}>{g.kod}</span>
                   <span style={{fontSize:"14px",color:sel?"#fa8c16":T.text,fontWeight:sel?600:400}}>{g.ad}</span>
@@ -1035,9 +997,9 @@ const MalzemeKoduCreator=({malzemeler,altKategoriler,altGruplar,onComplete,onClo
         {(altGrp&&altGrpAd)&&<div style={{marginTop:"12px"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"6px"}}>
             <label style={{...lS,marginBottom:0}}>Malzeme Açıklaması <span style={{color:T.err}}>*</span></label>
-            <button onClick={()=>setMlzAd([isHizmet&&selProje?selProje.ad:"",altKatAd,altGrpAd].filter(Boolean).join(" - "))} style={{fontSize:"11px",color:T.primary,background:T.pBg,border:`1px solid ${T.primary}33`,borderRadius:"4px",padding:"2px 8px",cursor:"pointer"}}>✨ Otomatik Öner</button>
+            <button onClick={()=>setMlzAd([altKatAd,altGrpAd].filter(Boolean).join(" - "))} style={{fontSize:"11px",color:T.primary,background:T.pBg,border:`1px solid ${T.primary}33`,borderRadius:"4px",padding:"2px 8px",cursor:"pointer"}}>✨ Otomatik Öner</button>
           </div>
-          <input style={{...iS,fontSize:"14px",fontWeight:500}} value={mlzAd} onChange={e=>setMlzAd(e.target.value)} placeholder={[isHizmet&&selProje?selProje.ad:"",altKatAd,altGrpAd].filter(Boolean).join(" - ")} onFocus={foc} onBlur={blr}/>
+          <input style={{...iS,fontSize:"14px",fontWeight:500}} value={mlzAd} onChange={e=>setMlzAd(e.target.value)} placeholder={[altKatAd,altGrpAd].filter(Boolean).join(" - ")} onFocus={foc} onBlur={blr}/>
           <div style={{fontSize:"11px",color:T.t3,marginTop:"3px"}}>Düzenleyebilirsiniz</div>
         </div>}
         <div style={{display:"flex",justifyContent:"space-between",marginTop:"16px"}}>
@@ -1050,9 +1012,6 @@ const MalzemeKoduCreator=({malzemeler,altKategoriler,altGruplar,onComplete,onClo
               kategori:selKat,
               altKategori:altKat,altKategoriAd:altKatAd,
               altGrup:altGrp,altGrupAd:altGrpAd,
-              projeKodu:isHizmet?selProje?.projeKodu:"",
-              projeAd:isHizmet?selProje?.ad:"",
-              projeId:isHizmet?selProje?.id:null,
               mlzAd:mlzAd.trim()
             });
           }} style={{padding:"8px 24px",borderRadius:"6px",border:"none",background:(altGrp&&altGrpAd&&mlzAd.trim())?T.primary:"#d9d9d9",color:"#fff",fontWeight:500,fontSize:"14px",cursor:(altGrp&&altGrpAd&&mlzAd.trim())?"pointer":"not-allowed"}}>Malzeme Oluştur ✓</button>
@@ -4331,19 +4290,13 @@ const MaliyetPage=({projeler,malzemeler,faturalar=[],siparisler=[]})=>{
   const selProje=projeler.find(p=>p.id===selProjeId);
   const butceKalemleri=selProje?.butceKalemleri||[];
 
-  // Proje koduna göre malzeme kartlarını çek
+  // Tüm malzeme/hizmet kartları seçilebilir
   const projeMalzemeleri=useMemo(()=>{
     if(!selProje)return[];
-    const pk=selProje.projeKodu;
-    if(!pk)return[];
-    // Hizmet kartları (4.projeKodu.xxx) + tüm malzemeler (1,2,3 kategorisi)
-    return malzemeler.filter(m=>{
-      if(m.kategori==="4"){
-        // Hizmet: malzemeKodu içinde proje kodu geçiyor mu
-        return m.malzemeKodu.startsWith(`4.${pk}.`);
-      }
-      return false; // Şimdilik sadece hizmet kartları
-    });
+    // Bütçelenmiş kalemlerin malzeme ID'leri
+    const butcelenmisIds=new Set(butceKalemleri.map(k=>k.malzemeId));
+    // Tüm malzemeler — bütçelenmiş olanlar + tüm katalog
+    return malzemeler;
   },[selProje,malzemeler]);
 
   // Bütçelenmiş/bütçelenmemiş kontrolü
