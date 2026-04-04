@@ -48,6 +48,532 @@ const PARA_BIRIMLERI=[{id:"TL",label:"₺ Türk Lirası (TL)",kod:"1",symbol:"�
 const MLZ_KATEGORILER=[{id:"1",label:"Hammadde",color:"#1677ff",bg:"#e6f4ff",icon:"📦"},{id:"2",label:"Mamül",color:"#52c41a",bg:"#f6ffed",icon:"✅"},{id:"3",label:"Yarı Mamül",color:"#fa8c16",bg:"#fff7e6",icon:"🔄"},{id:"4",label:"Alınan Hizmet",color:"#f5222d",bg:"#fff1f0",icon:"🔧"}];
 const MLZ_BIRIMLER=["kg","ton","gr","m³","m²","m","adet","takım","paket","torba","lt","kova","rulo","levha","sefer","saat","gün","ay","götürü","daire"];
 const KDV_ORANLARI=[{id:"0",label:"%0"},{id:"1",label:"%1"},{id:"10",label:"%10"},{id:"20",label:"%20"}];
+const PROJE_TURLERI_OMURGA=[{id:"konut",label:"Konut",icon:"🏘️",color:"#1677ff",bg:"#e6f4ff"},{id:"ticari",label:"Ticari",icon:"🏢",color:"#fa8c16",bg:"#fff7e6"},{id:"karma",label:"Karma",icon:"🏙️",color:"#722ed1",bg:"#f9f0ff"},{id:"altyapi",label:"Altyapı",icon:"🏗️",color:"#52c41a",bg:"#f6ffed"}];
+
+/* ========== YAPI SINIFLARI BİRİM MALİYET TABLOSU (Çevre ve Şehircilik Bakanlığı) ========== */
+const YAPI_SINIF_MALIYETLERI={
+  2025:[
+    {sinif:"I",grup:"A",label:"I-A: Basit tarım/hayvan yapıları, çardaklar",maliyet:2100},
+    {sinif:"I",grup:"B",label:"I-B: Basit padok, cam sera, depo amaçlı kayadan oyma",maliyet:3050},
+    {sinif:"I",grup:"C",label:"I-C: Su depoları, ahırlar, istinat duvarları",maliyet:3300},
+    {sinif:"I",grup:"D",label:"I-D: GES (Güneş Enerji Santrali)",maliyet:3900},
+    {sinif:"II",grup:"A",label:"II-A: Deniz iskeleleri, genel depolar, tarımsal endüstri",maliyet:6600},
+    {sinif:"II",grup:"B",label:"II-B: Tema park, halı saha, hangar, kapalı pazar",maliyet:10200},
+    {sinif:"II",grup:"C",label:"II-C: Köy/yayla evi, bungalov, hal binası, sanayi (0-500kg)",maliyet:12400},
+    {sinif:"III",grup:"A",label:"III-A: Konut (3 kata kadar), kreş, garaj, otopark",maliyet:17100},
+    {sinif:"III",grup:"B",label:"III-B: Konut (≤21.5m), ilkokul, iş merkezi (≤3kat), apart otel",maliyet:18200},
+    {sinif:"III",grup:"C",label:"III-C: Konut (21.5-30.5m), lise, öğrenci yurdu, huzurevi",maliyet:19150},
+    {sinif:"IV",grup:"A",label:"IV-A: Konut (30.5-51.5m), AVM (<25.000m²), üniversite, otel 1-2*",maliyet:21500},
+    {sinif:"IV",grup:"B",label:"IV-B: Konut (>51.5m), banka, ibadet (500-1500), otel salon",maliyet:27500},
+    {sinif:"IV",grup:"C",label:"IV-C: Hastane (<200 yatak), AVM (≥25.000m²), otel 3*, adalet sarayı",maliyet:32600},
+    {sinif:"V",grup:"A",label:"V-A: Eğitim/araştırma hast., büyükelçilik, stadyum, kampüs",maliyet:34400},
+    {sinif:"V",grup:"B",label:"V-B: Hastane (200-400 yatak), otel 4*, askeri tesisler",maliyet:35600},
+    {sinif:"V",grup:"C",label:"V-C: Hastane (≥400 yatak), opera/tiyatro, müze, kongre merkezi",maliyet:39500},
+    {sinif:"V",grup:"D",label:"V-D: Havalimanı terminali, metro istasyonu, otel 5*, şehir hastanesi",maliyet:43400},
+    {sinif:"V",grup:"E",label:"V-E: RES (Rüzgar Enerji Santrali)",maliyet:86250}
+  ],
+  2026:[
+    {sinif:"I",grup:"A",label:"I-A: Basit tarım/hayvan yapıları, çardaklar",maliyet:2600},
+    {sinif:"I",grup:"B",label:"I-B: Basit padok, cam sera, depo amaçlı kayadan oyma",maliyet:3900},
+    {sinif:"I",grup:"C",label:"I-C: Su depoları, ahırlar, istinat duvarları, şarj istasyonu",maliyet:4200},
+    {sinif:"I",grup:"D",label:"I-D: GES (Güneş Enerji Santrali)",maliyet:4800},
+    {sinif:"II",grup:"A",label:"II-A: Deniz iskeleleri, genel depolar, tarımsal endüstri",maliyet:8100},
+    {sinif:"II",grup:"B",label:"II-B: Tema park, halı saha, hangar, kapalı pazar",maliyet:12500},
+    {sinif:"II",grup:"C",label:"II-C: Köy/yayla evi, bungalov, hal binası, sanayi (0-500kg)",maliyet:15100},
+    {sinif:"III",grup:"A",label:"III-A: Konut (3 kata kadar), kreş, garaj, otopark",maliyet:19800},
+    {sinif:"III",grup:"B",label:"III-B: Konut (≤21.5m), ilkokul, iş merkezi (≤3kat), apart otel",maliyet:21050},
+    {sinif:"III",grup:"C",label:"III-C: Konut (21.5-30.5m), lise, öğrenci yurdu, huzurevi",maliyet:23400},
+    {sinif:"IV",grup:"A",label:"IV-A: Konut (30.5-51.5m), AVM (<25.000m²), üniversite, otel 1-2*",maliyet:26450},
+    {sinif:"IV",grup:"B",label:"IV-B: Konut (>51.5m), banka, ibadet (500-1500), otel salon",maliyet:33900},
+    {sinif:"IV",grup:"C",label:"IV-C: Hastane (<200 yatak), AVM (≥25.000m²), otel 3*, adalet sarayı",maliyet:40500},
+    {sinif:"V",grup:"A",label:"V-A: Eğitim/araştırma hast., büyükelçilik, stadyum, kampüs",maliyet:42350},
+    {sinif:"V",grup:"B",label:"V-B: Hastane (200-400 yatak), otel 4*, askeri tesisler",maliyet:43850},
+    {sinif:"V",grup:"C",label:"V-C: Hastane (≥400 yatak), opera/tiyatro, müze, kongre merkezi",maliyet:48750},
+    {sinif:"V",grup:"D",label:"V-D: Havalimanı terminali, metro istasyonu, otel 5*, şehir hastanesi",maliyet:53500},
+    {sinif:"V",grup:"E",label:"V-E: RES (Rüzgar Enerji Santrali)",maliyet:103500}
+  ]
+};
+
+/* ========== HESAPLAMA ŞABLONLARI (Calculation Engine Templates) ========== */
+const HESAPLAMA_SABLONLARI={
+  sgk_insaat_hesaplama:{
+    ad:"SGK İnşaat İşçilik Hesabı",
+    kategoriler:["4"],
+    aciklama:"İnşaat m² maliyeti üzerinden SGK asgari işçilik ve prim hesabı",
+    icon:"🏛️",
+    parametreler:[
+      {key:"yil",label:"Yıl",tip:"secim",secenekler:[{v:2026,l:"2026"},{v:2025,l:"2025"}],varsayilan:2026},
+      {key:"yapiSinifGrup",label:"Yapı Sınıfı / Grubu",tip:"secim",secenekler:[],varsayilan:"III-B",dinamikSecenekler:true},
+      {key:"insaatAlani",label:"İnşaat Alanı",tip:"sayi",birim:"m²",varsayilan:""},
+      {key:"insaatTuru",label:"İnşaat Türü",tip:"secim",secenekler:[
+        {v:9,l:"Betonarme Karkas (%9)"},
+        {v:7,l:"Tünel Kalıp Sistem (%7)"},
+        {v:7.3,l:"Tünel Kalıp + Çevre Düz. (%7,3)"},
+        {v:8,l:"Prefabrik (%8)"},
+        {v:9.1,l:"Çelik Konstrüksiyon (%9)"},
+        {v:12,l:"Kâgir / Yığma Yapı (%12)"},
+        {v:13,l:"Onarım / Tadilat (%13)"}
+      ],varsayilan:9},
+      {key:"dusumOrani",label:"Düşüm Oranı",tip:"secim",secenekler:[{v:25,l:"%25 (Standart)"},{v:0,l:"%0 (Düşüm Yok)"}],varsayilan:25},
+      {key:"sgkPrimOrani",label:"SGK Prim Oranı",tip:"secim",secenekler:[{v:38.75,l:"%38,75 (2026 Güncel)"},{v:38.5,l:"%38,50 (Eski Oran)"}],varsayilan:38.75}
+    ],
+    hesapla:(p)=>{
+      const yil=Number(p.yil)||2026;
+      const alan=Number(p.insaatAlani)||0;
+      const asgariIscilikOrani=Number(p.insaatTuru)||9;
+      const dusum=Number(p.dusumOrani)||25;
+      const sgkPrim=Number(p.sgkPrimOrani)||38.75;
+
+      // Yapı sınıfından birim maliyet bul
+      const sinifGrup=p.yapiSinifGrup||"III-B";
+      const [sinif,grup]=sinifGrup.split("-");
+      const tablo=YAPI_SINIF_MALIYETLERI[yil]||YAPI_SINIF_MALIYETLERI[2026];
+      const yapiObj=tablo.find(y=>y.sinif===sinif&&y.grup===grup);
+      const birimMaliyet=yapiObj?yapiObj.maliyet:21050;
+
+      const toplamInsaatMaliyeti=alan*birimMaliyet;
+      const uyguIscilikOrani=asgariIscilikOrani*(1-dusum/100);
+      const sgkMatrahi=toplamInsaatMaliyeti*(uyguIscilikOrani/100);
+      const odenecekSGK=sgkMatrahi*(sgkPrim/100);
+
+      return {
+        baslik:`SGK İnşaat İşçilik Hesabı (${yil})`,
+        satirlar:[
+          {label:"İnşaat Alanı",deger:alan,birim:"m²"},
+          {label:`Birim Maliyet (${sinifGrup} — ${yil})`,deger:birimMaliyet,birim:"₺/m²"},
+          {label:"Toplam İnşaat Maliyeti",deger:toplamInsaatMaliyeti,birim:"₺",vurgu:true},
+          {label:`Asgari İşçilik Oranı`,deger:asgariIscilikOrani,birim:"%"},
+          {label:`Düşüm Oranı`,deger:dusum,birim:"%"},
+          {label:`Uygulanan İşçilik Oranı`,deger:Number(uyguIscilikOrani.toFixed(4)),birim:"%",vurgu:true},
+          {label:"SGK Matrahı",deger:Number(sgkMatrahi.toFixed(2)),birim:"₺",vurgu:true},
+          {label:`SGK Prim Oranı`,deger:sgkPrim,birim:"%"},
+          {label:"ÖDENECEK SGK",deger:Number(odenecekSGK.toFixed(2)),birim:"₺",vurgu:true,ana:true}
+        ],
+        toplamMaliyet:odenecekSGK
+      };
+    }
+  },
+  yapi_denetim:{
+    ad:"Yapı Denetim Ücreti",
+    kategoriler:["4"],
+    aciklama:"4708 sayılı Kanun kapsamında yapı denetim hizmet bedeli hesabı",
+    icon:"🏗️",
+    parametreler:[
+      {key:"yil",label:"Yıl",tip:"secim",secenekler:[{v:2026,l:"2026"},{v:2025,l:"2025"}],varsayilan:2026},
+      {key:"insaatAlani",label:"İnşaat Alanı",tip:"sayi",birim:"m²",varsayilan:""},
+      {key:"yapiDenetimGrubu",label:"Yapı Denetim Grubu",tip:"secim",secenekler:[
+        {v:1,l:"1. Grup — I-II. sınıf (basit yapılar, depolar, seralar)"},
+        {v:2,l:"2. Grup — III. sınıf (konutlar, okullar, iş merkezleri)"},
+        {v:3,l:"3. Grup — IV-V. sınıf (hastaneler, AVM, yüksek yapılar)"}
+      ],varsayilan:2},
+      {key:"yapiSuresi",label:"Yapım Süresi",tip:"secim",secenekler:[
+        {v:12,l:"12 ay (1 yıl)"},
+        {v:24,l:"24 ay (2 yıl)"},
+        {v:36,l:"36 ay (3 yıl)"},
+        {v:48,l:"48 ay (4 yıl)"},
+        {v:60,l:"60 ay (5 yıl)"}
+      ],varsayilan:24},
+      {key:"kdvDahil",label:"KDV Dahil Göster",tip:"evet_hayir",varsayilan:true}
+    ],
+    hesapla:(p)=>{
+      const yil=Number(p.yil)||2026;
+      const alan=Number(p.insaatAlani)||0;
+      const grup=Number(p.yapiDenetimGrubu)||2;
+      const sure=Number(p.yapiSuresi)||24;
+      // Yapı denetim birim maliyetleri (3 grup)
+      const birimMaliyetTablo={
+        2025:{1:5000,2:15000,3:25000},
+        2026:{1:6464,2:19392,3:32320}
+      };
+      const birimMaliyet=(birimMaliyetTablo[yil]||birimMaliyetTablo[2026])[grup]||19392;
+      const yakMaliyet=alan*birimMaliyet;
+      // Hizmet bedeli oranları (süreye göre)
+      const oranTablo={12:1.43,24:1.50,36:1.58,48:1.65,60:1.74};
+      const oran=oranTablo[sure]||1.50;
+      const hizmetBedeli=yakMaliyet*(oran/100);
+      const kdv=hizmetBedeli*0.20;
+      const toplamKDVHaric=hizmetBedeli;
+      const toplamKDVDahil=hizmetBedeli+kdv;
+      const toplamMaliyet=p.kdvDahil?toplamKDVDahil:toplamKDVHaric;
+      const grupAdlari={1:"1. Grup (I-II. sınıf)",2:"2. Grup (III. sınıf)",3:"3. Grup (IV-V. sınıf)"};
+      return {
+        baslik:`Yapı Denetim Hizmet Bedeli (${yil})`,
+        satirlar:[
+          {label:"İnşaat Alanı",deger:alan,birim:"m²"},
+          {label:`Yapı Denetim Grubu`,deger:grupAdlari[grup]||"",birim:""},
+          {label:`Birim Maliyet (${yil})`,deger:birimMaliyet,birim:"₺/m²"},
+          {label:"Yapı Yaklaşık Maliyeti",deger:Number(yakMaliyet.toFixed(2)),birim:"₺",vurgu:true},
+          {label:`Yapım Süresi`,deger:sure,birim:"ay"},
+          {label:`Hizmet Bedeli Oranı`,deger:oran,birim:"%"},
+          {label:"Yapı Denetim Bedeli (KDV Hariç)",deger:Number(toplamKDVHaric.toFixed(2)),birim:"₺",vurgu:true},
+          ...(p.kdvDahil?[
+            {label:"KDV (%20)",deger:Number(kdv.toFixed(2)),birim:"₺"},
+            {label:"ÖDENECEK YAPI DENETİM",deger:Number(toplamKDVDahil.toFixed(2)),birim:"₺",vurgu:true,ana:true}
+          ]:[{label:"ÖDENECEK YAPI DENETİM",deger:Number(toplamKDVHaric.toFixed(2)),birim:"₺",vurgu:true,ana:true}])
+        ],
+        toplamMaliyet
+      };
+    }
+  },
+  tugla_hesabi:{
+    ad:"Tuğla / Duvar Hesabı",
+    kategoriler:["1","3"],
+    aciklama:"Duvar m² üzerinden tuğla adedi ve harç miktarı hesabı",
+    icon:"🧱",
+    parametreler:[
+      {key:"duvarAlani",label:"Duvar Alanı",tip:"sayi",birim:"m²",varsayilan:100},
+      {key:"tuglaTipi",label:"Tuğla Tipi",tip:"secim",secenekler:[{v:"13.5",l:"13,5'luk Yatay Delikli"},{v:"8.5",l:"8,5'luk Yatay Delikli"},{v:"gazbeton",l:"Gazbeton Blok (60x25)"},{v:"briket",l:"20'lik Briket"}],varsayilan:"13.5"},
+      {key:"orumSekli",label:"Örüm Şekli",tip:"secim",secenekler:[{v:"dik",l:"Dik (İnce Duvar)"},{v:"yatik",l:"Yatık (Kalın Duvar)"}],varsayilan:"dik"},
+      {key:"firePay",label:"Fire Payı",tip:"secim",secenekler:[{v:3,l:"%3"},{v:5,l:"%5"},{v:7,l:"%7"}],varsayilan:5}
+    ],
+    hesapla:(p)=>{
+      const alan=Number(p.duvarAlani)||0, fire=Number(p.firePay)||5;
+      const adetTablosu={"13.5":{dik:25,yatik:35},"8.5":{dik:25,yatik:25},"gazbeton":{dik:7,yatik:7},"briket":{dik:13,yatik:13}};
+      const harcTablosu={"13.5":0.014,"8.5":0.010,"gazbeton":0.003,"briket":0.012};
+      const tipiObj=adetTablosu[p.tuglaTipi]||adetTablosu["13.5"];
+      const birimAdet=tipiObj[p.orumSekli]||tipiObj.dik;
+      const netAdet=Math.ceil(alan*birimAdet);
+      const fireliAdet=Math.ceil(netAdet*(1+fire/100));
+      const harcM3=alan*(harcTablosu[p.tuglaTipi]||0.014);
+      const cimentoKg=harcM3*250;
+      const kumM3=harcM3;
+      const tuglaTipAd=p.tuglaTipi==="gazbeton"?"Gazbeton":p.tuglaTipi==="briket"?"Briket":`${p.tuglaTipi}'luk Tuğla`;
+      return {
+        baslik:`${tuglaTipAd} — Duvar Hesabı`,
+        satirlar:[
+          {label:"Duvar Alanı",deger:alan,birim:"m²"},
+          {label:`Birim Adet (${p.orumSekli==="dik"?"Dik":"Yatık"})`,deger:birimAdet,birim:"ad/m²"},
+          {label:"Net Tuğla Adedi",deger:netAdet,birim:"adet"},
+          {label:`Fire Dahil (%${fire})`,deger:fireliAdet,birim:"adet",vurgu:true,ana:true},
+          {label:"Harç Miktarı",deger:Number(harcM3.toFixed(3)),birim:"m³"},
+          {label:"Çimento İhtiyacı",deger:Math.ceil(cimentoKg),birim:"kg"},
+          {label:"Kum İhtiyacı",deger:Number(kumM3.toFixed(2)),birim:"m³"}
+        ],
+        toplamMaliyet:fireliAdet
+      };
+    }
+  },
+  beton_hesabi:{
+    ad:"Beton Hesabı",
+    kategoriler:["1","3"],
+    aciklama:"Beton hacmi üzerinden malzeme miktarı hesabı",
+    icon:"🏗️",
+    parametreler:[
+      {key:"hacim",label:"Beton Hacmi",tip:"sayi",birim:"m³",varsayilan:10},
+      {key:"betonSinifi",label:"Beton Sınıfı",tip:"secim",secenekler:[{v:"C20",l:"C20/25 (300 kg/m³)"},{v:"C25",l:"C25/30 (330 kg/m³)"},{v:"C30",l:"C30/37 (350 kg/m³)"}],varsayilan:"C25"},
+      {key:"firePay",label:"Fire Payı",tip:"secim",secenekler:[{v:2,l:"%2"},{v:3,l:"%3"},{v:5,l:"%5"}],varsayilan:2}
+    ],
+    hesapla:(p)=>{
+      const hacim=Number(p.hacim)||0, fire=Number(p.firePay)||2;
+      const dozajlar={C20:300,C25:330,C30:350};
+      const dozaj=dozajlar[p.betonSinifi]||330;
+      const fireliHacim=hacim*(1+fire/100);
+      const cimento=fireliHacim*dozaj;
+      const kum=fireliHacim*651;
+      const cakil=fireliHacim*1206;
+      const su=fireliHacim*154;
+      return {
+        baslik:`${p.betonSinifi} Beton Malzeme Hesabı`,
+        satirlar:[
+          {label:"Net Beton Hacmi",deger:hacim,birim:"m³"},
+          {label:`Fire Dahil (%${fire})`,deger:Number(fireliHacim.toFixed(2)),birim:"m³",vurgu:true},
+          {label:`Çimento (${dozaj} kg/m³)`,deger:Math.ceil(cimento),birim:"kg",ana:true},
+          {label:"Çimento (Torba)",deger:Math.ceil(cimento/50),birim:"torba"},
+          {label:"Kum",deger:Math.ceil(kum),birim:"kg"},
+          {label:"Çakıl",deger:Math.ceil(cakil),birim:"kg"},
+          {label:"Su",deger:Math.ceil(su),birim:"lt"}
+        ],
+        toplamMaliyet:fireliHacim
+      };
+    }
+  },
+  demir_hesabi:{
+    ad:"Donatı / Demir Hesabı",
+    kategoriler:["1","3"],
+    aciklama:"İnşaat alanı veya beton hacmi üzerinden demir miktarı hesabı (İMO kabulleri)",
+    icon:"⚙️",
+    parametreler:[
+      {key:"hesapTipi",label:"Hesap Yöntemi",tip:"secim",secenekler:[{v:"alan",l:"İnşaat Alanı (m²) ile"},{v:"hacim",l:"Beton Hacmi (m³) ile"}],varsayilan:"alan"},
+      {key:"deger",label:"Miktar",tip:"sayi",birim:"",varsayilan:1000},
+      {key:"yapiTipi",label:"Yapı Tipi",tip:"secim",secenekler:[{v:"karkas",l:"Betonarme Karkas (34 kg/m²)"},{v:"yigma",l:"Yığma Yapı (20 kg/m²)"}],varsayilan:"karkas"},
+      {key:"firePay",label:"Fire Payı",tip:"secim",secenekler:[{v:3,l:"%3"},{v:5,l:"%5"}],varsayilan:3}
+    ],
+    hesapla:(p)=>{
+      const deger=Number(p.deger)||0, fire=Number(p.firePay)||3;
+      const kgM2={karkas:34,yigma:20};
+      const betonM2={karkas:0.38,yigma:0.25};
+      let demirKg, betonM3;
+      if(p.hesapTipi==="alan"){
+        demirKg=deger*(kgM2[p.yapiTipi]||34);
+        betonM3=deger*(betonM2[p.yapiTipi]||0.38);
+      }else{
+        demirKg=deger*80;
+        betonM3=deger;
+      }
+      const fireliDemir=demirKg*(1+fire/100);
+      return {
+        baslik:"Donatı (Demir) Hesabı",
+        satirlar:[
+          {label:p.hesapTipi==="alan"?"İnşaat Alanı":"Beton Hacmi",deger:deger,birim:p.hesapTipi==="alan"?"m²":"m³"},
+          {label:"Net Demir Miktarı",deger:Math.ceil(demirKg),birim:"kg"},
+          {label:`Fire Dahil (%${fire})`,deger:Math.ceil(fireliDemir),birim:"kg",vurgu:true,ana:true},
+          {label:"Demir (Ton)",deger:Number((fireliDemir/1000).toFixed(2)),birim:"ton"},
+          ...(p.hesapTipi==="alan"?[{label:"Tahmini Beton İhtiyacı",deger:Number(betonM3.toFixed(1)),birim:"m³"}]:[])
+        ],
+        toplamMaliyet:fireliDemir
+      };
+    }
+  },
+  siva_hesabi:{
+    ad:"Sıva Hesabı",
+    kategoriler:["2"],
+    aciklama:"Duvar alanı üzerinden sıva malzeme miktarı hesabı",
+    icon:"🪣",
+    parametreler:[
+      {key:"alan",label:"Sıva Alanı",tip:"sayi",birim:"m²",varsayilan:200},
+      {key:"sivaTipi",label:"Sıva Tipi",tip:"secim",secenekler:[{v:"kaba",l:"Kaba Sıva (~2 cm)"},{v:"ince",l:"İnce Sıva (~0,8 cm)"},{v:"ikisi",l:"Kaba + İnce (Toplam)"}],varsayilan:"ikisi"},
+      {key:"icDis",label:"İç / Dış Cephe",tip:"secim",secenekler:[{v:"ic",l:"İç Cephe (Kireçli)"},{v:"dis",l:"Dış Cephe (Kireçsiz)"}],varsayilan:"ic"}
+    ],
+    hesapla:(p)=>{
+      const alan=Number(p.alan)||0;
+      const kabaHarcM3=alan/30;
+      const inceHarcM3=alan/37.5;
+      let harcM3, cimentoKg, kumKg, kirecKg=0;
+      if(p.sivaTipi==="kaba"){harcM3=kabaHarcM3;cimentoKg=harcM3*200;kumKg=harcM3*1500;}
+      else if(p.sivaTipi==="ince"){harcM3=inceHarcM3;cimentoKg=harcM3*250;kumKg=harcM3*1500;}
+      else{harcM3=kabaHarcM3+inceHarcM3;cimentoKg=kabaHarcM3*200+inceHarcM3*250;kumKg=harcM3*1500;}
+      if(p.icDis==="ic")kirecKg=harcM3*50;
+      return {
+        baslik:"Sıva Malzeme Hesabı",
+        satirlar:[
+          {label:"Sıva Alanı",deger:alan,birim:"m²"},
+          {label:"Harç Miktarı",deger:Number(harcM3.toFixed(2)),birim:"m³"},
+          {label:"Çimento İhtiyacı",deger:Math.ceil(cimentoKg),birim:"kg",vurgu:true},
+          {label:"Çimento (Torba)",deger:Math.ceil(cimentoKg/50),birim:"torba"},
+          {label:"Kum İhtiyacı",deger:Math.ceil(kumKg),birim:"kg"},
+          ...(kirecKg>0?[{label:"Kireç (İç Cephe)",deger:Math.ceil(kirecKg),birim:"kg"}]:[])
+        ],
+        toplamMaliyet:cimentoKg
+      };
+    }
+  },
+  boya_hesabi:{
+    ad:"Boya Hesabı",
+    kategoriler:["2"],
+    aciklama:"Boyama alanı üzerinden boya miktarı ve ambalaj hesabı",
+    icon:"🎨",
+    parametreler:[
+      {key:"alan",label:"Boyama Alanı",tip:"sayi",birim:"m²",varsayilan:150},
+      {key:"boyaTipi",label:"Boya Tipi",tip:"secim",secenekler:[{v:"ic",l:"İç Cephe (10-12 m²/lt)"},{v:"dis",l:"Dış Cephe (8-10 m²/lt)"}],varsayilan:"ic"},
+      {key:"katSayisi",label:"Kat Sayısı",tip:"secim",secenekler:[{v:1,l:"1 Kat"},{v:2,l:"2 Kat (Standart)"},{v:3,l:"3 Kat"}],varsayilan:2},
+      {key:"astarVar",label:"Astar Uygulaması",tip:"evet_hayir",varsayilan:true}
+    ],
+    hesapla:(p)=>{
+      const alan=Number(p.alan)||0, kat=Number(p.katSayisi)||2;
+      const verimler={ic:11,dis:9};
+      const verim=verimler[p.boyaTipi]||11;
+      const boyaLt=(alan/verim)*kat;
+      const astarLt=p.astarVar?(alan/12):0;
+      const toplamLt=boyaLt+astarLt;
+      const teneke15=Math.ceil(boyaLt/15);
+      const teneke75=Math.ceil(boyaLt/7.5);
+      const teneke25=Math.ceil(boyaLt/2.5);
+      return {
+        baslik:"Boya Miktarı Hesabı",
+        satirlar:[
+          {label:"Boyama Alanı",deger:alan,birim:"m²"},
+          {label:`Verim (${p.boyaTipi==="ic"?"İç":"Dış"} Cephe)`,deger:verim,birim:"m²/lt"},
+          {label:`Boya (${kat} kat)`,deger:Number(boyaLt.toFixed(1)),birim:"lt",vurgu:true,ana:true},
+          ...(p.astarVar?[{label:"Astar",deger:Number(astarLt.toFixed(1)),birim:"lt"}]:[]),
+          {label:"Toplam İhtiyaç",deger:Number(toplamLt.toFixed(1)),birim:"lt",vurgu:true},
+          {label:"15 lt Teneke",deger:teneke15,birim:"adet"},
+          {label:"7,5 lt Teneke",deger:teneke75,birim:"adet"},
+          {label:"2,5 lt Teneke",deger:teneke25,birim:"adet"}
+        ],
+        toplamMaliyet:toplamLt
+      };
+    }
+  }
+};
+
+/* ========== HESAPLAMA SEKMESİ BİLEŞENİ ========== */
+const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,seciliHesaplama,onSablonSec,onSonucAktar,planlananMiktar})=>{
+  // zorSablon: Hesaplamalar sekmesinden direkt açılan şablon (detay görünümü)
+  // seciliHesaplama: Karta bağlı şablon key (form.hesaplamaSablonu)
+  // onSablonSec: Kart modunda şablon seçildiğinde callback
+  const tumSablonlar=Object.entries(HESAPLAMA_SABLONLARI);
+  const aktifSablon=zorSablon||seciliHesaplama||"";
+  const[seciliSablon,setSeciliSablon]=useState(aktifSablon);
+  const[params,setParams]=useState({});
+  const[sonuc,setSonuc]=useState(null);
+  const[kayitlar,setKayitlar]=useState([]);
+  const[kopyalandi,setKopyalandi]=useState(false);
+
+  useEffect(()=>{if(zorSablon)setSeciliSablon(zorSablon);},[zorSablon]);
+
+  useEffect(()=>{
+    if(seciliSablon&&HESAPLAMA_SABLONLARI[seciliSablon]){
+      const s=HESAPLAMA_SABLONLARI[seciliSablon];
+      const yeniP={};
+      s.parametreler.forEach(p=>{yeniP[p.key]=p.varsayilan!==undefined?p.varsayilan:"";});
+      if(planlananMiktar){
+        if(yeniP.insaatAlani!==undefined)yeniP.insaatAlani=planlananMiktar;
+        if(yeniP.duvarAlani!==undefined)yeniP.duvarAlani=planlananMiktar;
+        if(yeniP.hacim!==undefined)yeniP.hacim=planlananMiktar;
+        if(yeniP.deger!==undefined)yeniP.deger=planlananMiktar;
+        if(yeniP.alan!==undefined)yeniP.alan=planlananMiktar;
+      }
+      setParams(yeniP);
+      setSonuc(null);
+    }
+  },[seciliSablon]);
+
+  // Planlanan Miktar değişince sadece ilgili parametreyi güncelle, sonucu koru
+  useEffect(()=>{
+    if(planlananMiktar&&seciliSablon){
+      setParams(p=>{
+        const yeni={...p};
+        if(yeni.insaatAlani!==undefined)yeni.insaatAlani=planlananMiktar;
+        if(yeni.duvarAlani!==undefined)yeni.duvarAlani=planlananMiktar;
+        if(yeni.hacim!==undefined)yeni.hacim=planlananMiktar;
+        if(yeni.deger!==undefined)yeni.deger=planlananMiktar;
+        if(yeni.alan!==undefined)yeni.alan=planlananMiktar;
+        return yeni;
+      });
+    }
+  },[planlananMiktar]);
+
+  const hesapla=()=>{
+    if(!seciliSablon)return;
+    const s=HESAPLAMA_SABLONLARI[seciliSablon];
+    const r=s.hesapla(params);
+    setSonuc(r);
+  };
+
+  const kaydet=()=>{
+    if(!sonuc)return;
+    const yeniKayit={id:Date.now(),tarih:new Date().toISOString(),sablonKey:seciliSablon,sablonAd:HESAPLAMA_SABLONLARI[seciliSablon].ad,parametreler:{...params},sonuc:{...sonuc}};
+    setKayitlar(prev=>[yeniKayit,...prev]);
+  };
+
+  const kopyala=()=>{
+    if(!sonuc)return;
+    const metin=sonuc.satirlar.map(s=>`${s.label}: ${typeof s.deger==="number"?s.deger.toLocaleString("tr-TR"):s.deger} ${s.birim}`).join("\n");
+    navigator.clipboard.writeText(`${sonuc.baslik}\n${"─".repeat(40)}\n${metin}`);
+    setKopyalandi(true);setTimeout(()=>setKopyalandi(false),2000);
+  };
+
+  const fmtN=(v)=>typeof v==="number"?v.toLocaleString("tr-TR",{minimumFractionDigits:0,maximumFractionDigits:2}):v;
+
+  const kartModu=!zorSablon&&onSablonSec; // Kart içinden mi açıldı?
+  const sablon=HESAPLAMA_SABLONLARI[seciliSablon];
+
+  return <div style={{display:"flex",flexDirection:"column",gap:"20px"}}>
+    {/* KART MODUNDA: DROPDOWN İLE ŞABLON SEÇ */}
+    {kartModu&&<div>
+      <div style={{fontSize:"13px",fontWeight:600,color:"#1677ff",marginBottom:"10px"}}>Bu kart için hesaplama şablonu seçin</div>
+      <select value={seciliSablon} onChange={e=>{setSeciliSablon(e.target.value);onSablonSec(e.target.value);}} style={{width:"100%",maxWidth:"500px",padding:"10px 14px",borderRadius:"6px",border:"1px solid #d1d5db",fontSize:"14px",background:"#fff"}}>
+        <option value="">— Şablon Seçiniz —</option>
+        {tumSablonlar.map(([key,s])=><option key={key} value={key}>{s.icon} {s.ad}</option>)}
+      </select>
+      {seciliSablon&&sablon&&<div style={{marginTop:"8px",padding:"12px 16px",background:"#f0f9ff",borderRadius:"6px",border:"1px solid #bfdbfe"}}>
+        <div style={{fontSize:"12px",color:"#1e40af",marginBottom:"8px"}}>{sablon.aciklama}</div>
+        <div style={{fontSize:"11px",color:"#6B7280"}}>Parametreler: {sablon.parametreler.map(p=>p.label).join(", ")}</div>
+        <div style={{fontSize:"11px",color:"#9CA3AF",marginTop:"4px"}}>Hesaplama Maliyet modülünde yapılacaktır.</div>
+      </div>}
+    </div>}
+
+    {/* HESAPLAMALAR SEKMESİNDEN: DİREKT GÖSTERİM (zorSablon) — şablon seçimi yok */}
+    {zorSablon&&sablon&&<div style={{padding:"12px 16px",background:"#f0f9ff",borderRadius:"8px",border:"1px solid #bfdbfe",display:"flex",alignItems:"center",gap:"12px"}}>
+      <span style={{fontSize:"28px"}}>{sablon.icon}</span>
+      <div>
+        <div style={{fontSize:"16px",fontWeight:600,color:"#0958d9"}}>{sablon.ad}</div>
+        <div style={{fontSize:"12px",color:"#6B7280"}}>{sablon.aciklama}</div>
+      </div>
+    </div>}
+
+    {sablon&&!kartModu&&<>
+      {/* PARAMETRELER */}
+      <div style={{padding:"20px",background:"#fafafa",borderRadius:"8px",border:"1px solid #e5e7eb"}}>
+        <div style={{fontSize:"13px",fontWeight:600,color:"#374151",marginBottom:"14px"}}>⚙️ PARAMETRELER</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:"14px"}}>
+          {sablon.parametreler.map(pm=>{
+            const val=params[pm.key]!==undefined?params[pm.key]:"";
+            if(pm.tip==="sayi")return <div key={pm.key}>
+              <label style={{fontSize:"12px",fontWeight:600,color:"#6B7280",display:"block",marginBottom:"4px"}}>{pm.label}</label>
+              <div style={{display:"flex",alignItems:"center",gap:"6px"}}>
+                <input type="number" value={val} onChange={e=>setParams(p=>({...p,[pm.key]:e.target.value}))} style={{flex:1,padding:"8px 12px",borderRadius:"6px",border:"1px solid #d1d5db",fontSize:"14px",background:"#fff"}}/>
+                {pm.birim&&<span style={{fontSize:"13px",color:"#6B7280",whiteSpace:"nowrap"}}>{pm.birim}</span>}
+              </div>
+              {pm.aciklama&&<div style={{fontSize:"11px",color:"#9CA3AF",marginTop:"2px"}}>{pm.aciklama}</div>}
+            </div>;
+            if(pm.tip==="secim"){
+              let secenekler=pm.secenekler;
+              if(pm.dinamikSecenekler&&pm.key==="yapiSinifGrup"){
+                const yil=params.yil||2026;
+                const tablo=YAPI_SINIF_MALIYETLERI[yil]||YAPI_SINIF_MALIYETLERI[2026];
+                secenekler=tablo.map(y=>({v:`${y.sinif}-${y.grup}`,l:`${y.label} — ${y.maliyet.toLocaleString("tr-TR")} ₺/m²`}));
+              }
+              // Yapı sınıfı seçimi sonrası birim maliyet gösterimi
+              const birimMaliyetGoster=pm.dinamikSecenekler&&pm.key==="yapiSinifGrup";
+              let seciliBirimMaliyet=null;
+              if(birimMaliyetGoster){
+                const yil2=params.yil||2026;
+                const sg=val||"III-B";
+                const [ss,gg]=String(sg).split("-");
+                const tb=YAPI_SINIF_MALIYETLERI[yil2]||YAPI_SINIF_MALIYETLERI[2026];
+                const bul=tb.find(y=>y.sinif===ss&&y.grup===gg);
+                if(bul)seciliBirimMaliyet=bul.maliyet;
+              }
+              return <><div key={pm.key}>
+              <label style={{fontSize:"12px",fontWeight:600,color:"#6B7280",display:"block",marginBottom:"4px"}}>{pm.label}</label>
+              <select value={val} onChange={e=>setParams(p=>({...p,[pm.key]:isNaN(e.target.value)?e.target.value:Number(e.target.value)}))} style={{width:"100%",padding:"8px 12px",borderRadius:"6px",border:"1px solid #d1d5db",fontSize:"14px",background:"#fff"}}>
+                {secenekler.map(s=><option key={s.v} value={s.v}>{s.l}</option>)}
+              </select>
+            </div>
+            {birimMaliyetGoster&&seciliBirimMaliyet!==null&&<div key={pm.key+"_bm"}>
+              <label style={{fontSize:"12px",fontWeight:600,color:"#6B7280",display:"block",marginBottom:"4px"}}>Birim Maliyet (TL/m²)</label>
+              <div style={{padding:"10px 14px",borderRadius:"6px",border:"2px solid #1677ff",background:"#e6f4ff",fontSize:"18px",fontWeight:700,color:"#0958d9",textAlign:"center",letterSpacing:"0.5px"}}>
+                {seciliBirimMaliyet.toLocaleString("tr-TR")} ₺/m²
+              </div>
+            </div>}
+            </>;
+            }
+            if(pm.tip==="evet_hayir")return <div key={pm.key} style={{display:"flex",alignItems:"center",gap:"8px",paddingTop:"20px"}}>
+              <input type="checkbox" checked={!!val} onChange={e=>setParams(p=>({...p,[pm.key]:e.target.checked}))} style={{width:"18px",height:"18px",accentColor:"#1677ff"}}/>
+              <label style={{fontSize:"13px",fontWeight:500,color:"#374151"}}>{pm.label}</label>
+            </div>;
+            return null;
+          })}
+          <div key="_hesapla_btn" style={{display:"flex",alignItems:"flex-end",paddingTop:"4px"}}>
+            <button onClick={hesapla} style={{padding:"10px 32px",borderRadius:"8px",border:"none",background:"#1677ff",color:"#fff",fontSize:"15px",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:"8px",transition:"background .15s",height:"38px"}} onMouseEnter={e=>e.currentTarget.style.background="#0958d9"} onMouseLeave={e=>e.currentTarget.style.background="#1677ff"}>
+              <RefreshCw size={16}/> Hesapla
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* SONUÇLAR */}
+      {sonuc&&<div style={{padding:"20px",background:"#f0f9ff",borderRadius:"8px",border:"2px solid #1677ff"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px"}}>
+          <div style={{fontSize:"15px",fontWeight:700,color:"#0958d9"}}>{sonuc.baslik}</div>
+          <div style={{display:"flex",gap:"8px"}}>
+            {onSonucAktar&&<button onClick={()=>onSonucAktar(sonuc.toplamMaliyet)} style={{padding:"6px 14px",borderRadius:"6px",border:"none",background:"#52c41a",color:"#fff",fontSize:"12px",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:"4px"}}>
+              <ArrowDownFromLine size={14}/> Tutarı Aktar
+            </button>}
+          </div>
+        </div>
+        <div style={{background:"#fff",borderRadius:"6px",overflow:"hidden",border:"1px solid #e5e7eb"}}>
+          {sonuc.satirlar.map((s,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"10px 16px",borderBottom:i<sonuc.satirlar.length-1?"1px solid #f3f4f6":"none",background:s.ana?"#eef6ff":s.vurgu?"#fafafa":"#fff"}}>
+            <span style={{fontSize:"13px",color:s.ana?"#0958d9":s.vurgu?"#111827":"#6B7280",fontWeight:s.vurgu||s.ana?600:400}}>{s.label}</span>
+            <span style={{fontSize:"14px",fontWeight:s.vurgu||s.ana?700:500,color:s.renk==="green"?"#16a34a":s.ana?"#0958d9":"#111827"}}>{fmtN(s.deger)} {s.birim}</span>
+          </div>)}
+        </div>
+      </div>}
+
+    </>}
+  </div>;
+};
 const TEKLIF_DEMO=[
   {id:1,teklifNo:"TKL-2026-001",firmaId:2,firmaAd:"Karadeniz Hazır Beton",teklifTarihi:"2026-02-10",gecerlilikTarihi:"2026-03-10",paraBirimi:"TL",aciklama:"Şantiye teslim, nakliye dahil fiyatlar",durum:"aktif",
     kalemler:[
@@ -70,7 +596,7 @@ const MLZ_DEMO=[
   {id:2,malzemeKodu:"1.002.002.00001",ad:"Nervürlü İnşaat Demiri Ø12",kategori:"1",altKategori:"002",altKategoriAd:"Demir/Çelik",altGrup:"002",altGrupAd:"Nervürlü 12mm",birim:"ton",birimFiyat:14500,paraBirimi:"TL",kdvOrani:"20",marka:"Kardemir",model:"B420C",aciklama:"12mm nervürlü inşaat demiri",tedarikciId:5,durum:"aktif",resimler:[],notlar:[],createdAt:"2026-01-12"},
   {id:3,malzemeKodu:"2.003.003.00001",ad:"Çelik Kapı - Daire Giriş",kategori:"2",altKategori:"003",altKategoriAd:"Kapı",altGrup:"003",altGrupAd:"Çelik Kapı",birim:"adet",birimFiyat:8500,paraBirimi:"TL",kdvOrani:"20",marka:"Kale",model:"Mono Plus",aciklama:"90x205 cm, çift kilit",tedarikciId:null,durum:"aktif",resimler:[],notlar:[],createdAt:"2026-01-20"},
   {id:4,malzemeKodu:"3.004.004.00001",ad:"C30 Hazır Beton",kategori:"3",altKategori:"004",altKategoriAd:"Hazır Beton",altGrup:"004",altGrupAd:"C30",birim:"m³",birimFiyat:2850,paraBirimi:"TL",kdvOrani:"20",marka:"Karadeniz Beton",model:"C30/37",aciklama:"C30/37 hazır beton, pompalı",tedarikciId:2,durum:"aktif",resimler:[],notlar:[{id:2,tarih:"2026-02-01",yazar:"Admin",metin:"Yeni dönem fiyatı. Pompa dahil."}],createdAt:"2026-01-08"},
-  {id:5,malzemeKodu:"4.005.005.00001",ad:"Kule Vinç Kiralama",kategori:"4",altKategori:"005",altKategoriAd:"İş Makinesi",altGrup:"005",altGrupAd:"Kule Vinç",birim:"ay",birimFiyat:4500,paraBirimi:"USD",kdvOrani:"20",marka:"","model":"Liebherr 110 EC-B6",aciklama:"Aylık kiralama, operatör hariç",tedarikciId:null,durum:"aktif",resimler:[],notlar:[],createdAt:"2026-02-01"},
+  {id:5,malzemeKodu:"4.005.005.00001",ad:"Kule Vinç Kiralama",kategori:"4",altKategori:"005",altKategoriAd:"İş Makinesi",altGrup:"005",altGrupAd:"Kule Vinç",birim:"ay",birimFiyat:4500,paraBirimi:"USD",kdvOrani:"20",marka:"","model":"Liebherr 110 EC-B6",aciklama:"Aylık kiralama, operatör hariç",tedarikciId:null,durum:"aktif",hesaplamaSablonu:"sgk_insaat_hesaplama",resimler:[],notlar:[],createdAt:"2026-02-01"},
 ];
 
 const DEMO=[
@@ -1028,7 +1554,7 @@ const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKate
     altKategori:initData?.altKategori||"",altKategoriAd:initData?.altKategoriAd||"",
     altGrup:initData?.altGrup||"",altGrupAd:initData?.altGrupAd||"",
     birim:"adet",birimFiyat:0,paraBirimi:"TL",kdvOrani:"20",marka:"",model:"",aciklama:"",
-    tedarikciId:null,durum:"aktif",resimler:[],notlar:[],createdAt:new Date().toISOString().split("T")[0]
+    tedarikciId:null,durum:"aktif",hesaplamaSablonu:"",omurgaProjeTurleri:[],resimler:[],notlar:[],createdAt:new Date().toISOString().split("T")[0]
   });
   const[tab,setTab]=useState("genel");
   const[nn,setNn]=useState("");
@@ -1074,6 +1600,7 @@ const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKate
     {id:"genel",label:"Malzeme Bilgileri"},
     {id:"gorseller",label:`Görseller (${form.resimler.length})`},
     {id:"fiyat",label:"Fiyat & Tedarik"},
+    {id:"hesaplama",label:"Hesaplama"},
     {id:"notlar",label:`Notlar (${form.notlar.length})`}
   ];
 
@@ -1175,6 +1702,21 @@ const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKate
               </div>
             </div>
           </div>
+
+          {/* OMURGA PROJE TÜRLERİ */}
+          <div style={{padding:"16px 20px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`}}>
+            <div style={{fontSize:"13px",fontWeight:600,color:T.primary,marginBottom:"10px"}}>OMURGA PROJE TÜRLERİ</div>
+            <div style={{fontSize:"11px",color:T.t3,marginBottom:"8px"}}>Bu malzeme/hizmet hangi proje türlerinin omurgasında yer alsın?</div>
+            <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
+              {PROJE_TURLERI_OMURGA.map(pt=>{
+                const checked=(form.omurgaProjeTurleri||[]).includes(pt.label);
+                return <label key={pt.id} style={{display:"flex",alignItems:"center",gap:"6px",padding:"6px 12px",borderRadius:"6px",border:`1px solid ${checked?pt.color:T.border}`,background:checked?pt.bg:"#fff",cursor:"pointer",fontSize:"13px",fontWeight:checked?600:400,color:checked?pt.color:T.text}}>
+                  <input type="checkbox" checked={checked} onChange={e=>{const arr=e.target.checked?[...(form.omurgaProjeTurleri||[]),pt.label]:(form.omurgaProjeTurleri||[]).filter(x=>x!==pt.label);u("omurgaProjeTurleri",arr);}} style={{accentColor:pt.color}}/>
+                  {pt.icon} {pt.label}
+                </label>;
+              })}
+            </div>
+          </div>
         </div>}
 
         {/* GÖRSELLER */}
@@ -1269,6 +1811,9 @@ const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKate
             </div>}
           </div>;
         })()}
+
+        {/* HESAPLAMA */}
+        {tab==="hesaplama"&&<HesaplamaSekmesi kategori={form.kategori} malzemeId={form.id} malzemeAd={form.ad} malzemeKodu={form.malzemeKodu} seciliHesaplama={form.hesaplamaSablonu} onSablonSec={(key)=>setForm(p=>({...p,hesaplamaSablonu:key}))}/>}
 
         {/* NOTLAR */}
         {tab==="notlar"&&<div>
@@ -2639,6 +3184,7 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
   const[view,setView]=useState("list");
   const[activeMlz,setActiveMlz]=useState(null);
   const[initData,setInitData]=useState(null);
+  const[hesapDetay,setHesapDetay]=useState(null);
 
   const filtered=malzemeler.filter(m=>{
     const q=search.toLowerCase();
@@ -2662,6 +3208,7 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
 
   const mainTabs=[
     {id:"liste",label:"Malzeme Listesi",icon:"🧱",count:malzemeler.length},
+    {id:"hesaplamalar",label:"Hesaplamalar",count:Object.keys(HESAPLAMA_SABLONLARI).length},
     {id:"altkat",label:"Kategoriler",count:altKategoriler.length},
   ];
 
@@ -2731,6 +3278,34 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
     </>}
 
     {/* ALINAN TEKLİFLER */}
+
+    {/* HESAPLAMALAR */}
+    {mainTab==="hesaplamalar"&&<div style={{padding:"20px",background:"#fff",borderRadius:"0 0 8px 8px",border:`1px solid ${T.border}`,borderTop:"none",minHeight:"400px"}}>
+      {!hesapDetay?<>
+        <div style={{fontSize:"13px",fontWeight:600,color:T.primary,marginBottom:"16px"}}>HESAPLAMA ŞABLONLARI</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:"12px"}}>
+          {Object.entries(HESAPLAMA_SABLONLARI).map(([key,s])=><div key={key} onClick={()=>setHesapDetay(key)} style={{padding:"16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fafafa",cursor:"pointer",transition:"all .15s"}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor=T.primary;e.currentTarget.style.background="#e6f4ff";}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.background="#fafafa";}}>
+            <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"8px"}}>
+              <span style={{fontSize:"24px"}}>{s.icon}</span>
+              <div style={{fontSize:"15px",fontWeight:600,color:T.text}}>{s.ad}</div>
+            </div>
+            <div style={{fontSize:"12px",color:T.t2,lineHeight:"1.5",marginBottom:"8px"}}>{s.aciklama}</div>
+            <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+              <span style={{fontSize:"11px",padding:"2px 8px",borderRadius:"4px",background:"#e6f4ff",color:T.primary,fontWeight:500}}>{s.parametreler.length} parametre</span>
+              {s.kategoriler.map(k=>{const ko=MLZ_KATEGORILER.find(c=>c.id===k);return ko?<span key={k} style={{fontSize:"11px",padding:"2px 8px",borderRadius:"4px",background:ko.bg,color:ko.color,fontWeight:500}}>{ko.label}</span>:null;})}
+            </div>
+          </div>)}
+        </div>
+      </>:<>
+        {/* ŞABLON DETAY */}
+        <div style={{marginBottom:"16px"}}>
+          <button onClick={()=>setHesapDetay(null)} style={{padding:"6px 16px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#fff",cursor:"pointer",fontSize:"13px",display:"flex",alignItems:"center",gap:"6px"}}><MoveLeft size={16}/> Geri</button>
+        </div>
+        <HesaplamaSekmesi kategori="*" malzemeId={null} malzemeAd="" malzemeKodu="" zorSablon={hesapDetay}/>
+      </>}
+    </div>}
 
     {/* ALT KATEGORİLER */}
     {mainTab==="altkat"&&<AltKategoriYonetim altKategoriler={altKategoriler} setAltKategoriler={setAltKategoriler} onSave={onSaveKat} onDel={onDelKat} altGruplar={altGruplar} setAltGruplar={setAltGruplar} onSaveAltGrp={onSaveAltGrp} onDelAltGrp={onDelAltGrp}/>}
@@ -2898,6 +3473,8 @@ const malzemeToLocal = (m) => ({
   birimFiyat: parseFloat(m.birim_fiyat)||0, paraBirimi: m.para_birimi||"TL",
   kdvOrani: m.kdv_orani||"20", marka: m.marka||"", model: m.model||"",
   aciklama: m.aciklama||"", tedarikciId: m.tedarikci_id||null, durum: m.durum||"aktif",
+  hesaplamaSablonu: m.hesaplama_sablonu||"",
+  omurgaProjeTurleri: m.omurga_proje_turleri||[],
   resimler: [], notlar: [],
   createdAt: m.created_at ? m.created_at.split("T")[0] : new Date().toISOString().split("T")[0]
 });
@@ -2907,7 +3484,9 @@ const malzemeToDb = (m) => ({
   alt_grup: m.altGrup, alt_grup_ad: m.altGrupAd, birim: m.birim,
   birim_fiyat: m.birimFiyat, para_birimi: m.paraBirimi, kdv_orani: m.kdvOrani,
   marka: m.marka, model: m.model, aciklama: m.aciklama,
-  tedarikci_id: m.tedarikciId||null, durum: m.durum
+  tedarikci_id: m.tedarikciId||null, durum: m.durum,
+  hesaplama_sablonu: m.hesaplamaSablonu||null,
+  omurga_proje_turleri: m.omurgaProjeTurleri||[]
 });
 const katToLocal = (k) => ({ id: k.id, kod: k.kod, ad: k.ad });
 const altGrpToLocal = (g) => ({
@@ -2921,7 +3500,7 @@ const projeToLocal = (p) => ({
   il: p.il||"", ilce: p.ilce||"", mahalle: p.mahalle||"", adres: p.adres||"",
   ada: p.ada||"", parsel: p.parsel||"",
   baslangicTarihi: p.baslangic_tarihi||"", tahminiTeslim: p.tahmini_teslim||"", fiiliTeslim: p.fiili_teslim||"",
-  toplamM2: p.toplam_m2||"", katSayisi: p.kat_sayisi||"", toplamBolum: p.toplam_bolum||"",
+  toplamM2: p.toplam_m2||"", ortakAlanM2: p.ortak_alan_m2||"", katSayisi: p.kat_sayisi||"", toplamBolum: p.toplam_bolum||"",
   aciklama: p.aciklama||"",
   bloklar: p.bloklar||[], bolumler: p.bolumler||[],
   firmaBaglantilari: p.firma_baglantilari||[],
@@ -2930,6 +3509,7 @@ const projeToLocal = (p) => ({
   projeNotlari: p.proje_notlari||[],
   durumTarihce: p.durum_tarihce||[],
   blokSeviyeler: p.blok_seviyeler||[],
+  butceKalemleri: p.butce_kalemleri||[],
   dosyaTurleri: p.dosya_turleri&&p.dosya_turleri.length>0?p.dosya_turleri:[...DOSYA_TURLERI],
   projeTurleri: p.proje_turleri&&p.proje_turleri.length>0?p.proje_turleri:PROJE_TURLERI.map(t=>t.label),
   projedurumlari: p.proje_durumlari&&p.proje_durumlari.length>0?p.proje_durumlari:PROJE_DURUMLARI.map(d=>d.label),
@@ -2941,7 +3521,7 @@ const projeToDb = (p) => ({
   il: p.il||"", ilce: p.ilce||"", mahalle: p.mahalle||"", adres: p.adres||"",
   ada: p.ada||"", parsel: p.parsel||"",
   baslangic_tarihi: p.baslangicTarihi||"", tahmini_teslim: p.tahminiTeslim||"", fiili_teslim: p.fiiliTeslim||"",
-  toplam_m2: p.toplamM2||"", kat_sayisi: p.katSayisi||"", toplam_bolum: p.toplamBolum||"",
+  toplam_m2: p.toplamM2||"", ortak_alan_m2: p.ortakAlanM2||"", kat_sayisi: p.katSayisi||"", toplam_bolum: p.toplamBolum||"",
   aciklama: p.aciklama||"",
   bloklar: p.bloklar||[], bolumler: p.bolumler||[],
   firma_baglantilari: p.firmaBaglantilari||[],
@@ -2950,6 +3530,7 @@ const projeToDb = (p) => ({
   proje_notlari: p.projeNotlari||[],
   durum_tarihce: p.durumTarihce||[],
   blok_seviyeler: p.blokSeviyeler||[],
+  butce_kalemleri: p.butceKalemleri||[],
   dosya_turleri: p.dosyaTurleri||[],
   proje_turleri: p.projeTurleri||[],
   proje_durumlari: p.projedurumlari||[]
@@ -3594,7 +4175,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
     id:null,projeKodu:"",ad:"",kisaAd:"",tur:"",durum:"",
     il:"",ilce:"",mahalle:"",adres:"",ada:"",parsel:"",
     baslangicTarihi:"",tahminiTeslim:"",fiiliTeslim:"",
-    toplamM2:"",katSayisi:"",toplamBolum:"",
+    toplamM2:"",ortakAlanM2:"",katSayisi:"",toplamBolum:"",
     aciklama:"",
     firmaBaglantilari:[],
     bloklar:[],
@@ -3857,6 +4438,10 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
             <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
               <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Net Toplam m²</label>
               <div style={{...iS,background:"#fff",color:T.text,fontWeight:700,cursor:"default",userSelect:"none"}}>{(form.bolumler||[]).length>0?(form.bolumler||[]).reduce((s,b)=>s+parseFloat(b.netM2||0),0).toLocaleString("tr-TR")+" m²":"—"}</div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
+              <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Ortak Alan m²</label>
+              <input style={{...iS,fontWeight:700}} value={form._ortakEdit?form.ortakAlanM2||"":(form.ortakAlanM2?form.ortakAlanM2+" m²":"")} onChange={e=>{const v=e.target.value.replace(/[^0-9.,]/g,"").replace(",",".");u("ortakAlanM2",v);}} placeholder="0" onFocus={e=>{u("_ortakEdit",true);}} onBlur={e=>{u("_ortakEdit",false);}}/>
             </div>
           </div>
         </div>
@@ -4183,16 +4768,42 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
 
 /* --- Dosya Kategori Yönetim --- */
 /* --- Bütçe Kalem Modal --- */
-const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler})=>{
-  const[fm,setFm]=useState({
-    ...kalem,
-    detaylar:kalem.detaylar||[],
-    ilkPlanlananFiyat:kalem.ilkPlanlananFiyat||kalem.planlananBirimFiyat||"",
-    piyasaFiyat:kalem.piyasaFiyat||"",
-    firmaFiyat:kalem.firmaFiyat||"",
-    revizyonlar:kalem.revizyonlar||[],
+const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],projeBolumler=[],ortakAlanM2=""})=>{
+  const kalemInit=(k)=>({
+    ...k,
+    bloklar:k.bloklar||[],
+    detaylar:k.detaylar||[],
+    ilkPlanlananFiyat:k.ilkPlanlananFiyat||k.planlananBirimFiyat||"",
+    piyasaFiyat:k.piyasaFiyat||"",
+    firmaFiyat:k.firmaFiyat||"",
+    revizyonlar:k.revizyonlar||[],
   });
+  const[fm,setFm]=useState(kalemInit(kalem));
+  useEffect(()=>{setFm(kalemInit(kalem));},[kalem.id]);
   const uf=(f,v)=>setFm(p=>({...p,[f]:v}));
+  const[saved,setSaved]=useState(false);
+  const[hatalar,setHatalar]=useState({});
+
+  const kaydetValidasyon=()=>{
+    const h={};
+    // 1. Blok seçimi zorunlu
+    if(projeBloklar.length>0&&(!fm.bloklar||fm.bloklar.length===0))h.bloklar="Blok seçimi zorunludur";
+    if(_hesaplamaVar){
+      // 2-4. Hesaplamalı kartlar
+      if(!fm.planlananToplam||parseFloat(fm.planlananToplam)<=0)h.hesaplama="Hesaplama yapılmalı ve tutarı aktarılmalıdır";
+    }else{
+      // 6-7. Normal kartlar
+      if(!fm.planlananMiktar||parseFloat(fm.planlananMiktar)<=0)h.miktar="Planlanan miktar zorunludur";
+      if(!fm.planlananBirimFiyat||parseFloat(fm.planlananBirimFiyat)<=0)h.birimFiyat="Birim fiyat zorunludur";
+    }
+    // 5. Piyasa / Firma / Planlanan fiyat boş olamaz
+    if(!fm.piyasaFiyat||parseFloat(fm.piyasaFiyat)<=0)h.piyasa="Piyasa fiyatı zorunludur";
+    if(!fm.firmaFiyat||parseFloat(fm.firmaFiyat)<=0)h.firma="Firma fiyatı zorunludur";
+    if(!fm.planlananBirimFiyat||parseFloat(fm.planlananBirimFiyat)<=0)h.planlanan="Planlanan fiyat zorunludur";
+    setHatalar(h);
+    if(Object.keys(h).length>0)return false;
+    return true;
+  };
 
   // Fiyat değişikliğinde revizyon ekle
   const fiyatDegistir=(yeniFiyat)=>{
@@ -4206,9 +4817,13 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler})=>{
     if(!fm.ilkPlanlananFiyat||parseFloat(fm.ilkPlanlananFiyat)===0){uf("ilkPlanlananFiyat",yeniFiyat);}
   };
 
+  // Hesaplamalı kart mı?
+  const _mlzRef=malzemeler?.find(m=>m.id===fm.malzemeId);
+  const _hesaplamaVar=_mlzRef?.hesaplamaSablonu&&HESAPLAMA_SABLONLARI[_mlzRef.hesaplamaSablonu];
+
   // Detay satırları toplamı
   const detayToplam=useMemo(()=>(fm.detaylar||[]).reduce((s,d)=>s+parseFloat(d.toplam||0),0),[fm.detaylar]);
-  const toplam=(fm.detaylar||[]).length>0?detayToplam:parseFloat(fm.planlananMiktar||0)*parseFloat(fm.planlananBirimFiyat||0);
+  const toplam=_hesaplamaVar?parseFloat(fm.planlananToplam||0):(fm.detaylar||[]).length>0?detayToplam:parseFloat(fm.planlananMiktar||0)*parseFloat(fm.planlananBirimFiyat||0);
 
   // Sapma hesaplamaları
   const ilkFiyat=parseFloat(fm.ilkPlanlananFiyat||0);
@@ -4230,37 +4845,56 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler})=>{
   const delDetay=(idx)=>uf("detaylar",(fm.detaylar||[]).filter((_,i)=>i!==idx));
 
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-    <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"800px",maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+    <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"800px",maxHeight:"95vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <div style={{padding:"12px 20px",background:"#384248",display:"flex",alignItems:"center",gap:"16px",borderRadius:`${T.rl} ${T.rl} 0 0`}}>
         <button onClick={onClose} title="Kapat" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={28}/></button>
-        <div style={{flex:1,textAlign:"center"}}><span style={{fontSize:"16px",fontWeight:600,color:"#8799a3",textTransform:"uppercase"}}>{fm.malzemeAd||"Bütçe Kalemi"}</span></div>
+        <div style={{flex:1,textAlign:"center"}}><span style={{fontSize:"16px",fontWeight:600,color:"#8799a3",textTransform:"uppercase"}}>{fm.malzemeKodu?fm.malzemeKodu+" - ":""}{fm.malzemeAd||"Bütçe Kalemi"}</span></div>
         <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
-          <button onClick={()=>onSave({...fm,planlananToplam:toplam,planlananMiktar:fm.planlananMiktar||(fm.detaylar||[]).length>0?"1":"",planlananBirimFiyat:fm.planlananBirimFiyat||(fm.detaylar||[]).length>0?String(detayToplam):""})} title="Kaydet" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><Save size={30}/></button>
+          <button onClick={()=>{if(!kaydetValidasyon())return;onSave({...fm,planlananToplam:toplam});setSaved(true);setTimeout(()=>setSaved(false),2000);setHatalar({});}} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={30}/></button>
           {onDel&&<button onClick={()=>{if(!confirm("Bu bütçe kalemini silmek istiyor musunuz?"))return;onDel(fm.id);onClose();}} title="Sil" style={{padding:"0",border:"none",background:"transparent",color:"#ff6b6b",cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={30}/></button>}
         </div>
       </div>
       <div style={{flex:1,overflow:"auto",padding:"20px",display:"flex",flexDirection:"column",gap:"14px"}}>
-        {/* MALZEME BİLGİSİ */}
-        <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
-          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Malzeme/Hizmet</label>
-          <select style={iS} value={fm.malzemeId||""} onChange={e=>{const m=malzemeler.find(x=>x.id===parseInt(e.target.value));uf("malzemeId",m?m.id:"");uf("malzemeAd",m?m.ad:"");uf("malzemeKodu",m?m.malzemeKodu:"");uf("birim",m?m.birim:"");}}>
-            <option value="">— Seçiniz —</option>
-            {malzemeler.map(m=><option key={m.id} value={m.id}>{m.malzemeKodu} - {m.ad}</option>)}
-          </select>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"140px 1fr 140px 1fr",gap:"12px",alignItems:"center"}}>
-          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Kod</label>
-          <div style={{...iS,background:"#fafafa",cursor:"default",fontSize:"13px"}}>{fm.malzemeKodu||"—"}</div>
-          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Birim</label>
-          <div style={{...iS,background:"#fafafa",cursor:"default"}}>{fm.birim||"—"}</div>
-        </div>
+        {/* BLOK SEÇİMİ */}
+        {projeBloklar.length>0&&<div style={{display:"flex",alignItems:"center",gap:"16px",flexWrap:"wrap"}}>
+          <label style={{fontSize:"13px",fontWeight:600,color:T.text}}>Blok:</label>
+          {projeBloklar.map(bl=>{
+            const blokM2=(projeBolumler||[]).filter(b=>b.blok===bl.ad).reduce((s,b)=>s+parseFloat(b.brutM2||0),0);
+            const checked=(fm.bloklar||[]).includes(bl.ad);
+            return <label key={bl.id} style={{display:"flex",alignItems:"center",gap:"6px",padding:"6px 12px",borderRadius:"6px",border:`1px solid ${checked?T.primary:T.border}`,background:checked?"#e6f4ff":"#fff",cursor:"pointer",fontSize:"13px",fontWeight:checked?600:400,color:checked?T.primary:T.text}}>
+              <input type="checkbox" checked={checked} onChange={e=>{const arr=e.target.checked?[...(fm.bloklar||[]),bl.ad]:(fm.bloklar||[]).filter(x=>x!==bl.ad);uf("bloklar",arr);}} style={{accentColor:T.primary}}/>
+              {bl.ad} Blok
+            </label>;
+          })}
+          {(fm.bloklar||[]).length>1&&<span style={{fontSize:"11px",color:"#fa8c16",fontWeight:500}}>Ortak gider — m² oranına göre dağıtılır</span>}
+          {hatalar.bloklar&&<span style={{fontSize:"11px",color:T.err,fontWeight:600}}>{hatalar.bloklar}</span>}
+        </div>}
 
-        {/* MİKTAR + 3 FİYAT SİSTEMİ */}
+        {/* HESAPLAMA ENTEGRASYONU */}
+        {_hesaplamaVar&&(()=>{
+          const sablonKey=_mlzRef.hesaplamaSablonu;
+          return <div style={{border:`2px solid ${T.primary}`,borderRadius:T.r,overflow:"hidden"}}>
+            <div style={{padding:"8px 14px",background:"#e6f4ff",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+                <span style={{fontSize:"16px"}}>{HESAPLAMA_SABLONLARI[sablonKey].icon}</span>
+                <span style={{fontSize:"13px",fontWeight:600,color:T.primary}}>{HESAPLAMA_SABLONLARI[sablonKey].ad}</span>
+              </div>
+              <span style={{fontSize:"11px",color:hatalar.hesaplama?T.err:T.t2}}>{hatalar.hesaplama||"Hesaplama sonucu tutara aktarılır"}</span>
+            </div>
+            <div style={{padding:"16px"}}>
+              <HesaplamaSekmesi kategori={_mlzRef.kategori} malzemeId={_mlzRef.id} malzemeAd={_mlzRef.ad} malzemeKodu={_mlzRef.malzemeKodu} zorSablon={sablonKey} onSonucAktar={(tutar)=>{const t=Math.round(tutar*100)/100;uf("planlananBirimFiyat",String(t));uf("planlananToplam",t);setHatalar(p=>({...p,hesaplama:undefined,planlanan:undefined}));}}/>
+            </div>
+          </div>;
+        })()}
+
+        {/* MİKTAR + BİRİM + 3 FİYAT SİSTEMİ */}
         {(fm.detaylar||[]).length===0&&<>
-          <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
-            <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Planlanan Miktar</label>
-            <input style={iS} type="number" value={fm.planlananMiktar||""} onChange={e=>uf("planlananMiktar",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
-          </div>
+          {!_hesaplamaVar&&<div style={{display:"grid",gridTemplateColumns:"140px 200px 80px 1fr",gap:"12px",alignItems:"center"}}>
+            <label style={{fontSize:"15px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Planlanan Miktar</label>
+            <input style={{...iS,borderColor:hatalar.miktar?T.err:undefined}} value={fm._miktarEditing?fm.planlananMiktar||"":(fm.planlananMiktar?Number(fm.planlananMiktar).toLocaleString("tr-TR"):"")} onChange={e=>{const v=e.target.value.replace(/\./g,"").replace(",",".");uf("planlananMiktar",v);setHatalar(p=>({...p,miktar:undefined}));}} placeholder="0" onFocus={e=>{uf("_miktarEditing",true);foc(e);}} onBlur={e=>{uf("_miktarEditing",false);blr(e);}}/>
+            <div style={{...iS,background:"#fafafa",cursor:"default",textAlign:"center",fontWeight:600}}>{fm.birim||"—"}</div>
+            <div></div>
+          </div>}
           {/* 3 FİYAT KOLONU */}
           <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden",marginTop:"4px"}}>
             <div style={{display:"grid",gridTemplateColumns:"140px 1fr 1fr 1fr",gap:"0",background:"#384248",padding:"8px 12px"}}>
@@ -4270,34 +4904,38 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler})=>{
               <div style={{fontSize:"12px",fontWeight:600,color:"#8799a3",textAlign:"center"}}>Planlanan Fiyat</div>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"140px 1fr 1fr 1fr",gap:"8px",padding:"8px 12px",alignItems:"center"}}>
-              <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right"}}>Birim Fiyat</label>
-              <input style={{...iS,textAlign:"center"}} type="number" value={fm.piyasaFiyat||""} onChange={e=>uf("piyasaFiyat",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
-              <input style={{...iS,textAlign:"center"}} type="number" value={fm.firmaFiyat||""} onChange={e=>uf("firmaFiyat",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
-              <input style={{...iS,textAlign:"center",fontWeight:700}} type="number" value={fm.planlananBirimFiyat||""} onChange={e=>fiyatDegistir(e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
+              <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right"}}>{_hesaplamaVar?"Tutar":"Birim Fiyat"}</label>
+              <input style={{...iS,textAlign:"center",borderColor:hatalar.piyasa?T.err:undefined}} value={fm._piyasaEdit?fm.piyasaFiyat||"":(fm.piyasaFiyat?Number(fm.piyasaFiyat).toLocaleString("tr-TR",{minimumFractionDigits:2}):"")} onChange={e=>{const v=e.target.value.replace(/\./g,"").replace(",",".");uf("piyasaFiyat",v);setHatalar(p=>({...p,piyasa:undefined}));}} placeholder="0" onFocus={e=>{uf("_piyasaEdit",true);foc(e);}} onBlur={e=>{uf("_piyasaEdit",false);blr(e);}}/>
+              <input style={{...iS,textAlign:"center",borderColor:hatalar.firma?T.err:undefined}} value={fm._firmaEdit?fm.firmaFiyat||"":(fm.firmaFiyat?Number(fm.firmaFiyat).toLocaleString("tr-TR",{minimumFractionDigits:2}):"")} onChange={e=>{const v=e.target.value.replace(/\./g,"").replace(",",".");uf("firmaFiyat",v);setHatalar(p=>({...p,firma:undefined}));}} placeholder="0" onFocus={e=>{uf("_firmaEdit",true);foc(e);}} onBlur={e=>{uf("_firmaEdit",false);blr(e);}}/>
+              <input style={{...iS,textAlign:"center",fontWeight:700,borderColor:hatalar.planlanan?T.err:undefined}} value={fm._planEdit?fm.planlananBirimFiyat||"":(fm.planlananBirimFiyat?Number(fm.planlananBirimFiyat).toLocaleString("tr-TR",{minimumFractionDigits:2}):"")} onChange={e=>{const v=e.target.value.replace(/\./g,"").replace(",",".");fiyatDegistir(v);setHatalar(p=>({...p,planlanan:undefined}));}} placeholder="0" onFocus={e=>{uf("_planEdit",true);foc(e);}} onBlur={e=>{uf("_planEdit",false);blr(e);}}/>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"140px 1fr 1fr 1fr",gap:"8px",padding:"4px 12px 8px",alignItems:"center"}}>
+            {!_hesaplamaVar&&<div style={{display:"grid",gridTemplateColumns:"140px 1fr 1fr 1fr",gap:"8px",padding:"4px 12px 8px",alignItems:"center"}}>
               <label style={{fontSize:"12px",fontWeight:600,color:T.t3,textAlign:"right"}}>Toplam</label>
-              <div style={{fontSize:"14px",fontWeight:600,color:T.t2,textAlign:"center"}}>{piyasaF>0&&miktar>0?(piyasaF*miktar).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-              <div style={{fontSize:"14px",fontWeight:600,color:T.t2,textAlign:"center"}}>{firmaF>0&&miktar>0?(firmaF*miktar).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+              <div style={{fontSize:"14px",fontWeight:700,color:T.t2,textAlign:"center"}}>{piyasaF>0&&miktar>0?(piyasaF*miktar).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+              <div style={{fontSize:"14px",fontWeight:700,color:T.t2,textAlign:"center"}}>{firmaF>0&&miktar>0?(firmaF*miktar).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
               <div style={{fontSize:"14px",fontWeight:700,color:T.text,textAlign:"center"}}>{toplam>0?toplam.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-            </div>
+            </div>}
             {/* TASARRUF */}
-            {tasarruf>0&&<div style={{padding:"6px 12px",background:"#f6ffed",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            {!_hesaplamaVar&&tasarruf>0&&<div style={{padding:"6px 12px",background:"#f6ffed",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <span style={{fontSize:"12px",color:"#389e0d",fontWeight:600}}>Firma fiyatı ile tasarruf</span>
               <span style={{fontSize:"14px",color:"#389e0d",fontWeight:700}}>{tasarruf.toLocaleString("tr-TR",{minimumFractionDigits:2})} ₺</span>
             </div>}
           </div>
+          {/* VALİDASYON HATALARI */}
+          {Object.keys(hatalar).length>0&&<div style={{display:"flex",flexDirection:"column",gap:"2px"}}>
+            {Object.values(hatalar).filter(Boolean).map((h,i)=><div key={i} style={{fontSize:"12px",color:T.err,fontWeight:500}}>{h}</div>)}
+          </div>}
 
           {/* İLK PLANLANAN & SAPMA */}
-          {ilkFiyat>0&&guncelFiyat>0&&ilkFiyat!==guncelFiyat&&<div style={{display:"grid",gridTemplateColumns:"140px 1fr 1fr",gap:"12px",alignItems:"center",marginTop:"4px",padding:"8px 12px",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffe58f"}}>
+          {!_hesaplamaVar&&ilkFiyat>0&&guncelFiyat>0&&ilkFiyat!==guncelFiyat&&<div style={{display:"grid",gridTemplateColumns:"140px 1fr 1fr",gap:"12px",alignItems:"center",marginTop:"4px",padding:"8px 12px",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffe58f"}}>
             <label style={{fontSize:"12px",fontWeight:600,color:"#d48806",textAlign:"right"}}>İlk Planlanan</label>
             <div style={{fontSize:"14px",fontWeight:600,color:"#d48806"}}>{ilkFiyat.toLocaleString("tr-TR")} ₺ / {fm.birim||"birim"}</div>
             <div style={{fontSize:"14px",fontWeight:700,color:sapmaIlk>0?"#ff4d4f":"#52c41a"}}>Sapma: {sapmaIlk>0?"+":""}{sapmaIlk.toFixed(1)}% ({((guncelFiyat-ilkFiyat)*miktar).toLocaleString("tr-TR",{minimumFractionDigits:2})} ₺)</div>
           </div>}
         </>}
 
-        {/* DETAY SATIRLARI — alt kalem girişi (demir çapları, SGK kalemleri vb.) */}
-        <div style={{borderTop:`1px solid ${T.border}`,paddingTop:"12px"}}>
+        {/* DETAY SATIRLARI — hesaplamalı kartlarda gizle */}
+        {!malzemeler?.find(m=>m.id===fm.malzemeId)?.hesaplamaSablonu&&<div style={{borderTop:`1px solid ${T.border}`,paddingTop:"12px"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}}>
             <span style={{fontSize:"13px",fontWeight:600,color:T.t2}}>Detay Kalemleri</span>
             <button onClick={addDetay} title="Detay Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#384248",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={24}/></button>
@@ -4321,13 +4959,8 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler})=>{
               <div></div>
             </div>
           </>}
-        </div>
+        </div>}
 
-        {/* PLANLANAN TOPLAM */}
-        <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center",borderTop:`1px solid ${T.border}`,paddingTop:"12px"}}>
-          <label style={{fontSize:"14px",fontWeight:700,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>PLANLANAN TOPLAM</label>
-          <div style={{...iS,background:"#384248",color:"#fff",fontWeight:700,fontSize:"18px",cursor:"default"}}>{toplam>0?toplam.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺":"—"}</div>
-        </div>
 
         {/* REVİZYON TARİHÇESİ */}
         {(fm.revizyonlar||[]).length>0&&<div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
@@ -4355,38 +4988,73 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler})=>{
   </div>;
 };
 
+/* ========== MALZEME PICKER MODAL ========== */
+const MalzemePickerModal=({malzemeler,onSelect,onClose})=>{
+  const[src,setSrc]=useState("");
+  const[fKat,setFKat]=useState("all");
+  const filtered=malzemeler.filter(m=>{
+    const q=src.toLowerCase();
+    const ms=m.ad.toLowerCase().includes(q)||m.malzemeKodu.toLowerCase().includes(q)||(m.altKategoriAd||"").toLowerCase().includes(q);
+    const mk=fKat==="all"||m.kategori===fKat;
+    return ms&&mk;
+  });
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+    <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"700px",maxHeight:"80vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      <div style={{padding:"12px 20px",background:"#384248",display:"flex",alignItems:"center",gap:"16px",borderRadius:`${T.rl} ${T.rl} 0 0`}}>
+        <button onClick={onClose} style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={24}/></button>
+        <span style={{fontSize:"15px",fontWeight:600,color:"#8799a3",flex:1,textAlign:"center"}}>MALZEME / HİZMET SEÇ</span>
+      </div>
+      <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}}>
+        <input style={{...iS,flex:1,minWidth:"200px"}} value={src} onChange={e=>setSrc(e.target.value)} placeholder="Ara: kod, ad, kategori..." onFocus={foc} onBlur={blr}/>
+        {MLZ_KATEGORILER.map(k=><button key={k.id} onClick={()=>setFKat(fKat===k.id?"all":k.id)} style={{padding:"4px 10px",borderRadius:"4px",border:`1px solid ${fKat===k.id?k.color:T.border}`,background:fKat===k.id?k.bg:"#fff",color:fKat===k.id?k.color:T.t2,fontSize:"12px",fontWeight:500,cursor:"pointer"}}>{k.icon} {k.label}</button>)}
+      </div>
+      <div style={{flex:1,overflow:"auto",padding:"8px 16px"}}>
+        {filtered.length===0?<div style={{padding:"40px",textAlign:"center",color:T.t3}}>Sonuç bulunamadı</div>:
+        filtered.map(m=><div key={m.id} onClick={()=>{onSelect(m);onClose();}} style={{display:"grid",gridTemplateColumns:"130px 1fr 80px",gap:"8px",padding:"10px 12px",borderBottom:`1px solid ${T.border}`,cursor:"pointer",alignItems:"center"}}
+          onMouseEnter={e=>e.currentTarget.style.background=T.pBg} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+          <div style={{fontSize:"12px",color:T.t3}}>{m.malzemeKodu}</div>
+          <div style={{fontSize:"14px",fontWeight:500,color:T.text}}>{m.ad}</div>
+          <div style={{fontSize:"12px",color:T.t2}}>{m.birim}</div>
+        </div>)}
+      </div>
+    </div>
+  </div>;
+};
+
 /* ========== MALİYET YÖNETİMİ ========== */
-const MaliyetPage=({projeler,malzemeler,faturalar=[],siparisler=[]})=>{
+const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})=>{
   const[selProjeId,setSelProjeId]=useState(null);
   const[butceModal,setButceModal]=useState(null);
-  const[filtre,setFiltre]=useState("hepsi"); // hepsi, butcelenmemis, butcelenmis
+  const[filtre,setFiltre]=useState("hepsi");
+  const[pickerOpen,setPickerOpen]=useState(false);
   const selProje=projeler.find(p=>p.id===selProjeId);
   const butceKalemleri=selProje?.butceKalemleri||[];
 
-  // Tüm malzeme/hizmet kartları seçilebilir
-  const projeMalzemeleri=useMemo(()=>{
-    if(!selProje)return[];
-    // Bütçelenmiş kalemlerin malzeme ID'leri
-    const butcelenmisIds=new Set(butceKalemleri.map(k=>k.malzemeId));
-    // Tüm malzemeler — bütçelenmiş olanlar + tüm katalog
-    return malzemeler;
-  },[selProje,malzemeler]);
-
-  // Bütçelenmiş/bütçelenmemiş kontrolü
-  const kalemDurumu=(mlzId)=>{
-    const bk=butceKalemleri.find(k=>k.malzemeId===mlzId);
-    return bk?{butcelendi:true,miktar:bk.planlananMiktar,fiyat:bk.planlananBirimFiyat,toplam:bk.planlananToplam,kalem:bk}:{butcelendi:false};
+  // Projeyi immutable güncelle
+  const guncelleProje=(guncKalemler)=>{
+    if(!selProje)return;
+    const guncProje={...selProje,butceKalemleri:guncKalemler};
+    setProjeler(prev=>prev.map(p=>p.id===guncProje.id?guncProje:p));
   };
 
-  // Filtrelenmiş malzeme listesi
+  // Kalem listesi — sadece eklenen kalemleri göster
+  const kalemListesi=useMemo(()=>{
+    if(!selProje)return[];
+    return butceKalemleri.map(bk=>{
+      const mlz=malzemeler.find(m=>m.id===bk.malzemeId);
+      return{...bk,mlzAd:mlz?.ad||bk.malzemeAd,mlzKodu:mlz?.malzemeKodu||bk.malzemeKodu,mlzBirim:mlz?.birim||bk.birim,mlzKategori:mlz?.kategori||"",mlzAltKategori:mlz?.altKategori||"",mlzAltKategoriAd:mlz?.altKategoriAd||""};
+    });
+  },[selProje,butceKalemleri,malzemeler]);
+
+  // Filtrelenmiş kalem listesi
   const filtrelenmis=useMemo(()=>{
-    return projeMalzemeleri.filter(m=>{
-      const d=kalemDurumu(m.id);
-      if(filtre==="butcelenmemis")return !d.butcelendi;
-      if(filtre==="butcelenmis")return d.butcelendi;
+    return kalemListesi.filter(k=>{
+      if(filtre.startsWith("blok_")){const blokAd=filtre.replace("blok_","");return(k.bloklar||[]).includes(blokAd);}
+      if(filtre==="ortak")return(k.bloklar||[]).length>1;
+      if(filtre==="atanmamis")return(k.bloklar||[]).length===0;
       return true;
     });
-  },[projeMalzemeleri,filtre,butceKalemleri]);
+  },[kalemListesi,filtre]);
 
   // Gerçekleşen
   const gerceklesen=useMemo(()=>{
@@ -4400,42 +5068,128 @@ const MaliyetPage=({projeler,malzemeler,faturalar=[],siparisler=[]})=>{
     return siparisler.filter(s=>s.projeId===selProjeId).flatMap(s=>(s.kalemler||[]).map(k=>({...k,spNo:s.spNo||"",firmaAd:s.firmaAd||""})));
   },[selProjeId,siparisler]);
 
+  // Blok m² hesabı
+  const blokM2Harita=useMemo(()=>{
+    if(!selProje)return{};
+    const h={};
+    (selProje.bloklar||[]).forEach(bl=>{
+      h[bl.ad]=(selProje.bolumler||[]).filter(b=>b.blok===bl.ad).reduce((s,b)=>s+parseFloat(b.brutM2||0),0);
+    });
+    return h;
+  },[selProje]);
+
   // Özet
   const ozet=useMemo(()=>{
     const planlananTop=butceKalemleri.reduce((s,k)=>s+parseFloat(k.planlananToplam||0),0);
     const gerceklesenTop=gerceklesen.reduce((s,k)=>s+(parseFloat(k.netFiyat||0)*parseFloat(k.miktar||0)),0);
     const taahhutTop=taahhut.reduce((s,k)=>s+(parseFloat(k.netFiyat||0)*parseFloat(k.miktar||0)),0);
     const brutM2=selProje?(selProje.bolumler||[]).reduce((s,b)=>s+parseFloat(b.brutM2||0),0):0;
-    const m2Maliyet=brutM2>0?gerceklesenTop/brutM2:0;
-    const butcelenmemisSayisi=projeMalzemeleri.filter(m=>!kalemDurumu(m.id).butcelendi).length;
-    return{planlananTop,gerceklesenTop,taahhutTop,kalanButce:planlananTop-taahhutTop-gerceklesenTop,brutM2,m2Maliyet,butcelenmemisSayisi};
-  },[butceKalemleri,gerceklesen,taahhut,selProje,projeMalzemeleri]);
+    const ortakM2=parseFloat(selProje?.ortakAlanM2||0);
+    const toplamM2=brutM2+ortakM2;
 
+    // Blok bazlı maliyet hesabı
+    const blokMaliyet={};
+    (selProje?.bloklar||[]).forEach(bl=>{blokMaliyet[bl.ad]=0;});
+    let ortakToplam=0;
+    // Hangi bloklara kalem girilmiş?
+    const aktifBloklar=new Set();
+    butceKalemleri.forEach(k=>{
+      const tutar=parseFloat(k.planlananToplam||0);
+      const bloklar=k.bloklar||[];
+      if(bloklar.length===0){/* atanmamış */}
+      else if(bloklar.length===1){
+        if(blokMaliyet[bloklar[0]]!==undefined)blokMaliyet[bloklar[0]]+=tutar;
+        aktifBloklar.add(bloklar[0]);
+      }
+      else{
+        const topBlokM2=bloklar.reduce((s,b)=>s+(blokM2Harita[b]||0),0);
+        if(topBlokM2>0){bloklar.forEach(b=>{const oran=(blokM2Harita[b]||0)/topBlokM2;if(blokMaliyet[b]!==undefined)blokMaliyet[b]+=tutar*oran;aktifBloklar.add(b);});}
+        ortakToplam+=tutar;
+      }
+    });
+
+    // Blok efektif m² (ortak alan payı dahil)
+    const blokEfektifM2={};
+    (selProje?.bloklar||[]).forEach(bl=>{
+      const blokBrut=blokM2Harita[bl.ad]||0;
+      const ortakPayi=brutM2>0?ortakM2*blokBrut/brutM2:0;
+      blokEfektifM2[bl.ad]=blokBrut+ortakPayi;
+    });
+
+    // m² maliyet — sadece kalem girilmiş blokların efektif m²'sine böl
+    let aktifEfektifM2=0;
+    aktifBloklar.forEach(b=>{aktifEfektifM2+=(blokEfektifM2[b]||0);});
+    const m2Maliyet=aktifEfektifM2>0?planlananTop/aktifEfektifM2:0;
+
+    // Kategori dağılımı
+    const kategoriDagilim={};
+    const blokKategoriDagilim={};
+    butceKalemleri.forEach(k=>{
+      const tutar=parseFloat(k.planlananToplam||0);
+      const mlz=malzemeler.find(m=>m.id===k.malzemeId);
+      const katAd=mlz?.altKategoriAd||"Diğer";
+      if(!kategoriDagilim[katAd])kategoriDagilim[katAd]={tutar:0};
+      kategoriDagilim[katAd].tutar+=tutar;
+      // Blok bazında
+      (k.bloklar||[]).forEach(b=>{
+        if(!blokKategoriDagilim[b])blokKategoriDagilim[b]={};
+        if(!blokKategoriDagilim[b][katAd])blokKategoriDagilim[b][katAd]={tutar:0};
+        if((k.bloklar||[]).length===1){blokKategoriDagilim[b][katAd].tutar+=tutar;}
+        else{const topBM2=(k.bloklar||[]).reduce((s,bl)=>s+(blokM2Harita[bl]||0),0);const oran=topBM2>0?(blokM2Harita[b]||0)/topBM2:0;blokKategoriDagilim[b][katAd].tutar+=tutar*oran;}
+      });
+    });
+    // Yüzde hesapla
+    Object.keys(kategoriDagilim).forEach(k=>{kategoriDagilim[k].yuzde=planlananTop>0?(kategoriDagilim[k].tutar/planlananTop*100):0;});
+    Object.keys(blokKategoriDagilim).forEach(b=>{const blokTop=Object.values(blokKategoriDagilim[b]).reduce((s,v)=>s+v.tutar,0);Object.keys(blokKategoriDagilim[b]).forEach(k=>{blokKategoriDagilim[b][k].yuzde=blokTop>0?(blokKategoriDagilim[b][k].tutar/blokTop*100):0;});});
+
+    return{planlananTop,gerceklesenTop,taahhutTop,kalanButce:planlananTop-taahhutTop-gerceklesenTop,brutM2,ortakM2,toplamM2,m2Maliyet,blokMaliyet,ortakToplam,blokEfektifM2,kategoriDagilim,blokKategoriDagilim};
+  },[butceKalemleri,gerceklesen,taahhut,selProje,blokM2Harita]);
+
+  // Kaydet — immutable update
   const saveButceKalemi=(kalem)=>{
     if(!selProje)return;
-    const toplam=parseFloat(kalem.planlananMiktar||0)*parseFloat(kalem.planlananBirimFiyat||0);
-    const kayit={...kalem,planlananToplam:toplam};
-    const mevcutKalemler=selProje.butceKalemleri||[];
+    // Hesaplamalı kartlarda planlananToplam direkt gelir, normal kartlarda miktar×fiyat
+    const mlzRef=malzemeler?.find(m=>m.id===kalem.malzemeId);
+    const hesaplamaVarMi=mlzRef?.hesaplamaSablonu&&HESAPLAMA_SABLONLARI[mlzRef.hesaplamaSablonu];
+    const toplam=hesaplamaVarMi?parseFloat(kalem.planlananToplam||0):parseFloat(kalem.planlananMiktar||0)*parseFloat(kalem.planlananBirimFiyat||0);
+    const kayit={...kalem,planlananToplam:toplam,_isNew:undefined};
+    const mevcutKalemler=[...(selProje.butceKalemleri||[])];
     const exists=mevcutKalemler.find(k=>k.id===kayit.id);
-    selProje.butceKalemleri=exists?mevcutKalemler.map(k=>k.id===kayit.id?kayit:k):[...mevcutKalemler,kayit];
-    setButceModal(null);
+    const yeniKalemler=exists?mevcutKalemler.map(k=>k.id===kayit.id?kayit:k):[...mevcutKalemler,kayit];
+    guncelleProje(yeniKalemler);
+    setButceModal({...kayit});
   };
 
   const delButceKalemi=(id)=>{
     if(!selProje||!confirm("Bu bütçe kalemini silmek istiyor musunuz?"))return;
-    selProje.butceKalemleri=(selProje.butceKalemleri||[]).filter(k=>k.id!==id);
+    guncelleProje((selProje.butceKalemleri||[]).filter(k=>k.id!==id));
     setButceModal(null);
   };
 
-  // Satıra tıklayınca: bütçelenmemişse yeni kalem oluştur, bütçelenmişse düzenle
-  const satirTikla=(m)=>{
-    const d=kalemDurumu(m.id);
-    if(d.butcelendi){
-      setButceModal(d.kalem);
-    } else {
-      setButceModal({id:Date.now(),malzemeId:m.id,malzemeAd:m.ad,malzemeKodu:m.malzemeKodu,birim:m.birim,planlananMiktar:"",planlananBirimFiyat:"",planlananToplam:0,aciklama:"",_isNew:true});
-    }
+  // Kalem ekle — malzeme picker'dan seçim
+  const kalemEkle=(mlz)=>{
+    const yeniKalem={id:Date.now(),malzemeId:mlz.id,malzemeAd:mlz.ad,malzemeKodu:mlz.malzemeKodu,birim:mlz.birim,bloklar:[],planlananMiktar:"",planlananBirimFiyat:"",planlananToplam:0,aciklama:""};
+    guncelleProje([...(selProje.butceKalemleri||[]),yeniKalem]);
+    setButceModal(yeniKalem);
   };
+
+  // Omurga oluştur
+  const omurgaOlustur=()=>{
+    if(!selProje)return;
+    const projeTuru=selProje.tur;
+    if(!projeTuru){alert("Önce proje türünü belirleyiniz!");return;}
+    const omurgaMlz=malzemeler.filter(m=>(m.omurgaProjeTurleri||[]).includes(projeTuru));
+    if(omurgaMlz.length===0){alert(`"${projeTuru}" proje türü için omurga malzemesi bulunamadı.`);return;}
+    const mevcutIds=new Set((selProje.butceKalemleri||[]).map(k=>k.malzemeId));
+    const yeniMlz=omurgaMlz.filter(m=>!mevcutIds.has(m.id));
+    if(yeniMlz.length===0){alert("Tüm omurga kalemleri zaten eklenmiş.");return;}
+    if(!confirm(`${yeniMlz.length} adet "${projeTuru}" omurga kalemi eklenecek. Devam?`))return;
+    const yeniKalemler=yeniMlz.map((mlz,idx)=>({id:Date.now()+idx,malzemeId:mlz.id,malzemeAd:mlz.ad,malzemeKodu:mlz.malzemeKodu,birim:mlz.birim,bloklar:[],planlananMiktar:"",planlananBirimFiyat:"",planlananToplam:0,aciklama:""}));
+    guncelleProje([...(selProje.butceKalemleri||[]),...yeniKalemler]);
+  };
+
+  // Satıra tıkla — direkt düzenle
+  const satirTikla=(kalem)=>{setButceModal(kalem);};
 
   return <div>
     {/* PROJE SEÇİMİ */}
@@ -4449,7 +5203,8 @@ const MaliyetPage=({projeler,malzemeler,faturalar=[],siparisler=[]})=>{
     {!selProje
       ?<div style={{padding:"80px",textAlign:"center",color:T.t3,fontSize:"16px",border:`1px dashed ${T.border}`,borderRadius:T.r}}>Maliyet takibi için bir proje seçiniz.</div>
       :<div>
-        {butceModal&&<ButceKalemModal kalem={butceModal} onSave={saveButceKalemi} onDel={butceModal._isNew?null:delButceKalemi} onClose={()=>setButceModal(null)} malzemeler={malzemeler}/>}
+        {pickerOpen&&<MalzemePickerModal malzemeler={malzemeler} onSelect={kalemEkle} onClose={()=>setPickerOpen(false)}/>}
+        {butceModal&&<ButceKalemModal kalem={butceModal} onSave={saveButceKalemi} onDel={delButceKalemi} onClose={()=>setButceModal(null)} malzemeler={malzemeler} projeBloklar={selProje?.bloklar||[]} projeBolumler={selProje?.bolumler||[]} ortakAlanM2={selProje?.ortakAlanM2||""}/>}
 
         {/* ÖZET KARTLAR */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:"12px",marginBottom:"16px"}}>
@@ -4466,11 +5221,59 @@ const MaliyetPage=({projeler,malzemeler,faturalar=[],siparisler=[]})=>{
           </div>)}
         </div>
 
-        {/* FİLTRE BUTONLARI */}
-        <div style={{display:"flex",gap:"8px",marginBottom:"16px",alignItems:"center"}}>
-          <button onClick={()=>setFiltre("hepsi")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="hepsi"?"#384248":T.bDark}`,background:filtre==="hepsi"?"#384248":"#fff",color:filtre==="hepsi"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Tümü ({projeMalzemeleri.length})</button>
-          <button onClick={()=>setFiltre("butcelenmemis")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="butcelenmemis"?"#ff4d4f":T.bDark}`,background:filtre==="butcelenmemis"?"#ff4d4f":"#fff",color:filtre==="butcelenmemis"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Bütçelenmemiş ({ozet.butcelenmemisSayisi})</button>
-          <button onClick={()=>setFiltre("butcelenmis")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="butcelenmis"?"#52c41a":T.bDark}`,background:filtre==="butcelenmis"?"#52c41a":"#fff",color:filtre==="butcelenmis"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Bütçelenmiş ({projeMalzemeleri.length-ozet.butcelenmemisSayisi})</button>
+        {/* BLOK BAZLI ÖZET */}
+        {(selProje?.bloklar||[]).length>0&&<div style={{display:"grid",gridTemplateColumns:`repeat(${(selProje.bloklar||[]).length+(ozet.ortakToplam>0?1:0)},1fr)`,gap:"12px",marginBottom:"16px"}}>
+          {(selProje.bloklar||[]).map(bl=>{
+            const blEfM2=ozet.blokEfektifM2?.[bl.ad]||0;
+            const blMaliyet=ozet.blokMaliyet[bl.ad]||0;
+            const blM2Maliyet=blEfM2>0?blMaliyet/blEfM2:0;
+            return <div key={bl.id} style={{padding:"12px 16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff"}}>
+              <div style={{fontSize:"13px",color:T.t3,marginBottom:"6px",fontWeight:600}}>{bl.ad} BLOK</div>
+              <div style={{fontSize:"18px",fontWeight:700,color:"#1677ff",marginBottom:"6px"}}>{blMaliyet>0?blMaliyet.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺":"—"}</div>
+              <div style={{fontSize:"12px",color:T.t2}}>Efektif m²: <strong>{blEfM2>0?blEfM2.toLocaleString("tr-TR",{minimumFractionDigits:2}):0} m²</strong></div>
+              <div style={{fontSize:"12px",color:T.t2}}>m² Maliyet: <strong>{blM2Maliyet>0?blM2Maliyet.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺/m²":"—"}</strong></div>
+              {ozet.blokKategoriDagilim?.[bl.ad]&&<div style={{marginTop:"6px",borderTop:`1px solid ${T.border}`,paddingTop:"4px"}}>
+                {Object.entries(ozet.blokKategoriDagilim[bl.ad]).sort((a,b)=>b[1].tutar-a[1].tutar).slice(0,3).map(([kat,v])=><div key={kat} style={{display:"flex",justifyContent:"space-between",fontSize:"11px",color:T.t3,lineHeight:"1.6"}}>
+                  <span>{kat}</span><span style={{fontWeight:600,color:T.primary}}>{v.yuzde.toFixed(1)}%</span>
+                </div>)}
+              </div>}
+            </div>;
+          })}
+          {ozet.ortakToplam>0&&<div style={{padding:"12px 16px",borderRadius:"8px",border:`1px solid #ffe58f`,background:"#fffbe6"}}>
+            <div style={{fontSize:"12px",color:"#d48806",marginBottom:"4px",fontWeight:600}}>ORTAK GİDER</div>
+            <div style={{fontSize:"16px",fontWeight:700,color:"#d48806"}}>{ozet.ortakToplam.toLocaleString("tr-TR",{minimumFractionDigits:2})} ₺</div>
+            <div style={{fontSize:"11px",color:"#d48806",marginTop:"2px"}}>Bloklara m² oranında dağıtılmış</div>
+          </div>}
+        </div>}
+
+        {/* KATEGORİ DAĞILIMI */}
+        {Object.keys(ozet.kategoriDagilim||{}).length>0&&<div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden",marginBottom:"16px"}}>
+          <div style={{padding:"8px 16px",background:"#384248"}}><span style={{fontSize:"14px",fontWeight:600,color:"#fff"}}>Kategori Dağılımı</span></div>
+          <div style={{padding:"4px 0"}}>
+            {Object.entries(ozet.kategoriDagilim).sort((a,b)=>b[1].tutar-a[1].tutar).map(([kat,v],i)=><div key={kat} style={{display:"grid",gridTemplateColumns:"200px 120px 60px 1fr",gap:"12px",padding:"6px 16px",alignItems:"center",background:i%2===0?"#fff":"#fafafa"}}>
+              <div style={{fontSize:"13px",fontWeight:500,color:T.text}}>{kat}</div>
+              <div style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right"}}>{v.tutar.toLocaleString("tr-TR",{minimumFractionDigits:2})} ₺</div>
+              <div style={{fontSize:"13px",fontWeight:600,color:T.primary,textAlign:"right"}}>{v.yuzde.toFixed(1)}%</div>
+              <div style={{height:"8px",background:"#e5e7eb",borderRadius:"4px",overflow:"hidden"}}><div style={{height:"100%",width:`${v.yuzde}%`,background:T.primary,borderRadius:"4px",transition:"width .3s"}}></div></div>
+            </div>)}
+            <div style={{display:"grid",gridTemplateColumns:"200px 120px 60px 1fr",gap:"12px",padding:"6px 16px",alignItems:"center",borderTop:`1px solid ${T.border}`,background:"#fafafa"}}>
+              <div style={{fontSize:"13px",fontWeight:700,color:T.text}}>TOPLAM</div>
+              <div style={{fontSize:"13px",fontWeight:700,color:T.text,textAlign:"right"}}>{ozet.planlananTop.toLocaleString("tr-TR",{minimumFractionDigits:2})} ₺</div>
+              <div style={{fontSize:"13px",fontWeight:700,color:T.primary,textAlign:"right"}}>100%</div>
+              <div></div>
+            </div>
+          </div>
+        </div>}
+
+        {/* FİLTRE + BUTONLAR */}
+        <div style={{display:"flex",gap:"8px",marginBottom:"16px",alignItems:"center",flexWrap:"wrap"}}>
+          <button onClick={()=>setFiltre("hepsi")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="hepsi"?"#384248":T.border}`,background:filtre==="hepsi"?"#384248":"#fff",color:filtre==="hepsi"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Tümü ({kalemListesi.length})</button>
+          {(selProje?.bloklar||[]).length>0&&<>
+            {(selProje.bloklar||[]).map(bl=><button key={bl.id} onClick={()=>setFiltre(`blok_${bl.ad}`)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre===`blok_${bl.ad}`?"#1677ff":T.border}`,background:filtre===`blok_${bl.ad}`?"#1677ff":"#fff",color:filtre===`blok_${bl.ad}`?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>{bl.ad} Blok</button>)}
+            <button onClick={()=>setFiltre("ortak")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="ortak"?"#d48806":T.border}`,background:filtre==="ortak"?"#d48806":"#fff",color:filtre==="ortak"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Ortak</button>
+          </>}
+          <div style={{flex:1}}></div>
+          <button onClick={omurgaOlustur} style={{height:"36px",padding:"0 16px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"14px",cursor:"pointer",display:"flex",alignItems:"center",gap:"6px"}}><Layers size={16}/> Omurga Oluştur</button>
         </div>
 
         {/* MALİYET PORTAL */}
@@ -4482,39 +5285,44 @@ const MaliyetPage=({projeler,malzemeler,faturalar=[],siparisler=[]})=>{
             </div>
             <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
               <button onClick={()=>{
-                const rows=[["Kod","Malzeme/Hizmet","Birim","Pl. Miktar","Pl. B.Fiyat","Pl. Toplam","Durum"]];
-                filtrelenmis.forEach(m=>{const d=kalemDurumu(m.id);rows.push([m.malzemeKodu||"",m.ad||"",m.birim||"",d.miktar||"",d.fiyat||"",d.toplam||"",d.butcelendi?"Bütçelenmiş":"Bütçelenmemiş"]);});
+                const rows=[["Kod","Malzeme/Hizmet","Blok","Birim","Pl. Miktar","Pl. B.Fiyat","Pl. Toplam"]];
+                filtrelenmis.forEach(k=>{rows.push([k.mlzKodu||"",k.mlzAd||"",(k.bloklar||[]).join("+")||"—",k.mlzBirim||"",k.planlananMiktar||"",k.planlananBirimFiyat||"",k.planlananToplam||""]);});
                 const csv=rows.map(r=>r.map(c=>`"${c}"`).join(";")).join("\n");
                 const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
                 const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${selProje.ad||"proje"}_maliyet.csv`;a.click();
               }} title="Excel'e Aktar" style={{padding:"0",border:"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center"}}><img src="/icons8-excel-48.png" alt="Excel" style={{width:"35px",height:"35px"}}/></button>
+              <button onClick={()=>setPickerOpen(true)} title="Kalem Ekle" style={{padding:"0",border:"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={35} color="#8799a3"/></button>
             </div>
           </div>
           {filtrelenmis.length===0
-            ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{projeMalzemeleri.length===0?"Bu projeye bağlı malzeme/hizmet kartı bulunamadı.":"Filtreye uygun kalem yok."}</div>
+            ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{kalemListesi.length===0?"Henüz kalem eklenmemiş. \"Kalem Ekle\" veya \"Omurga Oluştur\" butonunu kullanın.":"Filtreye uygun kalem yok."}</div>
             :<>
-              <div style={{display:"grid",gridTemplateColumns:"150px 1fr 80px 100px 100px 120px 100px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"12px"}}>
-                {["Kod","Malzeme/Hizmet","Birim","Pl. Miktar","Pl. B.Fiyat","Pl. Toplam","Durum"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>{h}</div>)}
+              <div style={{display:"grid",gridTemplateColumns:"130px 1fr 90px 70px 100px 100px 120px 50px 30px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"12px"}}>
+                {["Kod","Malzeme/Hizmet","Blok","Birim","Miktar","B.Fiyat","Toplam","%",""].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>{h}</div>)}
               </div>
-              {filtrelenmis.map((m,idx)=>{
-                const d=kalemDurumu(m.id);
-                return <div key={m.id} onClick={()=>satirTikla(m)} style={{display:"grid",gridTemplateColumns:"150px 1fr 80px 100px 100px 120px 100px",padding:"8px 12px",gap:"12px",alignItems:"center",borderBottom:idx<filtrelenmis.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
+              {filtrelenmis.map((k,idx)=>{
+                const bloklar=k.bloklar||[];
+                const blokStr=bloklar.length===0?"—":bloklar.join("+");
+                return <div key={k.id} onClick={()=>satirTikla(k)} style={{display:"grid",gridTemplateColumns:"130px 1fr 90px 70px 100px 100px 120px 50px 30px",padding:"8px 12px",gap:"12px",alignItems:"center",borderBottom:idx<filtrelenmis.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
                   onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
                   onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
-                  <div style={{fontSize:"13px",color:T.t3}}>{m.malzemeKodu||"—"}</div>
-                  <div style={{fontSize:"15px",fontWeight:500,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.ad}</div>
-                  <div style={{fontSize:"15px",color:T.t2}}>{m.birim||"—"}</div>
-                  <div style={{fontSize:"15px",color:d.butcelendi?T.text:T.t3}}>{d.miktar?Number(d.miktar).toLocaleString("tr-TR"):"—"}</div>
-                  <div style={{fontSize:"15px",color:d.butcelendi?T.text:T.t3}}>{d.fiyat?Number(d.fiyat).toLocaleString("tr-TR"):"—"}</div>
-                  <div style={{fontSize:"15px",fontWeight:700,color:d.butcelendi?T.text:T.t3}}>{d.toplam?Number(d.toplam).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                  <div style={{fontSize:"12px",fontWeight:600,color:d.butcelendi?"#52c41a":"#ff4d4f"}}>{d.butcelendi?"Bütçelenmiş":"Bekliyor"}</div>
+                  <div style={{fontSize:"14px",color:T.t3}}>{k.mlzKodu||"—"}</div>
+                  <div style={{fontSize:"15px",fontWeight:500,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{k.mlzAd}</div>
+                  <div style={{fontSize:"14px",fontWeight:600,color:bloklar.length>1?"#d48806":"#1677ff"}}>{blokStr}</div>
+                  <div style={{fontSize:"14px",color:T.t2}}>{k.mlzBirim||"—"}</div>
+                  <div style={{fontSize:"15px",color:k.planlananMiktar?T.text:T.t3}}>{k.planlananMiktar?Number(k.planlananMiktar).toLocaleString("tr-TR"):"—"}</div>
+                  <div style={{fontSize:"15px",color:k.planlananBirimFiyat?T.text:T.t3}}>{k.planlananBirimFiyat?Number(k.planlananBirimFiyat).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                  <div style={{fontSize:"15px",fontWeight:700,color:k.planlananToplam?T.text:T.t3}}>{k.planlananToplam?Number(k.planlananToplam).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                  <div style={{fontSize:"13px",fontWeight:600,color:T.primary}}>{k.planlananToplam&&ozet.planlananTop>0?(parseFloat(k.planlananToplam)/ozet.planlananTop*100).toFixed(1)+"%":"—"}</div>
+                  <button onClick={e=>{e.stopPropagation();if(confirm("Bu kalemi silmek istiyor musunuz?"))delButceKalemi(k.id);}} style={{padding:"0",border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={16}/></button>
                 </div>;
               })}
               {/* ALT TOPLAM */}
-              <div style={{display:"grid",gridTemplateColumns:"150px 1fr 80px 100px 100px 120px 100px",padding:"8px 12px",gap:"12px",alignItems:"center",background:"#8799a3"}}>
-                <div></div><div></div><div></div><div></div>
+              <div style={{display:"grid",gridTemplateColumns:"130px 1fr 90px 70px 100px 100px 120px 50px 30px",padding:"8px 12px",gap:"12px",alignItems:"center",background:"#8799a3"}}>
+                <div></div><div></div><div></div><div></div><div></div>
                 <div style={{fontSize:"14px",fontWeight:700,color:"#fff",textAlign:"right"}}>Toplam</div>
                 <div style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{ozet.planlananTop>0?ozet.planlananTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                <div style={{fontSize:"13px",fontWeight:700,color:"#fff"}}>100%</div>
                 <div></div>
               </div>
             </>
@@ -5065,7 +5873,7 @@ export default function App(){
         {page==="teklifler"&&<AlinanTekliflerYonetim teklifler={teklifler} setTeklifler={setTeklifler} onSave={saveTeklif} onDel={delTeklif} malzemeler={malzemeler} firmalar={firmalar} projeler={projeler} onSpOlustur={spOlusturTeklifden}/>}
         {page==="satinalma"&&<SatinalmaSiparisleriPage siparisler={siparisler} setSiparisler={setSiparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler}/>}
         {page==="alis_fatura"&&<AlisFaturalariPage faturalar={faturalar} setFaturalar={setFaturalar} siparisler={siparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler}/>}
-        {page==="maliyet"&&<MaliyetPage projeler={projeler} malzemeler={malzemeler} faturalar={faturalar} siparisler={siparisler}/>}
+        {page==="maliyet"&&<MaliyetPage projeler={projeler} setProjeler={setProjeler} malzemeler={malzemeler} faturalar={faturalar} siparisler={siparisler}/>}
       </div>
     </div>
   </div>;
