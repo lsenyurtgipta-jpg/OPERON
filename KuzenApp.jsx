@@ -399,15 +399,15 @@ const HESAPLAMA_SABLONLARI={
 };
 
 /* ========== HESAPLAMA SEKMESİ BİLEŞENİ ========== */
-const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,seciliHesaplama,onSablonSec,onSonucAktar,planlananMiktar})=>{
+const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,seciliHesaplama,onSablonSec,onSonucAktar,planlananMiktar,kayitliParams,kayitliSonuc,onParamsChange})=>{
   // zorSablon: Hesaplamalar sekmesinden direkt açılan şablon (detay görünümü)
   // seciliHesaplama: Karta bağlı şablon key (form.hesaplamaSablonu)
   // onSablonSec: Kart modunda şablon seçildiğinde callback
   const tumSablonlar=Object.entries(HESAPLAMA_SABLONLARI);
   const aktifSablon=zorSablon||seciliHesaplama||"";
   const[seciliSablon,setSeciliSablon]=useState(aktifSablon);
-  const[params,setParams]=useState({});
-  const[sonuc,setSonuc]=useState(null);
+  const[params,setParams]=useState(kayitliParams||{});
+  const[sonuc,setSonuc]=useState(kayitliSonuc||null);
   const[kayitlar,setKayitlar]=useState([]);
   const[kopyalandi,setKopyalandi]=useState(false);
 
@@ -415,6 +415,8 @@ const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,s
 
   useEffect(()=>{
     if(seciliSablon&&HESAPLAMA_SABLONLARI[seciliSablon]){
+      // Kayıtlı params varsa ve aynı şablonsa sıfırlama
+      if(kayitliParams&&Object.keys(kayitliParams).length>0){return;}
       const s=HESAPLAMA_SABLONLARI[seciliSablon];
       const yeniP={};
       s.parametreler.forEach(p=>{yeniP[p.key]=p.varsayilan!==undefined?p.varsayilan:"";});
@@ -450,6 +452,7 @@ const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,s
     const s=HESAPLAMA_SABLONLARI[seciliSablon];
     const r=s.hesapla(params);
     setSonuc(r);
+    if(onParamsChange)onParamsChange({...params},r);
   };
 
   const kaydet=()=>{
@@ -1700,6 +1703,7 @@ const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKate
                 </div>
                 <div><label style={lS}>Marka</label><input style={iS} value={form.marka} onChange={e=>u("marka",e.target.value)} placeholder="Marka" onFocus={foc} onBlur={blr}/></div>
                 <div><label style={lS}>Model</label><input style={iS} value={form.model} onChange={e=>u("model",e.target.value)} placeholder="Model" onFocus={foc} onBlur={blr}/></div>
+                <div><label style={lS}>KDV Oranı</label><select style={{...iS,cursor:"pointer"}} value={form.kdvOrani||"20"} onChange={e=>u("kdvOrani",e.target.value)} onFocus={foc} onBlur={blr}>{KDV_ORANLARI.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
                 <div><label style={lS}>Durum</label><div style={{display:"flex",gap:"8px"}}>{["aktif","pasif"].map(d=><button key={d} onClick={()=>u("durum",d)} style={{flex:1,padding:"8px",borderRadius:"6px",border:`1px solid ${form.durum===d?(d==="aktif"?T.ok:T.err):T.bDark}`,background:form.durum===d?(d==="aktif"?"#f6ffed":"#fff1f0"):"#fff",color:form.durum===d?(d==="aktif"?T.ok:T.err):T.t2,cursor:"pointer",fontWeight:form.durum===d?600:400,fontSize:"13px"}}>{d==="aktif"?"✓ Aktif":"✕ Pasif"}</button>)}</div></div>
               </div>
             </div>
@@ -3201,11 +3205,11 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
   const handleKodComplete=(data)=>{setInitData(data);setShowKod(false);setView("form-new");};
 
   if(view==="form-new"){
-    return <MalzemeKarti malzeme={null} initData={initData} isNew={true} onSave={(d)=>{handleSave(d);setView("list");setInitData(null);}} onBack={()=>{setView("list");setInitData(null);}} firmalar={firmalar} altKategoriler={altKategoriler} altGruplar={altGruplar} teklifler={teklifler}/>;
+    return <MalzemeKarti malzeme={null} initData={initData} isNew={true} onSave={async(d)=>{await handleSave(d);setInitData(null);}} onBack={()=>{setView("list");setInitData(null);}} firmalar={firmalar} altKategoriler={altKategoriler} altGruplar={altGruplar} teklifler={teklifler}/>;
   }
   if(view==="form-edit"&&activeMlz){
     const live=malzemeler.find(m=>m.id===activeMlz.id)||activeMlz;
-    return <MalzemeKarti malzeme={live} initData={null} isNew={false} onSave={(d)=>{handleSave(d);}} onDel={(id)=>{handleDel(id);setView("list");setActiveMlz(null);}} onBack={()=>{setView("list");setActiveMlz(null);}} firmalar={firmalar} altKategoriler={altKategoriler} altGruplar={altGruplar} teklifler={teklifler}/>;
+    return <MalzemeKarti malzeme={live} initData={null} isNew={false} onSave={async(d)=>{await handleSave(d);}} onDel={(id)=>{handleDel(id);setView("list");setActiveMlz(null);}} onBack={()=>{setView("list");setActiveMlz(null);}} firmalar={firmalar} altKategoriler={altKategoriler} altGruplar={altGruplar} teklifler={teklifler}/>;
   }
 
   const mainTabs=[
@@ -3503,6 +3507,8 @@ const projeToLocal = (p) => ({
   ada: p.ada||"", parsel: p.parsel||"",
   baslangicTarihi: p.baslangic_tarihi||"", tahminiTeslim: p.tahmini_teslim||"", fiiliTeslim: p.fiili_teslim||"",
   toplamM2: p.toplam_m2||"", ortakAlanM2: p.ortak_alan_m2||"", katSayisi: p.kat_sayisi||"", toplamBolum: p.toplam_bolum||"",
+  arsaM2: p.arsa_m2||"", emsal: p.emsal||"", toplamEmsal: p.toplam_emsal||"",
+  anlasmaYontemi: p.anlasma_yontemi||"", arsaSahibiPay: p.arsa_sahibi_pay||"", muteahhitPay: p.muteahhit_pay||"",
   aciklama: p.aciklama||"",
   bloklar: p.bloklar||[], bolumler: p.bolumler||[],
   firmaBaglantilari: p.firma_baglantilari||[],
@@ -3524,6 +3530,8 @@ const projeToDb = (p) => ({
   ada: p.ada||"", parsel: p.parsel||"",
   baslangic_tarihi: p.baslangicTarihi||"", tahmini_teslim: p.tahminiTeslim||"", fiili_teslim: p.fiiliTeslim||"",
   toplam_m2: p.toplamM2||"", ortak_alan_m2: p.ortakAlanM2||"", kat_sayisi: p.katSayisi||"", toplam_bolum: p.toplamBolum||"",
+  arsa_m2: p.arsaM2||"", emsal: p.emsal||"", toplam_emsal: p.toplamEmsal||"",
+  anlasma_yontemi: p.anlasmaYontemi||"", arsa_sahibi_pay: p.arsaSahibiPay||"", muteahhit_pay: p.muteahhitPay||"",
   aciklama: p.aciklama||"",
   bloklar: p.bloklar||[], bolumler: p.bolumler||[],
   firma_baglantilari: p.firmaBaglantilari||[],
@@ -4093,7 +4101,7 @@ const SeviyeModal=({blokAd,sev,onSave,onClose,onDosyaEkle,ilgiliDosyalar=[]})=>{
 };
 
 /* --- Bağımsız Bölüm Detay Modal --- */
-const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[]})=>{
+const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[],anlasmaYontemi=""})=>{
   const[form,setForm]=useState({...bolum});
   const u=(f,v)=>setForm(p=>({...p,[f]:v}));
   const[tab,setTab]=useState("bilgi");
@@ -4141,6 +4149,16 @@ const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[]})=>{
             <div><label style={lS}>Durum</label><select style={iS} value={form.durum||"musait"} onChange={e=>u("durum",e.target.value)}>{BOLUM_DURUMLARI.map(d=><option key={d.id} value={d.id}>{d.label}</option>)}</select></div>
             <div><label style={lS}>Para Birimi</label><select style={iS} value={form.paraBirimi||"TL"} onChange={e=>u("paraBirimi",e.target.value)}>{PARA_BIRIMLERI.map(p=><option key={p.id} value={p.id}>{p.id}</option>)}</select></div>
           </div>
+          {/* SAHİPLİK - anlaşma yöntemi varsa göster */}
+          {anlasmaYontemi&&<div>
+            <label style={lS}>Sahiplik</label>
+            <div style={{display:"flex",gap:"16px",padding:"8px 0"}}>
+              {["Arsa Sahibi","Müteahhit"].map(opt=><label key={opt} style={{display:"flex",alignItems:"center",gap:"6px",cursor:"pointer",fontSize:"14px",color:T.text}}>
+                <input type="radio" name="sahiplik" checked={form.sahiplik===opt} onChange={()=>u("sahiplik",opt)} style={{accentColor:opt==="Arsa Sahibi"?"#d4880f":"#1677ff",width:"16px",height:"16px",cursor:"pointer"}}/>
+                <span style={{fontWeight:form.sahiplik===opt?600:400,color:form.sahiplik===opt?(opt==="Arsa Sahibi"?"#d4880f":"#1677ff"):T.text}}>{opt}</span>
+              </label>)}
+            </div>
+          </div>}
           <div><label style={lS}>Satış Fiyatı</label><input style={iS} value={form.satisFiyati?Number(form.satisFiyati).toLocaleString("tr-TR"):""} onChange={e=>{const v=e.target.value.replace(/\./g,"").replace(/[^0-9]/g,"");u("satisFiyati",v);}} placeholder="0" onFocus={foc} onBlur={blr}/></div>
           {/* SÖZLEŞMELER MODÜLÜNDEN GELECEK */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
@@ -4180,6 +4198,8 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
     il:"",ilce:"",mahalle:"",adres:"",ada:"",parsel:"",
     baslangicTarihi:"",tahminiTeslim:"",fiiliTeslim:"",
     toplamM2:"",ortakAlanM2:"",katSayisi:"",toplamBolum:"",
+    arsaM2:"",emsal:"",toplamEmsal:"",
+    anlasmaYontemi:"",arsaSahibiPay:"",muteahhitPay:"",
     aciklama:"",
     firmaBaglantilari:[],
     bloklar:[],
@@ -4244,12 +4264,13 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
 
   const save=()=>{
     if(!form.ad.trim()){alert("Proje adı zorunludur!");return;}
-    onSave(form);setSaved(true);setTimeout(()=>setSaved(false),2000);
+    const toplamEmsal=(parseFloat(form.arsaM2||0)*parseFloat(form.emsal||0));
+    onSave({...form,toplamEmsal:toplamEmsal>0?String(toplamEmsal):""});setSaved(true);setTimeout(()=>setSaved(false),2000);
   };
 
   // Bölüm işlemleri
   const addBolum=()=>{
-    const yeni={id:Date.now(),tipi:"Daire",blok:"",no:"",kat:"",brutM2:"",netM2:"",odaSayisi:"",cephe:"",durum:"musait",satisFiyati:"",paraBirimi:"TL",sozlesmeTarihi:"",aliciFirmaId:"",aliciFirmaAd:"",notlar:"",gorseller:[]};
+    const yeni={id:Date.now(),tipi:"Daire",blok:"",no:"",kat:"",brutM2:"",netM2:"",odaSayisi:"",cephe:"",durum:"musait",sahiplik:"",satisFiyati:"",paraBirimi:"TL",sozlesmeTarihi:"",aliciFirmaId:"",aliciFirmaAd:"",notlar:"",gorseller:[]};
     setBolumModal(yeni);
   };
   const saveBolum=(b)=>{
@@ -4277,7 +4298,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
   const durumObj=PROJE_DURUMLARI.find(d=>d.label===form.durum)||null;
 
   return <div>
-    {bolumModal&&<BolumModal bolum={bolumModal} onSave={saveBolum} onDel={delBolum} onClose={()=>setBolumModal(null)} firmalar={firmalar} bloklar={form.bloklar||[]}/>}
+    {bolumModal&&<BolumModal bolum={bolumModal} onSave={saveBolum} onDel={delBolum} onClose={()=>setBolumModal(null)} firmalar={firmalar} bloklar={form.bloklar||[]} anlasmaYontemi={form.anlasmaYontemi||""}/>}
     {/* HEADER */}
     <div style={{display:"flex",alignItems:"center",gap:"16px",marginBottom:"0",padding:"12px 20px",background:"#384248",borderRadius:"8px 8px 0 0",paddingBottom:"8px"}}>
       <button onClick={onBack} title="Geri" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={32}/></button>
@@ -4340,15 +4361,6 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
             if(parts)window.open(`https://www.google.com/maps/search/${encodeURIComponent(parts)}`,"_blank");
             else alert("Adres bilgisi giriniz.");
           }} title="Haritada Göster" style={{padding:"0",border:"none",background:"transparent",color:"#384248",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"flex-end"}}><Map size={28}/></button>
-        </div>
-        {/* ADA + PARSEL */}
-        <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
-          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Ada</label>
-          <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:"12px",alignItems:"center"}}>
-            <input style={iS} value={form.ada||""} onChange={e=>u("ada",e.target.value)} placeholder="Ada" onFocus={foc} onBlur={blr}/>
-            <label style={{fontSize:"13px",fontWeight:600,color:T.text,height:"36px",lineHeight:"36px"}}>Parsel</label>
-            <input style={iS} value={form.parsel||""} onChange={e=>u("parsel",e.target.value)} placeholder="Parsel" onFocus={foc} onBlur={blr}/>
-          </div>
         </div>
         {/* PROJE TÜRÜ */}
         <div style={{display:"grid",gridTemplateColumns:"120px 1fr 35px",gap:"8px",alignItems:"start"}}>
@@ -4428,24 +4440,114 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
               <input style={iS} type="date" value={form.fiiliTeslim||""} onChange={e=>u("fiiliTeslim",e.target.value)} onFocus={foc} onBlur={blr}/>
             </div>
           </div>
-          {/* SAĞ: ÖZET BİLGİLER */}
+          {/* SAĞ: ARSA + ANLAŞMA + ÖZET BİLGİLER */}
           <div style={{display:"flex",flexDirection:"column",gap:"14px"}}>
+            {/* ADA + PARSEL */}
+            <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
+              <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Ada</label>
+              <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:"12px",alignItems:"center"}}>
+                <input style={iS} value={form.ada||""} onChange={e=>u("ada",e.target.value)} placeholder="Ada" onFocus={foc} onBlur={blr}/>
+                <label style={{fontSize:"13px",fontWeight:600,color:T.text,height:"36px",lineHeight:"36px"}}>Parsel</label>
+                <input style={iS} value={form.parsel||""} onChange={e=>u("parsel",e.target.value)} placeholder="Parsel" onFocus={foc} onBlur={blr}/>
+              </div>
+            </div>
+            {/* ARSA M² */}
+            <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
+              <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Arsa m²</label>
+              <input style={{...iS,fontWeight:700}} value={form._arsaEdit?form.arsaM2||"":(form.arsaM2?form.arsaM2+" m²":"")} onChange={e=>{const v=e.target.value.replace(/[^0-9.,]/g,"").replace(",",".");u("arsaM2",v);}} placeholder="0" onFocus={()=>u("_arsaEdit",true)} onBlur={()=>u("_arsaEdit",false)}/>
+            </div>
+            {/* EMSAL */}
+            <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
+              <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Emsal</label>
+              <input style={iS} type="text" value={form.emsal||""} onChange={e=>{const v=e.target.value.replace(/[^0-9.,]/g,"").replace(",",".");u("emsal",v);}} placeholder="0" onFocus={foc} onBlur={blr}/>
+            </div>
+            {/* TOPLAM EMSAL (otomatik: arsa m² × emsal) */}
+            <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
+              <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Toplam Emsal</label>
+              <div style={{...iS,background:"#fff",color:T.text,fontWeight:700,cursor:"default",userSelect:"none"}}>{(parseFloat(form.arsaM2||0)*parseFloat(form.emsal||0))>0?(parseFloat(form.arsaM2||0)*parseFloat(form.emsal||0)).toLocaleString("tr-TR")+" m²":"—"}</div>
+            </div>
+            {/* ANLAŞMA YÖNTEMİ */}
+            <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
+              <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Anlaşma Yöntemi</label>
+              <select style={iS} value={form.anlasmaYontemi||""} onChange={e=>u("anlasmaYontemi",e.target.value)}>
+                <option value="">—</option>
+                <option value="Kat Karşılığı">Kat Karşılığı</option>
+                <option value="Hasılat Paylaşımı">Hasılat Paylaşımı</option>
+              </select>
+            </div>
+            {/* PAY ORANLARI - sadece anlaşma yöntemi seçiliyse */}
+            {form.anlasmaYontemi&&<>
+              <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
+                <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Arsa Sahibi Payı</label>
+                <input style={{...iS,fontWeight:700}} value={form._asPayEdit?form.arsaSahibiPay||"":(form.arsaSahibiPay?form.arsaSahibiPay+" %":"")} onChange={e=>{const v=e.target.value.replace(/[^0-9.,]/g,"").replace(",",".");u("arsaSahibiPay",v);}} placeholder="0" onFocus={()=>u("_asPayEdit",true)} onBlur={()=>u("_asPayEdit",false)}/>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
+                <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Müteahhit Payı</label>
+                <input style={{...iS,fontWeight:700}} value={form._mutPayEdit?form.muteahhitPay||"":(form.muteahhitPay?form.muteahhitPay+" %":"")} onChange={e=>{const v=e.target.value.replace(/[^0-9.,]/g,"").replace(",",".");u("muteahhitPay",v);}} placeholder="0" onFocus={()=>u("_mutPayEdit",true)} onBlur={()=>u("_mutPayEdit",false)}/>
+              </div>
+            </>}
+            {/* AYIRICI */}
+            <div style={{borderTop:`1px solid ${T.border}`,margin:"4px 0"}}/>
+            {/* TOPLAM BAĞ. BÖLÜM */}
             <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
               <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Toplam Bağ. Bölüm</label>
               <div style={{...iS,background:"#fff",color:T.text,fontWeight:700,cursor:"default",userSelect:"none"}}>{(form.bolumler||[]).length||"0"}</div>
             </div>
+            {/* BRÜT TOPLAM */}
             <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
               <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Brüt Toplam m²</label>
               <div style={{...iS,background:"#fff",color:T.text,fontWeight:700,cursor:"default",userSelect:"none"}}>{(form.bolumler||[]).length>0?(form.bolumler||[]).reduce((s,b)=>s+parseFloat(b.brutM2||0),0).toLocaleString("tr-TR")+" m²":"—"}</div>
             </div>
+            {/* NET TOPLAM */}
             <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
               <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Net Toplam m²</label>
               <div style={{...iS,background:"#fff",color:T.text,fontWeight:700,cursor:"default",userSelect:"none"}}>{(form.bolumler||[]).length>0?(form.bolumler||[]).reduce((s,b)=>s+parseFloat(b.netM2||0),0).toLocaleString("tr-TR")+" m²":"—"}</div>
             </div>
+            {/* ORTAK ALAN */}
             <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
               <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Ortak Alan m²</label>
-              <input style={{...iS,fontWeight:700}} value={form._ortakEdit?form.ortakAlanM2||"":(form.ortakAlanM2?form.ortakAlanM2+" m²":"")} onChange={e=>{const v=e.target.value.replace(/[^0-9.,]/g,"").replace(",",".");u("ortakAlanM2",v);}} placeholder="0" onFocus={e=>{u("_ortakEdit",true);}} onBlur={e=>{u("_ortakEdit",false);}}/>
+              <input style={{...iS,fontWeight:700}} value={form._ortakEdit?form.ortakAlanM2||"":(form.ortakAlanM2?form.ortakAlanM2+" m²":"")} onChange={e=>{const v=e.target.value.replace(/[^0-9.,]/g,"").replace(",",".");u("ortakAlanM2",v);}} placeholder="0" onFocus={()=>u("_ortakEdit",true)} onBlur={()=>u("_ortakEdit",false)}/>
             </div>
+            {/* SAHİPLİK ÖZET - anlaşma yöntemi varsa */}
+            {form.anlasmaYontemi&&(()=>{
+              const bolumler=form.bolumler||[];
+              const asBolum=bolumler.filter(b=>b.sahiplik==="Arsa Sahibi");
+              const mutBolum=bolumler.filter(b=>b.sahiplik==="Müteahhit");
+              const asBrut=asBolum.reduce((s,b)=>s+parseFloat(b.brutM2||0),0);
+              const mutBrut=mutBolum.reduce((s,b)=>s+parseFloat(b.brutM2||0),0);
+              const asNet=asBolum.reduce((s,b)=>s+parseFloat(b.netM2||0),0);
+              const mutNet=mutBolum.reduce((s,b)=>s+parseFloat(b.netM2||0),0);
+              const topBolum=bolumler.length;
+              const fiiliAs=topBolum>0?((asBolum.length/topBolum)*100).toFixed(1):"0";
+              const fiiliMut=topBolum>0?((mutBolum.length/topBolum)*100).toFixed(1):"0";
+              return <>
+                <div style={{borderTop:`1px solid ${T.border}`,margin:"4px 0"}}/>
+                <div style={{fontSize:"12px",fontWeight:700,color:T.t2,textTransform:"uppercase",letterSpacing:"0.5px",textAlign:"right",paddingRight:"12px"}}>Sahiplik Dağılımı</div>
+                <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"6px 12px",gap:"8px"}}>
+                    {["","Bölüm","Brüt m²","Net m²"].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>{h}</div>)}
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",padding:"6px 12px",gap:"8px",borderBottom:`1px solid ${T.border}`}}>
+                    <div style={{fontSize:"12px",fontWeight:600,color:"#d4880f"}}>Arsa Sahibi</div>
+                    <div style={{fontSize:"12px",fontWeight:700,color:T.text}}>{asBolum.length}</div>
+                    <div style={{fontSize:"12px",color:T.text}}>{asBrut.toLocaleString("tr-TR")} m²</div>
+                    <div style={{fontSize:"12px",color:T.text}}>{asNet.toLocaleString("tr-TR")} m²</div>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",padding:"6px 12px",gap:"8px"}}>
+                    <div style={{fontSize:"12px",fontWeight:600,color:"#1677ff"}}>Müteahhit</div>
+                    <div style={{fontSize:"12px",fontWeight:700,color:T.text}}>{mutBolum.length}</div>
+                    <div style={{fontSize:"12px",color:T.text}}>{mutBrut.toLocaleString("tr-TR")} m²</div>
+                    <div style={{fontSize:"12px",color:T.text}}>{mutNet.toLocaleString("tr-TR")} m²</div>
+                  </div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
+                  <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Fiili Oran</label>
+                  <div style={{...iS,background:"#fff",color:T.text,fontWeight:700,cursor:"default",userSelect:"none",fontSize:"13px"}}>
+                    <span style={{color:"#d4880f"}}>AS %{fiiliAs}</span> / <span style={{color:"#1677ff"}}>MÜT %{fiiliMut}</span>
+                  </div>
+                </div>
+              </>;
+            })()}
           </div>
         </div>
       </div>}
@@ -4469,7 +4571,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
         };
 
         const addBolumToBlok=(blokAd)=>{
-          const yeni={id:Date.now(),tipi:"Daire",blok:blokAd,no:"",kat:"",brutM2:"",netM2:"",odaSayisi:"",cephe:"",durum:"musait",satisFiyati:"",paraBirimi:"TL",sozlesmeTarihi:"",aliciFirmaId:"",aliciFirmaAd:"",notlar:"",gorseller:[]};
+          const yeni={id:Date.now(),tipi:"Daire",blok:blokAd,no:"",kat:"",brutM2:"",netM2:"",odaSayisi:"",cephe:"",durum:"musait",sahiplik:"",satisFiyati:"",paraBirimi:"TL",sozlesmeTarihi:"",aliciFirmaId:"",aliciFirmaAd:"",notlar:"",gorseller:[]};
           setBolumModal(yeni);
         };
 
@@ -4511,42 +4613,48 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
               </div>
             </div>
             {/* TABLO */}
-            {blokBolumler.length===0
-              ?<div style={{padding:"30px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>Bu blokta henüz bölüm yok.</div>
-              :<>
-                <div style={{display:"grid",gridTemplateColumns:"60px 60px 70px 90px 90px 100px 100px 120px 100px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
-                  {["No","Kat","Tip","Brüt m²","Net m²","Oda","Cephe","Fiyat","Durum"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
-                </div>
-                {blokBolumler.map((b,idx)=>{
-                  const ds=BOLUM_DURUMLARI.find(d=>d.id===b.durum)||BOLUM_DURUMLARI[0];
-                  const pb=PARA_BIRIMLERI.find(p=>p.id===b.paraBirimi)||PARA_BIRIMLERI[0];
-                  return <div key={b.id} onClick={()=>setBolumModal(b)} style={{display:"grid",gridTemplateColumns:"60px 60px 70px 90px 90px 100px 100px 120px 100px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<blokBolumler.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer"}}
-                    onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
-                    onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
-                    <div style={{fontSize:"14px",fontWeight:600,color:T.text}}>{b.no||"—"}</div>
-                    <div style={{fontSize:"14px",color:T.text}}>{b.kat||"—"}</div>
-                    <div style={{fontSize:"14px",color:T.t2}}>{b.tipi}</div>
-                    <div style={{fontSize:"14px",color:T.text}}>{b.brutM2||"—"}</div>
-                    <div style={{fontSize:"14px",color:T.text}}>{b.netM2||"—"}</div>
-                    <div style={{fontSize:"14px",color:T.t2}}>{b.odaSayisi||"—"}</div>
-                    <div style={{fontSize:"14px",color:T.t2}}>{b.cephe||"—"}</div>
-                    <div style={{fontSize:"13px",fontWeight:600,color:T.text}}>{b.satisFiyati?Number(b.satisFiyati).toLocaleString("tr-TR")+" "+pb.symbol:"—"}</div>
-                    <div><span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"12px",color:ds.color,background:ds.bg,border:`1px solid ${ds.color}33`,whiteSpace:"nowrap"}}>{ds.label}</span></div>
-                  </div>;
-                })}
-                {/* ALT TOPLAM */}
-                <div style={{display:"grid",gridTemplateColumns:"60px 60px 70px 90px 90px 100px 100px 120px 100px",padding:"8px 12px",gap:"8px",alignItems:"center",background:"#8799a3",borderTop:`2px solid ${T.border}`}}>
-                  <div></div>
-                  <div></div>
-                  <div style={{fontSize:"16px",fontWeight:700,color:"#fff",textAlign:"right"}}>Toplam</div>
-                  <div style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{topBrut>0?topBrut.toLocaleString("tr-TR"):"—"}</div>
-                  <div style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{topNet>0?topNet.toLocaleString("tr-TR"):"—"}</div>
-                  <div></div><div></div>
-                  <div style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{(()=>{const t=blokBolumler.reduce((s,b)=>s+parseFloat(b.satisFiyati||0),0);return t>0?t.toLocaleString("tr-TR"):"—";})()}</div>
-                  <div></div>
-                </div>
-              </>
-            }
+            {(()=>{
+              const hasAnlasma=!!(form.anlasmaYontemi);
+              const cols=hasAnlasma?"60px 60px 70px 90px 90px 100px 100px 120px 100px 100px":"60px 60px 70px 90px 90px 100px 100px 120px 100px";
+              const headers=hasAnlasma?["No","Kat","Tip","Brüt m²","Net m²","Oda","Cephe","Fiyat","Durum","Sahiplik"]:["No","Kat","Tip","Brüt m²","Net m²","Oda","Cephe","Fiyat","Durum"];
+              return blokBolumler.length===0
+                ?<div style={{padding:"30px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>Bu blokta henüz bölüm yok.</div>
+                :<>
+                  <div style={{display:"grid",gridTemplateColumns:cols,background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
+                    {headers.map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
+                  </div>
+                  {blokBolumler.map((b,idx)=>{
+                    const ds=BOLUM_DURUMLARI.find(d=>d.id===b.durum)||BOLUM_DURUMLARI[0];
+                    const pb=PARA_BIRIMLERI.find(p=>p.id===b.paraBirimi)||PARA_BIRIMLERI[0];
+                    return <div key={b.id} onClick={()=>setBolumModal(b)} style={{display:"grid",gridTemplateColumns:cols,padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<blokBolumler.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer"}}
+                      onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
+                      onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
+                      <div style={{fontSize:"14px",fontWeight:600,color:T.text}}>{b.no||"—"}</div>
+                      <div style={{fontSize:"14px",color:T.text}}>{b.kat||"—"}</div>
+                      <div style={{fontSize:"14px",color:T.t2}}>{b.tipi}</div>
+                      <div style={{fontSize:"14px",color:T.text}}>{b.brutM2||"—"}</div>
+                      <div style={{fontSize:"14px",color:T.text}}>{b.netM2||"—"}</div>
+                      <div style={{fontSize:"14px",color:T.t2}}>{b.odaSayisi||"—"}</div>
+                      <div style={{fontSize:"14px",color:T.t2}}>{b.cephe||"—"}</div>
+                      <div style={{fontSize:"13px",fontWeight:600,color:T.text}}>{b.satisFiyati?Number(b.satisFiyati).toLocaleString("tr-TR")+" "+pb.symbol:"—"}</div>
+                      <div><span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"12px",color:ds.color,background:ds.bg,border:`1px solid ${ds.color}33`,whiteSpace:"nowrap"}}>{ds.label}</span></div>
+                      {hasAnlasma&&<div><span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"12px",fontWeight:600,whiteSpace:"nowrap",color:b.sahiplik==="Arsa Sahibi"?"#d4880f":b.sahiplik==="Müteahhit"?"#1677ff":"#999",background:b.sahiplik==="Arsa Sahibi"?"#fff7e6":b.sahiplik==="Müteahhit"?"#e6f4ff":"#f5f5f5",border:`1px solid ${b.sahiplik==="Arsa Sahibi"?"#d4880f33":b.sahiplik==="Müteahhit"?"#1677ff33":"#ddd"}`}}>{b.sahiplik||"—"}</span></div>}
+                    </div>;
+                  })}
+                  {/* ALT TOPLAM */}
+                  <div style={{display:"grid",gridTemplateColumns:cols,padding:"8px 12px",gap:"8px",alignItems:"center",background:"#8799a3",borderTop:`2px solid ${T.border}`}}>
+                    <div></div>
+                    <div></div>
+                    <div style={{fontSize:"16px",fontWeight:700,color:"#fff",textAlign:"right"}}>Toplam</div>
+                    <div style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{topBrut>0?topBrut.toLocaleString("tr-TR"):"—"}</div>
+                    <div style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{topNet>0?topNet.toLocaleString("tr-TR"):"—"}</div>
+                    <div></div><div></div>
+                    <div style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{(()=>{const t=blokBolumler.reduce((s,b)=>s+parseFloat(b.satisFiyati||0),0);return t>0?t.toLocaleString("tr-TR"):"—";})()}</div>
+                    <div></div>
+                    {hasAnlasma&&<div></div>}
+                  </div>
+                </>;
+            })()}
           </div>;
         };
 
@@ -4780,80 +4888,84 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
     piyasaFiyat:k.piyasaFiyat||"",
     firmaFiyat:k.firmaFiyat||"",
     revizyonlar:k.revizyonlar||[],
+    piyasaSatirlari:k.piyasaSatirlari||[],
+    firmaSatirlari:k.firmaSatirlari||[],
+    planlananSatirlari:k.planlananSatirlari||[],
   });
   const[fm,setFm]=useState(kalemInit(kalem));
   useEffect(()=>{setFm(kalemInit(kalem));},[kalem.id]);
   const uf=(f,v)=>setFm(p=>({...p,[f]:v}));
   const[saved,setSaved]=useState(false);
   const[hatalar,setHatalar]=useState({});
+  const[fiyatSekme,setFiyatSekme]=useState("planlanan");
+
+  // Malzeme referansı (erken tanımla — fiyat fonksiyonları kullanıyor)
+  const _mlzRef=malzemeler?.find(m=>m.id===fm.malzemeId);
+  const _hesaplamaVar=_mlzRef?.hesaplamaSablonu&&HESAPLAMA_SABLONLARI[_mlzRef.hesaplamaSablonu];
+
+  // Fiyat satır yönetimi
+  const fiyatAlanMap={piyasa:"piyasaSatirlari",firma:"firmaSatirlari",planlanan:"planlananSatirlari"};
+  const addFiyatSatir=(sekme)=>{const alan=fiyatAlanMap[sekme];const varsayilanKdv=_mlzRef?.kdvOrani||"20";uf(alan,[...(fm[alan]||[]),{id:Date.now(),aciklama:"",miktar:"",birimFiyat:"",kdvOrani:varsayilanKdv}]);};
+  const upFiyatSatir=(sekme,idx,field,val)=>{const alan=fiyatAlanMap[sekme];const arr=[...(fm[alan]||[])];arr[idx]={...arr[idx],[field]:val};uf(alan,arr);};
+  const delFiyatSatir=(sekme,idx)=>{const alan=fiyatAlanMap[sekme];uf(alan,(fm[alan]||[]).filter((_,i)=>i!==idx));};
+  const fiyatToplamHesapla=(satirlar)=>{
+    let miktarTop=0,kdvHaricTop=0,kdvTop=0;
+    (satirlar||[]).forEach(s=>{const m=parseFloat(s.miktar||0);const bf=parseFloat(s.birimFiyat||0);const kdvH=m*bf;const kdv=kdvH*(parseInt(s.kdvOrani||0)/100);miktarTop+=m;kdvHaricTop+=kdvH;kdvTop+=kdv;});
+    return{miktarTop,kdvHaricTop,kdvTop,genelTop:kdvHaricTop+kdvTop};
+  };
 
   const kaydetValidasyon=()=>{
     const h={};
     // 1. Blok seçimi zorunlu
     if(projeBloklar.length>0&&(!fm.bloklar||fm.bloklar.length===0))h.bloklar="Blok seçimi zorunludur";
     if(_hesaplamaVar){
-      // 2-4. Hesaplamalı kartlar
+      // Hesaplamalı kartlar
       if(!fm.planlananToplam||parseFloat(fm.planlananToplam)<=0)h.hesaplama="Hesaplama yapılmalı ve tutarı aktarılmalıdır";
     }else{
-      // 6-7. Normal kartlar
-      if(!fm.planlananMiktar||parseFloat(fm.planlananMiktar)<=0)h.miktar="Planlanan miktar zorunludur";
-      if(!fm.planlananBirimFiyat||parseFloat(fm.planlananBirimFiyat)<=0)h.birimFiyat="Birim fiyat zorunludur";
+      // Normal kartlar — planlanan sekmesinde en az 1 satır ve toplam > 0
+      const pt=fiyatToplamHesapla(fm.planlananSatirlari);
+      if((fm.planlananSatirlari||[]).length===0)h.planlanan="Planlanan fiyat sekmesine en az 1 satır ekleyin";
+      else if(pt.kdvHaricTop<=0)h.planlanan="Planlanan fiyat toplamı sıfırdan büyük olmalıdır";
     }
-    // 5. Piyasa / Firma / Planlanan fiyat boş olamaz
-    if(!fm.piyasaFiyat||parseFloat(fm.piyasaFiyat)<=0)h.piyasa="Piyasa fiyatı zorunludur";
-    if(!fm.firmaFiyat||parseFloat(fm.firmaFiyat)<=0)h.firma="Firma fiyatı zorunludur";
-    if(!fm.planlananBirimFiyat||parseFloat(fm.planlananBirimFiyat)<=0)h.planlanan="Planlanan fiyat zorunludur";
     setHatalar(h);
     if(Object.keys(h).length>0)return false;
     return true;
   };
 
-  // Fiyat değişikliğinde revizyon ekle
+  // Fiyat değişikliği
   const fiyatDegistir=(yeniFiyat)=>{
-    const eskiFiyat=fm.planlananBirimFiyat;
-    if(eskiFiyat&&eskiFiyat!==yeniFiyat&&parseFloat(eskiFiyat)>0){
-      const revizyon={id:Date.now(),tarih:new Date().toISOString().split("T")[0],eskiFiyat,yeniFiyat,sebep:""};
-      uf("revizyonlar",[...(fm.revizyonlar||[]),revizyon]);
-    }
     uf("planlananBirimFiyat",yeniFiyat);
-    // İlk planlanan fiyatı koru
     if(!fm.ilkPlanlananFiyat||parseFloat(fm.ilkPlanlananFiyat)===0){uf("ilkPlanlananFiyat",yeniFiyat);}
   };
 
-  // Hesaplamalı kart mı?
-  const _mlzRef=malzemeler?.find(m=>m.id===fm.malzemeId);
-  const _hesaplamaVar=_mlzRef?.hesaplamaSablonu&&HESAPLAMA_SABLONLARI[_mlzRef.hesaplamaSablonu];
-
-  // Detay satırları toplamı
-  const detayToplam=useMemo(()=>(fm.detaylar||[]).reduce((s,d)=>s+parseFloat(d.toplam||0),0),[fm.detaylar]);
-  const toplam=_hesaplamaVar?parseFloat(fm.planlananToplam||0):(fm.detaylar||[]).length>0?detayToplam:parseFloat(fm.planlananMiktar||0)*parseFloat(fm.planlananBirimFiyat||0);
-
-  // Sapma hesaplamaları
-  const ilkFiyat=parseFloat(fm.ilkPlanlananFiyat||0);
-  const guncelFiyat=parseFloat(fm.planlananBirimFiyat||0);
-  const piyasaF=parseFloat(fm.piyasaFiyat||0);
-  const firmaF=parseFloat(fm.firmaFiyat||0);
-  const miktar=parseFloat(fm.planlananMiktar||0);
-  const sapmaIlk=ilkFiyat>0&&guncelFiyat>0?((guncelFiyat-ilkFiyat)/ilkFiyat*100):0;
-  const tasarruf=piyasaF>0&&firmaF>0?(piyasaF-firmaF)*miktar:0;
-
-  // Detay satır ekleme
-  const addDetay=()=>uf("detaylar",[...(fm.detaylar||[]),{id:Date.now(),aciklama:"",miktar:"",birimFiyat:"",toplam:0}]);
-  const upDetay=(idx,f,v)=>{
-    const arr=[...(fm.detaylar||[])];
-    arr[idx]={...arr[idx],[f]:v};
-    if(f==="miktar"||f==="birimFiyat"){arr[idx].toplam=parseFloat(arr[idx].miktar||0)*parseFloat(arr[idx].birimFiyat||0);}
-    uf("detaylar",arr);
+  // Revizyon işlemleri
+  const[revEkleAcik,setRevEkleAcik]=useState(false);
+  const[revForm,setRevForm]=useState({tip:"fiyat",yeniDeger:"",not:""});
+  const[revDuzenle,setRevDuzenle]=useState(null);
+  const addRevizyon=()=>{
+    if(!revForm.yeniDeger)return;
+    const eskiDeger=revForm.tip==="fiyat"?fm.planlananBirimFiyat||"0":fm.planlananMiktar||"0";
+    const revNo=(fm.revizyonlar||[]).length+1;
+    const yeniRev={id:Date.now(),tarih:new Date().toISOString().split("T")[0],tip:revForm.tip,eskiDeger,yeniDeger:revForm.yeniDeger,not:revForm.not,revNo};
+    uf("revizyonlar",[...(fm.revizyonlar||[]),yeniRev]);
+    if(revForm.tip==="fiyat"){fiyatDegistir(revForm.yeniDeger);}
+    else{uf("planlananMiktar",revForm.yeniDeger);}
+    setRevForm({tip:"fiyat",yeniDeger:"",not:""});setRevEkleAcik(false);
   };
-  const delDetay=(idx)=>uf("detaylar",(fm.detaylar||[]).filter((_,i)=>i!==idx));
+  const delRevizyon=(id)=>uf("revizyonlar",(fm.revizyonlar||[]).filter(r=>r.id!==id));
+  const saveRevDuzenle=(id,field,val)=>{uf("revizyonlar",(fm.revizyonlar||[]).map(r=>r.id===id?{...r,[field]:val}:r));};
+
+  // Toplam hesaplama (hesaplamalı kartlar için mevcut, diğerleri planlanan sekmesinden)
+  const planlananTop=fiyatToplamHesapla(fm.planlananSatirlari);
+  const toplam=_hesaplamaVar?parseFloat(fm.planlananToplam||0):planlananTop.kdvHaricTop;
 
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-    <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"800px",maxHeight:"95vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+    <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"1200px",maxHeight:"95vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <div style={{padding:"12px 20px",background:"#384248",display:"flex",alignItems:"center",gap:"16px",borderRadius:`${T.rl} ${T.rl} 0 0`}}>
         <button onClick={onClose} title="Kapat" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={28}/></button>
         <div style={{flex:1,textAlign:"center"}}><span style={{fontSize:"16px",fontWeight:600,color:"#8799a3",textTransform:"uppercase"}}>{fm.malzemeKodu?fm.malzemeKodu+" - ":""}{fm.malzemeAd||"Bütçe Kalemi"}</span></div>
         <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
-          <button onClick={()=>{if(!kaydetValidasyon())return;onSave({...fm,planlananToplam:toplam});setSaved(true);setTimeout(()=>setSaved(false),2000);setHatalar({});}} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={30}/></button>
+          <button onClick={()=>{if(!kaydetValidasyon())return;const pt=fiyatToplamHesapla(fm.planlananSatirlari);onSave({...fm,planlananToplam:_hesaplamaVar?toplam:pt.kdvHaricTop,planlananMiktar:_hesaplamaVar?fm.planlananMiktar:String(pt.miktarTop||""),planlananBirimFiyat:_hesaplamaVar?fm.planlananBirimFiyat:(pt.miktarTop>0?String(pt.kdvHaricTop/pt.miktarTop):"")});setSaved(true);setTimeout(()=>setSaved(false),2000);setHatalar({});}} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={30}/></button>
           {onDel&&<button onClick={()=>{if(!confirm("Bu bütçe kalemini silmek istiyor musunuz?"))return;onDel(fm.id);onClose();}} title="Sil" style={{padding:"0",border:"none",background:"transparent",color:"#ff6b6b",cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={30}/></button>}
         </div>
       </div>
@@ -4885,101 +4997,112 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
               <span style={{fontSize:"11px",color:hatalar.hesaplama?T.err:T.t2}}>{hatalar.hesaplama||"Hesaplama sonucu tutara aktarılır"}</span>
             </div>
             <div style={{padding:"16px"}}>
-              <HesaplamaSekmesi kategori={_mlzRef.kategori} malzemeId={_mlzRef.id} malzemeAd={_mlzRef.ad} malzemeKodu={_mlzRef.malzemeKodu} zorSablon={sablonKey} onSonucAktar={(tutar)=>{const t=Math.round(tutar*100)/100;uf("planlananBirimFiyat",String(t));uf("planlananToplam",t);setHatalar(p=>({...p,hesaplama:undefined,planlanan:undefined}));}}/>
+              <HesaplamaSekmesi kategori={_mlzRef.kategori} malzemeId={_mlzRef.id} malzemeAd={_mlzRef.ad} malzemeKodu={_mlzRef.malzemeKodu} zorSablon={sablonKey} kayitliParams={fm.hesaplamaParams||null} kayitliSonuc={fm.hesaplamaSonuc||null} onParamsChange={(p,s)=>{uf("hesaplamaParams",p);uf("hesaplamaSonuc",s);}} onSonucAktar={(tutar)=>{const t=Math.round(tutar*100)/100;uf("planlananBirimFiyat",String(t));uf("planlananToplam",t);setHatalar(p=>({...p,hesaplama:undefined,planlanan:undefined}));}}/>
             </div>
           </div>;
         })()}
 
-        {/* MİKTAR + BİRİM + 3 FİYAT SİSTEMİ */}
-        {(fm.detaylar||[]).length===0&&<>
-          {!_hesaplamaVar&&<div style={{display:"grid",gridTemplateColumns:"140px 200px 80px 1fr",gap:"12px",alignItems:"center"}}>
-            <label style={{fontSize:"15px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Planlanan Miktar</label>
-            <input style={{...iS,borderColor:hatalar.miktar?T.err:undefined}} value={fm._miktarEditing?fm.planlananMiktar||"":(fm.planlananMiktar?Number(fm.planlananMiktar).toLocaleString("tr-TR"):"")} onChange={e=>{const v=e.target.value.replace(/\./g,"").replace(",",".");uf("planlananMiktar",v);setHatalar(p=>({...p,miktar:undefined}));}} placeholder="0" onFocus={e=>{uf("_miktarEditing",true);foc(e);}} onBlur={e=>{uf("_miktarEditing",false);blr(e);}}/>
-            <div style={{...iS,background:"#fafafa",cursor:"default",textAlign:"center",fontWeight:600}}>{fm.birim||"—"}</div>
-            <div></div>
-          </div>}
-          {/* 3 FİYAT KOLONU */}
-          <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden",marginTop:"4px"}}>
-            <div style={{display:"grid",gridTemplateColumns:"140px 1fr 1fr 1fr",gap:"0",background:"#384248",padding:"8px 12px"}}>
-              <div></div>
-              <div style={{fontSize:"12px",fontWeight:600,color:"#8799a3",textAlign:"center"}}>Piyasa Fiyatı</div>
-              <div style={{fontSize:"12px",fontWeight:600,color:"#8799a3",textAlign:"center"}}>Firma Fiyatı</div>
-              <div style={{fontSize:"12px",fontWeight:600,color:"#8799a3",textAlign:"center"}}>Planlanan Fiyat</div>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"140px 1fr 1fr 1fr",gap:"8px",padding:"8px 12px",alignItems:"center"}}>
-              <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right"}}>{_hesaplamaVar?"Tutar":"Birim Fiyat"}</label>
-              <input style={{...iS,textAlign:"center",borderColor:hatalar.piyasa?T.err:undefined}} value={fm._piyasaEdit?fm.piyasaFiyat||"":(fm.piyasaFiyat?Number(fm.piyasaFiyat).toLocaleString("tr-TR",{minimumFractionDigits:2}):"")} onChange={e=>{const v=e.target.value.replace(/\./g,"").replace(",",".");uf("piyasaFiyat",v);setHatalar(p=>({...p,piyasa:undefined}));}} placeholder="0" onFocus={e=>{uf("_piyasaEdit",true);foc(e);}} onBlur={e=>{uf("_piyasaEdit",false);blr(e);}}/>
-              <input style={{...iS,textAlign:"center",borderColor:hatalar.firma?T.err:undefined}} value={fm._firmaEdit?fm.firmaFiyat||"":(fm.firmaFiyat?Number(fm.firmaFiyat).toLocaleString("tr-TR",{minimumFractionDigits:2}):"")} onChange={e=>{const v=e.target.value.replace(/\./g,"").replace(",",".");uf("firmaFiyat",v);setHatalar(p=>({...p,firma:undefined}));}} placeholder="0" onFocus={e=>{uf("_firmaEdit",true);foc(e);}} onBlur={e=>{uf("_firmaEdit",false);blr(e);}}/>
-              <input style={{...iS,textAlign:"center",fontWeight:700,borderColor:hatalar.planlanan?T.err:undefined}} value={fm._planEdit?fm.planlananBirimFiyat||"":(fm.planlananBirimFiyat?Number(fm.planlananBirimFiyat).toLocaleString("tr-TR",{minimumFractionDigits:2}):"")} onChange={e=>{const v=e.target.value.replace(/\./g,"").replace(",",".");fiyatDegistir(v);setHatalar(p=>({...p,planlanan:undefined}));}} placeholder="0" onFocus={e=>{uf("_planEdit",true);foc(e);}} onBlur={e=>{uf("_planEdit",false);blr(e);}}/>
-            </div>
-            {!_hesaplamaVar&&<div style={{display:"grid",gridTemplateColumns:"140px 1fr 1fr 1fr",gap:"8px",padding:"4px 12px 8px",alignItems:"center"}}>
-              <label style={{fontSize:"12px",fontWeight:600,color:T.t3,textAlign:"right"}}>Toplam</label>
-              <div style={{fontSize:"14px",fontWeight:700,color:T.t2,textAlign:"center"}}>{piyasaF>0&&miktar>0?(piyasaF*miktar).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-              <div style={{fontSize:"14px",fontWeight:700,color:T.t2,textAlign:"center"}}>{firmaF>0&&miktar>0?(firmaF*miktar).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-              <div style={{fontSize:"14px",fontWeight:700,color:T.text,textAlign:"center"}}>{toplam>0?toplam.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-            </div>}
-            {/* TASARRUF */}
-            {!_hesaplamaVar&&tasarruf>0&&<div style={{padding:"6px 12px",background:"#f6ffed",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{fontSize:"12px",color:"#389e0d",fontWeight:600}}>Firma fiyatı ile tasarruf</span>
-              <span style={{fontSize:"14px",color:"#389e0d",fontWeight:700}}>{tasarruf.toLocaleString("tr-TR",{minimumFractionDigits:2})} ₺</span>
-            </div>}
-          </div>
-          {/* VALİDASYON HATALARI */}
-          {Object.keys(hatalar).length>0&&<div style={{display:"flex",flexDirection:"column",gap:"2px"}}>
-            {Object.values(hatalar).filter(Boolean).map((h,i)=><div key={i} style={{fontSize:"12px",color:T.err,fontWeight:500}}>{h}</div>)}
-          </div>}
+        {/* 3 SEKMELİ FİYAT PORTALI — hesaplamalı kartlarda gizle */}
+        {!_hesaplamaVar&&(()=>{
+          const sekmeler=[{id:"piyasa",label:"Piyasa Fiyatı",color:"#fa8c16"},{id:"firma",label:"Firma Fiyatı",color:"#1677ff"},{id:"planlanan",label:"Planlanan Fiyat",color:"#52c41a"}];
+          const aktifAlan=fiyatAlanMap[fiyatSekme];
+          const satirlar=fm[aktifAlan]||[];
+          const toplamlar=fiyatToplamHesapla(satirlar);
+          const birim=_mlzRef?.birim||fm.birim||"adet";
 
-          {/* İLK PLANLANAN & SAPMA */}
-          {!_hesaplamaVar&&ilkFiyat>0&&guncelFiyat>0&&ilkFiyat!==guncelFiyat&&<div style={{display:"grid",gridTemplateColumns:"140px 1fr 1fr",gap:"12px",alignItems:"center",marginTop:"4px",padding:"8px 12px",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffe58f"}}>
-            <label style={{fontSize:"12px",fontWeight:600,color:"#d48806",textAlign:"right"}}>İlk Planlanan</label>
-            <div style={{fontSize:"14px",fontWeight:600,color:"#d48806"}}>{ilkFiyat.toLocaleString("tr-TR")} ₺ / {fm.birim||"birim"}</div>
-            <div style={{fontSize:"14px",fontWeight:700,color:sapmaIlk>0?"#ff4d4f":"#52c41a"}}>Sapma: {sapmaIlk>0?"+":""}{sapmaIlk.toFixed(1)}% ({((guncelFiyat-ilkFiyat)*miktar).toLocaleString("tr-TR",{minimumFractionDigits:2})} ₺)</div>
-          </div>}
-        </>}
-
-        {/* DETAY SATIRLARI — hesaplamalı kartlarda gizle */}
-        {!malzemeler?.find(m=>m.id===fm.malzemeId)?.hesaplamaSablonu&&<div style={{borderTop:`1px solid ${T.border}`,paddingTop:"12px"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}}>
-            <span style={{fontSize:"13px",fontWeight:600,color:T.t2}}>Detay Kalemleri</span>
-            <button onClick={addDetay} title="Detay Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#384248",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={24}/></button>
-          </div>
-          {(fm.detaylar||[]).length>0&&<>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 100px 100px 120px 30px",gap:"8px",padding:"4px 0",marginBottom:"4px"}}>
-              {["Açıklama","Miktar","B.Fiyat","Toplam",""].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t3,textTransform:"uppercase"}}>{h}</div>)}
+          return <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
+            {/* SEKME BAŞLIKLARI */}
+            <div style={{display:"flex",background:"#384248"}}>
+              {sekmeler.map(s=><button key={s.id} onClick={()=>setFiyatSekme(s.id)} style={{flex:1,padding:"10px 16px",border:"none",borderBottom:fiyatSekme===s.id?`3px solid ${s.color}`:"3px solid transparent",background:fiyatSekme===s.id?"#4a5568":"transparent",color:fiyatSekme===s.id?"#fff":"#8799a3",fontSize:"13px",fontWeight:fiyatSekme===s.id?700:400,cursor:"pointer",transition:"all .2s"}}>{s.label} ({(fm[fiyatAlanMap[s.id]]||[]).length})</button>)}
             </div>
-            {(fm.detaylar||[]).map((d,idx)=><div key={d.id} style={{display:"grid",gridTemplateColumns:"1fr 100px 100px 120px 30px",gap:"8px",marginBottom:"4px",alignItems:"center"}}>
-              <input style={{...iS,fontSize:"14px"}} value={d.aciklama||""} onChange={e=>upDetay(idx,"aciklama",e.target.value)} placeholder="Örn: Ø8 demir, SGK işçi primi..." onFocus={foc} onBlur={blr}/>
-              <input style={{...iS,fontSize:"14px"}} type="number" value={d.miktar||""} onChange={e=>upDetay(idx,"miktar",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
-              <input style={{...iS,fontSize:"14px"}} type="number" value={d.birimFiyat||""} onChange={e=>upDetay(idx,"birimFiyat",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
-              <div style={{...iS,background:"#fafafa",fontWeight:600,cursor:"default",fontSize:"14px"}}>{d.toplam?Number(d.toplam).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-              <button onClick={()=>delDetay(idx)} style={{padding:"0",border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={18}/></button>
-            </div>)}
-            {/* DETAY TOPLAMI */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 100px 100px 120px 30px",gap:"8px",padding:"6px 0",borderTop:`1px solid ${T.border}`,marginTop:"4px"}}>
-              <div></div><div></div>
-              <div style={{fontSize:"13px",fontWeight:700,color:T.t2,textAlign:"right"}}>Toplam</div>
-              <div style={{fontSize:"15px",fontWeight:700,color:T.text}}>{detayToplam>0?detayToplam.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺":"—"}</div>
-              <div></div>
+            {/* TABLO HEADER */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 80px 100px 120px 70px 100px 120px 30px",gap:"6px",padding:"6px 12px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
+              {["Açıklama","Miktar","B.Fiyat","KDV Hariç","KDV %","KDV Tut.","Toplam",""].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t3,textTransform:"uppercase"}}>{h}</div>)}
             </div>
-          </>}
+            {/* SATIRLAR */}
+            {satirlar.length===0
+              ?<div style={{padding:"24px",textAlign:"center",color:T.t3,fontSize:"13px"}}>Satır eklemek için aşağıdaki butonu kullanın.</div>
+              :satirlar.map((s,idx)=>{
+                const m=parseFloat(s.miktar||0);const bf=parseFloat(s.birimFiyat||0);
+                const kdvH=m*bf;const kdvT=kdvH*(parseInt(s.kdvOrani||0)/100);const satTop=kdvH+kdvT;
+                return <div key={s.id} style={{display:"grid",gridTemplateColumns:"1fr 80px 100px 120px 70px 100px 120px 30px",gap:"6px",padding:"4px 12px",alignItems:"center",borderBottom:idx<satirlar.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa"}}>
+                  <input style={{...iS,fontSize:"13px"}} value={s.aciklama||""} onChange={e=>upFiyatSatir(fiyatSekme,idx,"aciklama",e.target.value)} placeholder="Not..." onFocus={foc} onBlur={blr}/>
+                  <input style={{...iS,fontSize:"13px",textAlign:"center"}} value={s.miktar||""} onChange={e=>{const raw=e.target.value.replace(/[^0-9.,]/g,"").replace(/,/g,".");const pts=raw.split(".");const v=pts.length>2?pts.slice(0,-1).join("")+"."+pts[pts.length-1]:raw;upFiyatSatir(fiyatSekme,idx,"miktar",v);}} placeholder="0" onFocus={foc} onBlur={blr}/>
+                  <input style={{...iS,fontSize:"13px",textAlign:"center"}} value={s.birimFiyat||""} onChange={e=>{const raw=e.target.value.replace(/[^0-9.,]/g,"").replace(/,/g,".");const pts=raw.split(".");const v=pts.length>2?pts.slice(0,-1).join("")+"."+pts[pts.length-1]:raw;upFiyatSatir(fiyatSekme,idx,"birimFiyat",v);}} placeholder="0" onFocus={foc} onBlur={blr}/>
+                  <div style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"center"}}>{kdvH>0?kdvH.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                  <select style={{...iS,fontSize:"12px",padding:"4px",textAlign:"center"}} value={s.kdvOrani||"20"} onChange={e=>upFiyatSatir(fiyatSekme,idx,"kdvOrani",e.target.value)}>{KDV_ORANLARI.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select>
+                  <div style={{fontSize:"13px",color:T.t2,textAlign:"center"}}>{kdvT>0?kdvT.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                  <div style={{fontSize:"13px",fontWeight:700,color:T.text,textAlign:"center"}}>{satTop>0?satTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                  <button onClick={()=>delFiyatSatir(fiyatSekme,idx)} style={{padding:"0",border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={16}/></button>
+                </div>;
+              })
+            }
+            {/* SATIR EKLE */}
+            <div style={{padding:"6px 12px",borderTop:`1px solid ${T.border}`}}>
+              <button onClick={()=>addFiyatSatir(fiyatSekme)} style={{padding:"6px 16px",borderRadius:T.r,border:`1px dashed ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer",width:"100%",fontWeight:500}}>+ Satır Ekle</button>
+            </div>
+            {/* GENEL TOPLAMLAR */}
+            {satirlar.length>0&&<div style={{background:"#f0f7ff",borderTop:`2px solid ${sekmeler.find(s=>s.id===fiyatSekme)?.color||T.primary}`,padding:"8px 12px"}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 80px 100px 120px 70px 100px 120px 30px",gap:"6px",alignItems:"center"}}>
+                <div style={{fontSize:"13px",fontWeight:700,color:T.text,textAlign:"right"}}>TOPLAM</div>
+                <div style={{fontSize:"13px",fontWeight:700,color:T.text,textAlign:"center"}}>{toplamlar.miktarTop>0?toplamlar.miktarTop.toLocaleString("tr-TR"):""} <span style={{fontSize:"11px",color:T.t3}}>{birim}</span></div>
+                <div></div>
+                <div style={{fontSize:"13px",fontWeight:700,color:T.text,textAlign:"center"}}>{toplamlar.kdvHaricTop>0?toplamlar.kdvHaricTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                <div></div>
+                <div style={{fontSize:"13px",fontWeight:700,color:T.text,textAlign:"center"}}>{toplamlar.kdvTop>0?toplamlar.kdvTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                <div style={{fontSize:"14px",fontWeight:700,color:sekmeler.find(s=>s.id===fiyatSekme)?.color||T.primary,textAlign:"center"}}>{toplamlar.genelTop>0?toplamlar.genelTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                <div></div>
+              </div>
+            </div>}
+          </div>;
+        })()}
+        {/* VALİDASYON HATALARI */}
+        {Object.keys(hatalar).length>0&&<div style={{display:"flex",flexDirection:"column",gap:"2px"}}>
+          {Object.values(hatalar).filter(Boolean).map((h,i)=><div key={i} style={{fontSize:"12px",color:T.err,fontWeight:500}}>{h}</div>)}
         </div>}
 
 
         {/* REVİZYON TARİHÇESİ */}
-        {(fm.revizyonlar||[]).length>0&&<div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
+        <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
           <div style={{padding:"6px 12px",background:"#384248",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <span style={{fontSize:"12px",fontWeight:600,color:"#8799a3"}}>Revizyon Tarihçesi ({(fm.revizyonlar||[]).length})</span>
+            <button onClick={()=>setRevEkleAcik(!revEkleAcik)} style={{padding:"4px 12px",borderRadius:"4px",border:"1px solid #8799a3",background:"transparent",color:"#8799a3",fontSize:"12px",cursor:"pointer",fontWeight:600}}>{revEkleAcik?"İptal":"+ Revizyon Ekle"}</button>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"90px 100px 100px 1fr",gap:"8px",padding:"4px 12px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
-            {["Tarih","Eski Fiyat","Yeni Fiyat","Sebep"].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t3,textTransform:"uppercase"}}>{h}</div>)}
-          </div>
-          {(fm.revizyonlar||[]).map((r,idx)=><div key={r.id} style={{display:"grid",gridTemplateColumns:"90px 100px 100px 1fr",gap:"8px",padding:"4px 12px",alignItems:"center",borderBottom:idx<(fm.revizyonlar||[]).length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa"}}>
-            <div style={{fontSize:"13px",color:T.t2}}>{fmtDate(r.tarih)}</div>
-            <div style={{fontSize:"13px",color:T.t3}}>{Number(r.eskiFiyat).toLocaleString("tr-TR")}</div>
-            <div style={{fontSize:"13px",fontWeight:600,color:parseFloat(r.yeniFiyat)>parseFloat(r.eskiFiyat)?"#ff4d4f":"#52c41a"}}>{Number(r.yeniFiyat).toLocaleString("tr-TR")}</div>
-            <input style={{...iS,fontSize:"12px",height:"28px",lineHeight:"28px"}} value={r.sebep||""} onChange={e=>{const arr=[...(fm.revizyonlar||[])];arr[idx]={...arr[idx],sebep:e.target.value};uf("revizyonlar",arr);}} placeholder="Artış sebebi..." onFocus={foc} onBlur={blr}/>
-          </div>)}
-        </div>}
+          {/* REVİZYON EKLEME FORMU */}
+          {revEkleAcik&&<div style={{padding:"12px",background:"#fff7e6",borderBottom:`1px solid ${T.border}`,display:"flex",flexDirection:"column",gap:"8px"}}>
+            <div style={{display:"flex",gap:"16px",alignItems:"center"}}>
+              <span style={{fontSize:"12px",fontWeight:600,color:T.t2}}>Tip:</span>
+              {["fiyat","miktar"].map(t=><label key={t} style={{display:"flex",alignItems:"center",gap:"4px",cursor:"pointer",fontSize:"13px"}}>
+                <input type="radio" checked={revForm.tip===t} onChange={()=>setRevForm(p=>({...p,tip:t}))} style={{accentColor:T.primary}}/>
+                <span>{t==="fiyat"?"Fiyat":"Miktar"}</span>
+              </label>)}
+              <span style={{fontSize:"12px",color:T.t3,marginLeft:"8px"}}>Mevcut: {revForm.tip==="fiyat"?(fm.planlananBirimFiyat?Number(fm.planlananBirimFiyat).toLocaleString("tr-TR"):"0"):(fm.planlananMiktar||"0")}</span>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:"8px",alignItems:"center"}}>
+              <input style={iS} value={revForm.yeniDeger} onChange={e=>{const raw=e.target.value.replace(/[^0-9.,]/g,"").replace(/,/g,".");const pts=raw.split(".");const v=pts.length>2?pts.slice(0,-1).join("")+"."+pts[pts.length-1]:raw;setRevForm(p=>({...p,yeniDeger:v}));}} placeholder={revForm.tip==="fiyat"?"Yeni fiyat":"Yeni miktar"} onFocus={foc} onBlur={blr}/>
+              <input style={iS} value={revForm.not} onChange={e=>setRevForm(p=>({...p,not:e.target.value}))} placeholder="Revizyon notu..." onFocus={foc} onBlur={blr}/>
+              <button onClick={addRevizyon} style={{padding:"6px 16px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"13px",cursor:"pointer",fontWeight:600}}>Ekle</button>
+            </div>
+          </div>}
+          {/* TABLO */}
+          {(fm.revizyonlar||[]).length>0&&<>
+            <div style={{display:"grid",gridTemplateColumns:"50px 90px 70px 100px 100px 1fr 60px",gap:"6px",padding:"4px 12px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
+              {["Rev","Tarih","Tip","Eski","Yeni","Not",""].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t3,textTransform:"uppercase"}}>{h}</div>)}
+            </div>
+            {(fm.revizyonlar||[]).map((r,idx)=><div key={r.id} style={{display:"grid",gridTemplateColumns:"50px 90px 70px 100px 100px 1fr 60px",gap:"6px",padding:"4px 12px",alignItems:"center",borderBottom:idx<(fm.revizyonlar||[]).length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa"}}>
+              <div style={{fontSize:"13px",fontWeight:700,color:T.primary}}>R{r.revNo||idx+1}</div>
+              <div style={{fontSize:"12px",color:T.t2}}>{fmtDate(r.tarih)}</div>
+              <div><span style={{padding:"1px 6px",borderRadius:"3px",fontSize:"11px",fontWeight:600,background:r.tip==="fiyat"?"#e6f4ff":"#f6ffed",color:r.tip==="fiyat"?"#1677ff":"#52c41a"}}>{r.tip==="fiyat"?"Fiyat":"Miktar"}</span></div>
+              <div style={{fontSize:"13px",color:T.t3}}>{Number(r.eskiDeger||r.eskiFiyat||0).toLocaleString("tr-TR")}</div>
+              <div style={{fontSize:"13px",fontWeight:600,color:parseFloat(r.yeniDeger||r.yeniFiyat||0)>parseFloat(r.eskiDeger||r.eskiFiyat||0)?"#ff4d4f":"#52c41a"}}>{Number(r.yeniDeger||r.yeniFiyat||0).toLocaleString("tr-TR")}</div>
+              <input style={{...iS,fontSize:"12px",height:"28px",lineHeight:"28px"}} value={r.not||r.sebep||""} onChange={e=>saveRevDuzenle(r.id,"not",e.target.value)} placeholder="Not..." onFocus={foc} onBlur={blr}/>
+              <div style={{display:"flex",gap:"8px"}}>
+                <button onClick={()=>delRevizyon(r.id)} title="Sil" style={{padding:"0",border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={16}/></button>
+              </div>
+            </div>)}
+          </>}
+          {(fm.revizyonlar||[]).length===0&&!revEkleAcik&&<div style={{padding:"16px",textAlign:"center",color:T.t3,fontSize:"13px",background:"#fff"}}>Henüz revizyon yok.</div>}
+        </div>
 
         {/* AÇIKLAMA */}
         <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
@@ -5030,14 +5153,17 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
   const[butceModal,setButceModal]=useState(null);
   const[filtre,setFiltre]=useState("hepsi");
   const[pickerOpen,setPickerOpen]=useState(false);
+  const[siralama,setSiralama]=useState({alan:"mlzKodu",yon:"asc"});
+  const siraToggle=(alan)=>setSiralama(p=>p.alan===alan?{alan,yon:p.yon==="asc"?"desc":"asc"}:{alan,yon:"asc"});
   const selProje=projeler.find(p=>p.id===selProjeId);
   const butceKalemleri=selProje?.butceKalemleri||[];
 
-  // Projeyi immutable güncelle
-  const guncelleProje=(guncKalemler)=>{
+  // Projeyi immutable güncelle + Supabase'e yaz
+  const guncelleProje=async(guncKalemler)=>{
     if(!selProje)return;
     const guncProje={...selProje,butceKalemleri:guncKalemler};
     setProjeler(prev=>prev.map(p=>p.id===guncProje.id?guncProje:p));
+    try{await sbPatch('projeler',selProje.id,{butce_kalemleri:guncKalemler});}catch(e){console.warn("Maliyet Supabase kayıt hatası:",e.message);}
   };
 
   // Kalem listesi — sadece eklenen kalemleri göster
@@ -5049,15 +5175,26 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
     });
   },[selProje,butceKalemleri,malzemeler]);
 
-  // Filtrelenmiş kalem listesi
+  // Filtrelenmiş + sıralanmış kalem listesi
   const filtrelenmis=useMemo(()=>{
-    return kalemListesi.filter(k=>{
+    const list=kalemListesi.filter(k=>{
       if(filtre.startsWith("blok_")){const blokAd=filtre.replace("blok_","");return(k.bloklar||[]).includes(blokAd);}
       if(filtre==="ortak")return(k.bloklar||[]).length>1;
       if(filtre==="atanmamis")return(k.bloklar||[]).length===0;
       return true;
     });
-  },[kalemListesi,filtre]);
+    const{alan,yon}=siralama;
+    const carp=yon==="asc"?1:-1;
+    list.sort((a,b)=>{
+      let va,vb;
+      if(alan==="yuzde"){va=parseFloat(a.planlananToplam||0);vb=parseFloat(b.planlananToplam||0);}
+      else if(alan==="blok"){va=(a.bloklar||[]).join("+");vb=(b.bloklar||[]).join("+");}
+      else{va=a[alan]||"";vb=b[alan]||"";}
+      if(typeof va==="number"&&typeof vb==="number")return(va-vb)*carp;
+      return String(va).localeCompare(String(vb),"tr")*carp;
+    });
+    return list;
+  },[kalemListesi,filtre,siralama]);
 
   // Gerçekleşen
   const gerceklesen=useMemo(()=>{
@@ -5301,7 +5438,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
             ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{kalemListesi.length===0?"Henüz kalem eklenmemiş. \"Kalem Ekle\" veya \"Omurga Oluştur\" butonunu kullanın.":"Filtreye uygun kalem yok."}</div>
             :<>
               <div style={{display:"grid",gridTemplateColumns:"130px 1fr 90px 70px 100px 100px 120px 50px 30px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"12px"}}>
-                {["Kod","Malzeme/Hizmet","Blok","Birim","Miktar","B.Fiyat","Toplam","%",""].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>{h}</div>)}
+                {[{label:"Kod",alan:"mlzKodu"},{label:"Malzeme/Hizmet",alan:"mlzAd"},{label:"Blok",alan:"blok"},{label:"Birim",alan:null},{label:"Miktar",alan:null},{label:"B.Fiyat",alan:null},{label:"Toplam",alan:null},{label:"%",alan:"yuzde"},{label:"",alan:null}].map((h,i)=><div key={i} onClick={h.alan?()=>siraToggle(h.alan):undefined} style={{fontSize:"12px",fontWeight:600,color:siralama.alan===h.alan?"#1677ff":T.t2,textTransform:"uppercase",cursor:h.alan?"pointer":"default",userSelect:"none",display:"flex",alignItems:"center",gap:"4px"}}>{h.label}{h.alan&&siralama.alan===h.alan&&<span style={{fontSize:"10px"}}>{siralama.yon==="asc"?"▲":"▼"}</span>}</div>)}
               </div>
               {filtrelenmis.map((k,idx)=>{
                 const bloklar=k.bloklar||[];
@@ -5446,7 +5583,7 @@ const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategoriler
   const[turFil,setTurFil]=useState("hepsi");
   const[mainTab,setMainTab]=useState("projeler");
 
-  if(secili==="yeni") return <ProjeKarti proje={null} isNew={true} onSave={p=>{onSave(p);setSecili(p.id);}} onBack={()=>setSecili(null)} firmalar={firmalar} setPage={setPage} goToFirma={goToFirma}/>;
+  if(secili==="yeni") return <ProjeKarti proje={null} isNew={true} onSave={async p=>{await onSave(p);setSecili(p.id);}} onBack={()=>setSecili(null)} firmalar={firmalar} setPage={setPage} goToFirma={goToFirma}/>;
   if(secili) {
     const p=projeler.find(x=>x.id===secili);
     if(p) return <ProjeKarti proje={p} isNew={false} onSave={onSave} onDel={(id)=>{onDel(id);setSecili(null);}} onBack={()=>setSecili(null)} firmalar={firmalar} setPage={setPage} goToFirma={goToFirma}/>;
@@ -5692,17 +5829,21 @@ export default function App(){
   const saveMalzeme = async (form) => {
     try {
       const dbData = malzemeToDb(form);
-      if(!form.id || form._isNew) { await sbPost('malzemeler', dbData); }
-      else { await sbPatch('malzemeler', form.id, dbData); }
-      await loadAll();
+      if(!form.id || form._isNew) {
+        const [saved] = await sbPost('malzemeler', dbData);
+        form.id = saved.id;
+        form._isNew = false;
+      } else {
+        await sbPatch('malzemeler', form.id, dbData);
+      }
     } catch(e) {
-      // Supabase yoksa local state'e yaz
-      setMalzemeler(prev => {
-        const exists = prev.find(m=>m.id===form.id);
-        if(exists) return prev.map(m=>m.id===form.id?form:m);
-        return [...prev, form];
-      });
+      console.warn("Malzeme kaydetme hatası:", e.message);
     }
+    setMalzemeler(prev => {
+      const exists = prev.find(m=>m.id===form.id);
+      if(exists) return prev.map(m=>m.id===form.id?form:m);
+      return [...prev, {...form, id:form.id||Date.now()}];
+    });
   };
 
   const delMalzeme = async (id) => {
@@ -5803,18 +5944,18 @@ export default function App(){
       if(!form.id || form._isNew) {
         const [saved] = await sbPost('projeler', dbData);
         form.id = saved.id;
+        form._isNew = false;
       } else {
         await sbPatch('projeler', form.id, dbData);
       }
-      await loadAll();
     } catch(e) {
       console.warn("Proje kaydetme hatası, local state'e yazılıyor:", e.message);
-      setProjeler(prev => {
-        const exists = prev.find(p=>p.id===form.id);
-        if(exists) return prev.map(p=>p.id===form.id?form:p);
-        return [...prev, {...form, id:form.id||Date.now()}];
-      });
     }
+    setProjeler(prev => {
+      const exists = prev.find(p=>p.id===form.id);
+      if(exists) return prev.map(p=>p.id===form.id?form:p);
+      return [...prev, {...form, id:form.id||Date.now()}];
+    });
   };
   const delProje = async (id) => {
     if(!confirm("Bu projeyi silmek istediğinize emin misiniz?")) return;
