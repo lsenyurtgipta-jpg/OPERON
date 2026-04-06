@@ -174,8 +174,7 @@ const HESAPLAMA_SABLONLARI={
         {v:36,l:"36 ay (3 yıl)"},
         {v:48,l:"48 ay (4 yıl)"},
         {v:60,l:"60 ay (5 yıl)"}
-      ],varsayilan:24},
-      {key:"kdvDahil",label:"KDV Dahil Göster",tip:"evet_hayir",varsayilan:true}
+      ],varsayilan:24}
     ],
     hesapla:(p)=>{
       const yil=Number(p.yil)||2026;
@@ -399,7 +398,7 @@ const HESAPLAMA_SABLONLARI={
 };
 
 /* ========== HESAPLAMA SEKMESİ BİLEŞENİ ========== */
-const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,seciliHesaplama,onSablonSec,onSonucAktar,planlananMiktar,kayitliParams,kayitliSonuc,onParamsChange})=>{
+const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,seciliHesaplama,onSablonSec,onSonucAktar,planlananMiktar,kayitliParams,kayitliSonuc,onParamsChange,kdvOrani:propKdvOrani})=>{
   // zorSablon: Hesaplamalar sekmesinden direkt açılan şablon (detay görünümü)
   // seciliHesaplama: Karta bağlı şablon key (form.hesaplamaSablonu)
   // onSablonSec: Kart modunda şablon seçildiğinde callback
@@ -559,22 +558,43 @@ const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,s
       </div>
 
       {/* SONUÇLAR */}
-      {sonuc&&<div style={{padding:"20px",background:"#f0f9ff",borderRadius:"8px",border:"2px solid #1677ff"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px"}}>
-          <div style={{fontSize:"15px",fontWeight:700,color:"#0958d9"}}>{sonuc.baslik}</div>
-          <div style={{display:"flex",gap:"8px"}}>
-            {onSonucAktar&&<button onClick={()=>onSonucAktar(sonuc.toplamMaliyet)} style={{padding:"6px 14px",borderRadius:"6px",border:"none",background:"#52c41a",color:"#fff",fontSize:"12px",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:"4px"}}>
-              <ArrowDownFromLine size={14}/> Tutarı Aktar
-            </button>}
+      {sonuc&&(()=>{
+        const hesapKdvOran=parseInt(propKdvOrani||"20");
+        const kdvHaricTutar=sonuc.toplamMaliyet||0;
+        const kdvTutar=kdvHaricTutar*(hesapKdvOran/100);
+        const kdvDahilTutar=kdvHaricTutar+kdvTutar;
+        return <div style={{padding:"20px",background:"#f0f9ff",borderRadius:"8px",border:"2px solid #1677ff"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px"}}>
+            <div style={{fontSize:"15px",fontWeight:700,color:"#0958d9"}}>{sonuc.baslik}</div>
+            <div style={{display:"flex",gap:"8px"}}>
+              {onSonucAktar&&<button onClick={()=>onSonucAktar(kdvHaricTutar)} style={{padding:"6px 14px",borderRadius:"6px",border:"none",background:"#52c41a",color:"#fff",fontSize:"12px",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:"4px"}}>
+                <ArrowDownFromLine size={14}/> Tutarı Aktar
+              </button>}
+            </div>
           </div>
-        </div>
-        <div style={{background:"#fff",borderRadius:"6px",overflow:"hidden",border:"1px solid #e5e7eb"}}>
-          {sonuc.satirlar.map((s,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"10px 16px",borderBottom:i<sonuc.satirlar.length-1?"1px solid #f3f4f6":"none",background:s.ana?"#eef6ff":s.vurgu?"#fafafa":"#fff"}}>
-            <span style={{fontSize:"13px",color:s.ana?"#0958d9":s.vurgu?"#111827":"#6B7280",fontWeight:s.vurgu||s.ana?600:400}}>{s.label}</span>
-            <span style={{fontSize:"14px",fontWeight:s.vurgu||s.ana?700:500,color:s.renk==="green"?"#16a34a":s.ana?"#0958d9":"#111827"}}>{fmtN(s.deger)} {s.birim}</span>
-          </div>)}
-        </div>
-      </div>}
+          <div style={{background:"#fff",borderRadius:"6px",overflow:"hidden",border:"1px solid #e5e7eb"}}>
+            {sonuc.satirlar.filter(s=>!s.label.includes("KDV")&&!s.label.includes("ÖDENECEK")).map((s,i,arr)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"10px 16px",borderBottom:i<arr.length-1?"1px solid #f3f4f6":"none",background:s.vurgu?"#fafafa":"#fff"}}>
+              <span style={{fontSize:"13px",color:s.vurgu?"#111827":"#6B7280",fontWeight:s.vurgu?600:400}}>{s.label}</span>
+              <span style={{fontSize:"14px",fontWeight:s.vurgu?700:500,color:s.renk==="green"?"#16a34a":"#111827"}}>{fmtN(s.deger)} {s.birim}</span>
+            </div>)}
+            {/* KDV SATIRLARI */}
+            <div style={{borderTop:"2px solid #e5e7eb"}}>
+              <div style={{display:"flex",justifyContent:"space-between",padding:"10px 16px",background:"#fafafa"}}>
+                <span style={{fontSize:"13px",fontWeight:600,color:"#111827"}}>Tutar (KDV Hariç)</span>
+                <span style={{fontSize:"14px",fontWeight:700,color:"#111827"}}>{fmtN(Number(kdvHaricTutar.toFixed(2)))} ₺</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",padding:"10px 16px",borderTop:"1px solid #f3f4f6"}}>
+                <span style={{fontSize:"13px",fontWeight:500,color:"#6B7280"}}>KDV (%{hesapKdvOran})</span>
+                <span style={{fontSize:"14px",fontWeight:600,color:"#6B7280"}}>{fmtN(Number(kdvTutar.toFixed(2)))} ₺</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",padding:"12px 16px",background:"#eef6ff",borderTop:"1px solid #e5e7eb"}}>
+                <span style={{fontSize:"14px",fontWeight:700,color:"#0958d9"}}>GENEL TOPLAM (KDV Dahil)</span>
+                <span style={{fontSize:"16px",fontWeight:700,color:"#0958d9"}}>{fmtN(Number(kdvDahilTutar.toFixed(2)))} ₺</span>
+              </div>
+            </div>
+          </div>
+        </div>;
+      })()}
 
     </>}
   </div>;
@@ -1819,7 +1839,7 @@ const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKate
         })()}
 
         {/* HESAPLAMA */}
-        {tab==="hesaplama"&&<HesaplamaSekmesi kategori={form.kategori} malzemeId={form.id} malzemeAd={form.ad} malzemeKodu={form.malzemeKodu} seciliHesaplama={form.hesaplamaSablonu} onSablonSec={(key)=>setForm(p=>({...p,hesaplamaSablonu:key}))}/>}
+        {tab==="hesaplama"&&<HesaplamaSekmesi kategori={form.kategori} malzemeId={form.id} malzemeAd={form.ad} malzemeKodu={form.malzemeKodu} seciliHesaplama={form.hesaplamaSablonu} onSablonSec={(key)=>setForm(p=>({...p,hesaplamaSablonu:key}))} kdvOrani={form.kdvOrani||"20"}/>}
 
         {/* NOTLAR */}
         {tab==="notlar"&&<div>
@@ -3309,7 +3329,7 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
         <div style={{marginBottom:"16px"}}>
           <button onClick={()=>setHesapDetay(null)} style={{padding:"6px 16px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#fff",cursor:"pointer",fontSize:"13px",display:"flex",alignItems:"center",gap:"6px"}}><MoveLeft size={16}/> Geri</button>
         </div>
-        <HesaplamaSekmesi kategori="*" malzemeId={null} malzemeAd="" malzemeKodu="" zorSablon={hesapDetay}/>
+        <HesaplamaSekmesi kategori="*" malzemeId={null} malzemeAd="" malzemeKodu="" zorSablon={hesapDetay} kdvOrani="20"/>
       </>}
     </div>}
 
@@ -4997,7 +5017,7 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
               <span style={{fontSize:"11px",color:hatalar.hesaplama?T.err:T.t2}}>{hatalar.hesaplama||"Hesaplama sonucu tutara aktarılır"}</span>
             </div>
             <div style={{padding:"16px"}}>
-              <HesaplamaSekmesi kategori={_mlzRef.kategori} malzemeId={_mlzRef.id} malzemeAd={_mlzRef.ad} malzemeKodu={_mlzRef.malzemeKodu} zorSablon={sablonKey} kayitliParams={fm.hesaplamaParams||null} kayitliSonuc={fm.hesaplamaSonuc||null} onParamsChange={(p,s)=>{uf("hesaplamaParams",p);uf("hesaplamaSonuc",s);}} onSonucAktar={(tutar)=>{const t=Math.round(tutar*100)/100;uf("planlananBirimFiyat",String(t));uf("planlananToplam",t);setHatalar(p=>({...p,hesaplama:undefined,planlanan:undefined}));}}/>
+              <HesaplamaSekmesi kategori={_mlzRef.kategori} malzemeId={_mlzRef.id} malzemeAd={_mlzRef.ad} malzemeKodu={_mlzRef.malzemeKodu} zorSablon={sablonKey} kayitliParams={fm.hesaplamaParams||null} kayitliSonuc={fm.hesaplamaSonuc||null} onParamsChange={(p,s)=>{uf("hesaplamaParams",p);uf("hesaplamaSonuc",s);}} kdvOrani={_mlzRef.kdvOrani||"20"} onSonucAktar={(tutar)=>{const t=Math.round(tutar*100)/100;uf("planlananBirimFiyat",String(t));uf("planlananToplam",t);setHatalar(p=>({...p,hesaplama:undefined,planlanan:undefined}));}}/>
             </div>
           </div>;
         })()}
@@ -5437,34 +5457,56 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
           {filtrelenmis.length===0
             ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{kalemListesi.length===0?"Henüz kalem eklenmemiş. \"Kalem Ekle\" veya \"Omurga Oluştur\" butonunu kullanın.":"Filtreye uygun kalem yok."}</div>
             :<>
-              <div style={{display:"grid",gridTemplateColumns:"130px 1fr 90px 70px 100px 100px 120px 50px 30px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"12px"}}>
-                {[{label:"Kod",alan:"mlzKodu"},{label:"Malzeme/Hizmet",alan:"mlzAd"},{label:"Blok",alan:"blok"},{label:"Birim",alan:null},{label:"Miktar",alan:null},{label:"B.Fiyat",alan:null},{label:"Toplam",alan:null},{label:"%",alan:"yuzde"},{label:"",alan:null}].map((h,i)=><div key={i} onClick={h.alan?()=>siraToggle(h.alan):undefined} style={{fontSize:"12px",fontWeight:600,color:siralama.alan===h.alan?"#1677ff":T.t2,textTransform:"uppercase",cursor:h.alan?"pointer":"default",userSelect:"none",display:"flex",alignItems:"center",gap:"4px"}}>{h.label}{h.alan&&siralama.alan===h.alan&&<span style={{fontSize:"10px"}}>{siralama.yon==="asc"?"▲":"▼"}</span>}</div>)}
+              <div style={{display:"grid",gridTemplateColumns:"130px 1fr 90px 70px 80px 90px 110px 90px 110px 40px 30px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
+                {[{label:"Kod",alan:"mlzKodu"},{label:"Malzeme/Hizmet",alan:"mlzAd"},{label:"Blok",alan:"blok"},{label:"Birim",alan:null},{label:"Miktar",alan:null},{label:"B.Fiyat",alan:null},{label:"KDV Hariç",alan:null},{label:"KDV Tut.",alan:null},{label:"KDV Dahil",alan:null},{label:"%",alan:"yuzde"},{label:"",alan:null}].map((h,i)=><div key={i} onClick={h.alan?()=>siraToggle(h.alan):undefined} style={{fontSize:"11px",fontWeight:600,color:siralama.alan===h.alan?"#1677ff":T.t2,textTransform:"uppercase",cursor:h.alan?"pointer":"default",userSelect:"none",display:"flex",alignItems:"center",gap:"4px"}}>{h.label}{h.alan&&siralama.alan===h.alan&&<span style={{fontSize:"10px"}}>{siralama.yon==="asc"?"▲":"▼"}</span>}</div>)}
               </div>
-              {filtrelenmis.map((k,idx)=>{
-                const bloklar=k.bloklar||[];
-                const blokStr=bloklar.length===0?"—":bloklar.join("+");
-                return <div key={k.id} onClick={()=>satirTikla(k)} style={{display:"grid",gridTemplateColumns:"130px 1fr 90px 70px 100px 100px 120px 50px 30px",padding:"8px 12px",gap:"12px",alignItems:"center",borderBottom:idx<filtrelenmis.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
-                  onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
-                  onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
-                  <div style={{fontSize:"14px",color:T.t3}}>{k.mlzKodu||"—"}</div>
-                  <div style={{fontSize:"15px",fontWeight:500,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{k.mlzAd}</div>
-                  <div style={{fontSize:"14px",fontWeight:600,color:bloklar.length>1?"#d48806":"#1677ff"}}>{blokStr}</div>
-                  <div style={{fontSize:"14px",color:T.t2}}>{k.mlzBirim||"—"}</div>
-                  <div style={{fontSize:"15px",color:k.planlananMiktar?T.text:T.t3}}>{k.planlananMiktar?Number(k.planlananMiktar).toLocaleString("tr-TR"):"—"}</div>
-                  <div style={{fontSize:"15px",color:k.planlananBirimFiyat?T.text:T.t3}}>{k.planlananBirimFiyat?Number(k.planlananBirimFiyat).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                  <div style={{fontSize:"15px",fontWeight:700,color:k.planlananToplam?T.text:T.t3}}>{k.planlananToplam?Number(k.planlananToplam).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                  <div style={{fontSize:"13px",fontWeight:600,color:T.primary}}>{k.planlananToplam&&ozet.planlananTop>0?(parseFloat(k.planlananToplam)/ozet.planlananTop*100).toFixed(1)+"%":"—"}</div>
-                  <button onClick={e=>{e.stopPropagation();if(confirm("Bu kalemi silmek istiyor musunuz?"))delButceKalemi(k.id);}} style={{padding:"0",border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={16}/></button>
-                </div>;
-              })}
-              {/* ALT TOPLAM */}
-              <div style={{display:"grid",gridTemplateColumns:"130px 1fr 90px 70px 100px 100px 120px 50px 30px",padding:"8px 12px",gap:"12px",alignItems:"center",background:"#8799a3"}}>
-                <div></div><div></div><div></div><div></div><div></div>
-                <div style={{fontSize:"14px",fontWeight:700,color:"#fff",textAlign:"right"}}>Toplam</div>
-                <div style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{ozet.planlananTop>0?ozet.planlananTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                <div style={{fontSize:"13px",fontWeight:700,color:"#fff"}}>100%</div>
-                <div></div>
-              </div>
+              {(()=>{
+                let topMiktar=0,topKdvHaric=0,topKdv=0,topKdvDahil=0;
+                const rows=filtrelenmis.map((k,idx)=>{
+                  const bloklar=k.bloklar||[];
+                  const blokStr=bloklar.length===0?"—":bloklar.join("+");
+                  const plan=k.planlananSatirlari||[];
+                  let satMiktar=0,satKdvHaric=0,satKdv=0;
+                  if(plan.length>0){
+                    plan.forEach(s=>{const m=parseFloat(s.miktar||0);const bf=parseFloat(s.birimFiyat||0);const kh=m*bf;satMiktar+=m;satKdvHaric+=kh;satKdv+=kh*(parseInt(s.kdvOrani||0)/100);});
+                  }else{
+                    satMiktar=parseFloat(k.planlananMiktar||0);satKdvHaric=parseFloat(k.planlananToplam||0);
+                    const mlz=malzemeler.find(m=>m.id===k.malzemeId);satKdv=satKdvHaric*(parseInt(mlz?.kdvOrani||"20")/100);
+                  }
+                  const satKdvDahil=satKdvHaric+satKdv;
+                  const bFiyat=satMiktar>0?satKdvHaric/satMiktar:0;
+                  topMiktar+=satMiktar;topKdvHaric+=satKdvHaric;topKdv+=satKdv;topKdvDahil+=satKdvDahil;
+                  return <div key={k.id} onClick={()=>satirTikla(k)} style={{display:"grid",gridTemplateColumns:"130px 1fr 90px 70px 80px 90px 110px 90px 110px 40px 30px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtrelenmis.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
+                    onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
+                    onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
+                    <div style={{fontSize:"13px",color:T.t3}}>{k.mlzKodu||"—"}</div>
+                    <div style={{fontSize:"14px",fontWeight:500,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{k.mlzAd}</div>
+                    <div style={{fontSize:"13px",fontWeight:600,color:bloklar.length>1?"#d48806":"#1677ff"}}>{blokStr}</div>
+                    <div style={{fontSize:"13px",color:T.t2}}>{k.mlzBirim||"—"}</div>
+                    <div style={{fontSize:"13px",color:satMiktar?T.text:T.t3}}>{satMiktar?satMiktar.toLocaleString("tr-TR"):"—"}</div>
+                    <div style={{fontSize:"13px",color:bFiyat?T.text:T.t3}}>{bFiyat?bFiyat.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                    <div style={{fontSize:"13px",fontWeight:600,color:satKdvHaric?T.text:T.t3}}>{satKdvHaric?satKdvHaric.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                    <div style={{fontSize:"13px",color:satKdv?T.t2:T.t3}}>{satKdv?satKdv.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                    <div style={{fontSize:"13px",fontWeight:700,color:satKdvDahil?T.text:T.t3}}>{satKdvDahil?satKdvDahil.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                    <div style={{fontSize:"12px",fontWeight:600,color:T.primary}}>{satKdvHaric&&ozet.planlananTop>0?(satKdvHaric/ozet.planlananTop*100).toFixed(1)+"%":"—"}</div>
+                    <button onClick={e=>{e.stopPropagation();if(confirm("Bu kalemi silmek istiyor musunuz?"))delButceKalemi(k.id);}} style={{padding:"0",border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={16}/></button>
+                  </div>;
+                });
+                return <>{rows}
+                  {/* ALT TOPLAMLAR */}
+                  <div style={{display:"grid",gridTemplateColumns:"130px 1fr 90px 70px 80px 90px 110px 90px 110px 40px 30px",padding:"8px 12px",gap:"8px",alignItems:"center",background:"#384248",borderTop:`2px solid ${T.border}`}}>
+                    <div></div><div></div><div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div style={{fontSize:"13px",fontWeight:700,color:"#fff"}}>{topKdvHaric>0?topKdvHaric.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                    <div style={{fontSize:"13px",fontWeight:700,color:"#d1d9de"}}>{topKdv>0?topKdv.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                    <div style={{fontSize:"14px",fontWeight:700,color:"#52c41a"}}>{topKdvDahil>0?topKdvDahil.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                    <div style={{fontSize:"12px",fontWeight:700,color:"#fff"}}>100%</div>
+                    <div></div>
+                  </div>
+                </>;
+              })()}
             </>
           }
         </div>
