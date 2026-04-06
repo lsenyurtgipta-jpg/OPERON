@@ -273,6 +273,77 @@ CREATE TABLE projeler (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- SATINALMA SİPARİŞLERİ
+CREATE TABLE satinalma_siparisleri (
+  id BIGSERIAL PRIMARY KEY,
+  sp_no TEXT DEFAULT '',
+  teklif_id BIGINT,
+  teklif_no TEXT DEFAULT '',
+  firma_id BIGINT REFERENCES firmalar(id) ON DELETE SET NULL,
+  firma_ad TEXT DEFAULT '',
+  proje_id BIGINT REFERENCES projeler(id) ON DELETE SET NULL,
+  proje_ad TEXT DEFAULT '',
+  siparis_tarihi DATE,
+  termin_tarihi DATE,
+  teslimat_adresi TEXT DEFAULT '',
+  teslim_kosulu TEXT DEFAULT 'Şantiye Teslim',
+  odeme_vadesi TEXT DEFAULT '',
+  para_birimi TEXT DEFAULT 'TL',
+  aciklama TEXT DEFAULT '',
+  durum TEXT DEFAULT 'taslak',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE satinalma_siparis_kalemleri (
+  id BIGSERIAL PRIMARY KEY,
+  siparis_id BIGINT REFERENCES satinalma_siparisleri(id) ON DELETE CASCADE,
+  malzeme_id BIGINT,
+  malzeme_ad TEXT DEFAULT '',
+  malzeme_kodu TEXT DEFAULT '',
+  birim TEXT DEFAULT '',
+  miktar NUMERIC DEFAULT 0,
+  net_fiyat NUMERIC DEFAULT 0,
+  kdv_orani TEXT DEFAULT '20',
+  teslim_miktar NUMERIC DEFAULT 0,
+  aciklama TEXT DEFAULT '',
+  butce_kalemi_id BIGINT DEFAULT NULL
+);
+
+-- ALIŞ FATURALARI
+CREATE TABLE alis_faturalari (
+  id BIGSERIAL PRIMARY KEY,
+  af_no TEXT DEFAULT '',
+  siparis_id BIGINT,
+  sp_no TEXT DEFAULT '',
+  teklif_id BIGINT,
+  teklif_no TEXT DEFAULT '',
+  firma_id BIGINT REFERENCES firmalar(id) ON DELETE SET NULL,
+  firma_ad TEXT DEFAULT '',
+  proje_id BIGINT REFERENCES projeler(id) ON DELETE SET NULL,
+  proje_ad TEXT DEFAULT '',
+  fatura_no TEXT DEFAULT '',
+  fatura_tarihi DATE,
+  vade_tarihi DATE,
+  para_birimi TEXT DEFAULT 'TL',
+  aciklama TEXT DEFAULT '',
+  durum TEXT DEFAULT 'beklemede',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE alis_fatura_kalemleri (
+  id BIGSERIAL PRIMARY KEY,
+  fatura_id BIGINT REFERENCES alis_faturalari(id) ON DELETE CASCADE,
+  malzeme_id BIGINT,
+  malzeme_ad TEXT DEFAULT '',
+  malzeme_kodu TEXT DEFAULT '',
+  birim TEXT DEFAULT '',
+  miktar NUMERIC DEFAULT 0,
+  net_fiyat NUMERIC DEFAULT 0,
+  kdv_orani TEXT DEFAULT '20',
+  aciklama TEXT DEFAULT '',
+  butce_kalemi_id BIGINT DEFAULT NULL
+);
+
 -- ============================================
 -- 3. RLS (Row Level Security) AYARLARI
 -- Anon key ile erişim için tüm tablolarda RLS aç + policy ekle
@@ -291,6 +362,10 @@ ALTER TABLE firma_bankalar ENABLE ROW LEVEL SECURITY;
 ALTER TABLE firma_iletisim ENABLE ROW LEVEL SECURITY;
 ALTER TABLE firma_adresler ENABLE ROW LEVEL SECURITY;
 ALTER TABLE projeler ENABLE ROW LEVEL SECURITY;
+ALTER TABLE satinalma_siparisleri ENABLE ROW LEVEL SECURITY;
+ALTER TABLE satinalma_siparis_kalemleri ENABLE ROW LEVEL SECURITY;
+ALTER TABLE alis_faturalari ENABLE ROW LEVEL SECURITY;
+ALTER TABLE alis_fatura_kalemleri ENABLE ROW LEVEL SECURITY;
 
 -- Tüm tablolar için anon erişim (SELECT, INSERT, UPDATE, DELETE)
 CREATE POLICY "anon_all_firmalar" ON firmalar FOR ALL USING (true) WITH CHECK (true);
@@ -306,8 +381,12 @@ CREATE POLICY "anon_all_firma_bankalar" ON firma_bankalar FOR ALL USING (true) W
 CREATE POLICY "anon_all_firma_iletisim" ON firma_iletisim FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "anon_all_firma_adresler" ON firma_adresler FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "anon_all_projeler" ON projeler FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_all_satinalma_siparisleri" ON satinalma_siparisleri FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_all_satinalma_siparis_kalemleri" ON satinalma_siparis_kalemleri FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_all_alis_faturalari" ON alis_faturalari FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_all_alis_fatura_kalemleri" ON alis_fatura_kalemleri FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================
 -- TAMAMLANDI
--- 13 tablo oluşturuldu + RLS politikaları ayarlandı
+-- 17 tablo oluşturuldu + RLS politikaları ayarlandı
 -- ============================================

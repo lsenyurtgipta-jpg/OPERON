@@ -2684,7 +2684,7 @@ const SP_DURUMLARI=[
 ];
 const TESLIM_KOSULLARI=["Şantiye Teslim","Fabrika Teslim","Ex-Works","CIF","FOB","Diğer"];
 
-const SatinalmaSiparisleriPage=({siparisler,setSiparisler,teklifler,firmalar,projeler,malzemeler})=>{
+const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler,firmalar,projeler,malzemeler})=>{
   const[view,setView]=useState("list");
   const[aktifSp,setAktifSp]=useState(null);
   const[search,setSearch]=useState("");
@@ -2712,11 +2712,11 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,teklifler,firmalar,pro
       firmaId:String(t.firmaId),firmaAd:t.firmaAd,
       projeId:t.projeId?String(t.projeId):"",projeAd:t.projeAd||"",
       paraBirimi:t.paraBirimi,
-      kalemler:t.kalemler.map(k=>({...k,id:Date.now()+Math.random(),teslimMiktar:0,aciklama:""}))
+      kalemler:t.kalemler.map(k=>({...k,id:Date.now()+Math.random(),teslimMiktar:0,aciklama:"",butceKalemiId:null}))
     }));
   };
 
-  const kalemEkle=()=>setForm(p=>({...p,kalemler:[...p.kalemler,{id:Date.now(),malzemeId:"",malzemeAd:"",malzemeKodu:"",birim:"",miktar:1,netFiyat:0,kdvOrani:"20",teslimMiktar:0,aciklama:""}]}));
+  const kalemEkle=()=>setForm(p=>({...p,kalemler:[...p.kalemler,{id:Date.now(),malzemeId:"",malzemeAd:"",malzemeKodu:"",birim:"",miktar:1,netFiyat:0,kdvOrani:"20",teslimMiktar:0,aciklama:"",butceKalemiId:null}]}));
   const kalemSil=(kid)=>setForm(p=>({...p,kalemler:p.kalemler.filter(k=>k.id!==kid)}));
   const kalemUp=(kid,f,v)=>setForm(p=>({...p,kalemler:p.kalemler.map(k=>{
     if(k.id!==kid)return k;
@@ -2731,19 +2731,20 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,teklifler,firmalar,pro
     return{kdvHaric,kdvToplam,kdvDahil:kdvHaric+kdvToplam};
   };
 
-  const kaydet=()=>{
+  const kaydet=async()=>{
     if(!form.firmaId){alert("Firma seçiniz!");return;}
     if(form.kalemler.length===0){alert("En az bir kalem ekleyiniz!");return;}
     const frm=firmalar.find(f=>f.id===parseInt(form.firmaId));
     const prj=projeler.find(p=>p.id===parseInt(form.projeId));
-    const sp={...form,id:form.id||Date.now(),firmaId:parseInt(form.firmaId),firmaAd:frm?.ad||form.firmaAd,
+    const isNew=!form.id;
+    const sp={...form,id:form.id||Date.now(),_isNew:isNew,firmaId:parseInt(form.firmaId),firmaAd:frm?.ad||form.firmaAd,
       projeId:form.projeId?parseInt(form.projeId):null,projeAd:prj?.ad||form.projeAd,
-      kalemler:form.kalemler.map(k=>({...k,malzemeId:k.malzemeId?parseInt(k.malzemeId):null,miktar:parseFloat(k.miktar)||0,netFiyat:parseFloat(k.netFiyat)||0,teslimMiktar:parseFloat(k.teslimMiktar)||0}))};
-    setSiparisler(prev=>{const ex=prev.find(x=>x.id===sp.id);return ex?prev.map(x=>x.id===sp.id?sp:x):[...prev,sp];});
+      kalemler:form.kalemler.map(k=>({...k,malzemeId:k.malzemeId?parseInt(k.malzemeId):null,miktar:parseFloat(k.miktar)||0,netFiyat:parseFloat(k.netFiyat)||0,teslimMiktar:parseFloat(k.teslimMiktar)||0,butceKalemiId:k.butceKalemiId?parseInt(k.butceKalemiId):null}))};
+    if(onSave){await onSave(sp);}else{setSiparisler(prev=>{const ex=prev.find(x=>x.id===sp.id);return ex?prev.map(x=>x.id===sp.id?sp:x):[...prev,sp];});}
     setView("list");setForm({...emptyForm,spNo:nextNo});
   };
 
-  const sil=(id)=>{if(!confirm("Bu siparişi silmek istediğinize emin misiniz?"))return;setSiparisler(prev=>prev.filter(s=>s.id!==id));};
+  const sil=(id)=>{if(onDel){onDel(id);}else{if(!confirm("Bu siparişi silmek istediğinize emin misiniz?"))return;setSiparisler(prev=>prev.filter(s=>s.id!==id));}};
   const edit=(s)=>{setForm({...s,firmaId:String(s.firmaId),projeId:s.projeId?String(s.projeId):"",kalemler:s.kalemler.map(k=>({...k,malzemeId:k.malzemeId?String(k.malzemeId):""}))} );setView("form");};
   const durumGuncelle=(sp,yeniDurum)=>setSiparisler(prev=>prev.map(s=>s.id===sp.id?{...s,durum:yeniDurum}:s));
 
@@ -2840,8 +2841,9 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,teklifler,firmalar,pro
               </select>
               <button onClick={()=>kalemSil(k.id)} style={{background:"none",border:"none",color:T.err,cursor:"pointer",fontSize:"18px",padding:"2px"}}>×</button>
             </div>
-            <div style={{marginTop:"6px",paddingLeft:"36px"}}>
+            <div style={{marginTop:"6px",paddingLeft:"36px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}}>
               <input style={{...iS,fontSize:"12px",background:"#f9f9f9"}} value={k.aciklama||""} onChange={e=>kalemUp(k.id,"aciklama",e.target.value)} placeholder="Kalem notu..." onFocus={foc} onBlur={blr}/>
+              {form.projeId&&(()=>{const prj=projeler.find(p=>p.id===parseInt(form.projeId));const bkList=prj?.butceKalemleri||[];return bkList.length>0?<select style={{...iS,fontSize:"12px",background:k.butceKalemiId?"#f6ffed":"#fff7e6",borderColor:k.butceKalemiId?"#b7eb8f":"#ffe58f"}} value={k.butceKalemiId||""} onChange={e=>kalemUp(k.id,"butceKalemiId",e.target.value?parseInt(e.target.value):null)}><option value="">— Bütçe Kalemi Eşleştir —</option>{bkList.map(bk=>{const pt=parseFloat(bk.planlananToplam||0);return <option key={bk.id} value={bk.id}>[{bk.malzemeKodu||"?"}] {bk.malzemeAd||"?"}{pt>0?` (${pt.toLocaleString("tr-TR")} ₺)`:""}</option>;})}</select>:null;})()}
             </div>
           </div>;
         })}
@@ -2982,7 +2984,7 @@ const AF_DURUMLARI=[
   {id:"iptal",label:"İptal",color:"#ff4d4f",bg:"#fff1f0",icon:"❌"},
 ];
 
-const AlisFaturalariPage=({faturalar,setFaturalar,siparisler,teklifler,firmalar,projeler,malzemeler})=>{
+const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklifler,firmalar,projeler,malzemeler})=>{
   const[view,setView]=useState("list");
   const[aktifFatura,setAktifFatura]=useState(null);
   const[search,setSearch]=useState("");
@@ -3010,11 +3012,11 @@ const AlisFaturalariPage=({faturalar,setFaturalar,siparisler,teklifler,firmalar,
       firmaId:String(sp.firmaId),firmaAd:sp.firmaAd,
       projeId:sp.projeId?String(sp.projeId):"",projeAd:sp.projeAd||"",
       paraBirimi:sp.paraBirimi,
-      kalemler:(sp.kalemler||[]).map(k=>({...k,id:Date.now()+Math.random()}))
+      kalemler:(sp.kalemler||[]).map(k=>({...k,id:Date.now()+Math.random(),butceKalemiId:k.butceKalemiId||null}))
     }));
   };
 
-  const kalemEkle=()=>setForm(p=>({...p,kalemler:[...p.kalemler,{id:Date.now(),malzemeId:"",malzemeAd:"",malzemeKodu:"",birim:"",miktar:1,netFiyat:0,kdvOrani:"20",aciklama:""}]}));
+  const kalemEkle=()=>setForm(p=>({...p,kalemler:[...p.kalemler,{id:Date.now(),malzemeId:"",malzemeAd:"",malzemeKodu:"",birim:"",miktar:1,netFiyat:0,kdvOrani:"20",aciklama:"",butceKalemiId:null}]}));
   const kalemSil=(kid)=>setForm(p=>({...p,kalemler:p.kalemler.filter(k=>k.id!==kid)}));
   const kalemUp=(kid,f,v)=>setForm(p=>({...p,kalemler:p.kalemler.map(k=>{
     if(k.id!==kid)return k;
@@ -3029,20 +3031,21 @@ const AlisFaturalariPage=({faturalar,setFaturalar,siparisler,teklifler,firmalar,
     return{kdvHaric,kdvToplam,kdvDahil:kdvHaric+kdvToplam};
   };
 
-  const kaydet=()=>{
+  const kaydet=async()=>{
     if(!form.firmaId){alert("Firma seçiniz!");return;}
     if(!form.faturaNo.trim()){alert("Fatura numarası giriniz!");return;}
     if(form.kalemler.length===0){alert("En az bir kalem ekleyiniz!");return;}
     const frm=firmalar.find(f=>f.id===parseInt(form.firmaId));
     const prj=projeler.find(p=>p.id===parseInt(form.projeId));
-    const af={...form,id:form.id||Date.now(),firmaId:parseInt(form.firmaId),firmaAd:frm?.ad||form.firmaAd,
+    const isNew=!form.id;
+    const af={...form,id:form.id||Date.now(),_isNew:isNew,firmaId:parseInt(form.firmaId),firmaAd:frm?.ad||form.firmaAd,
       projeId:form.projeId?parseInt(form.projeId):null,projeAd:prj?.ad||form.projeAd,
-      kalemler:form.kalemler.map(k=>({...k,malzemeId:k.malzemeId?parseInt(k.malzemeId):null,miktar:parseFloat(k.miktar)||0,netFiyat:parseFloat(k.netFiyat)||0}))};
-    setFaturalar(prev=>{const ex=prev.find(x=>x.id===af.id);return ex?prev.map(x=>x.id===af.id?af:x):[...prev,af];});
+      kalemler:form.kalemler.map(k=>({...k,malzemeId:k.malzemeId?parseInt(k.malzemeId):null,miktar:parseFloat(k.miktar)||0,netFiyat:parseFloat(k.netFiyat)||0,butceKalemiId:k.butceKalemiId?parseInt(k.butceKalemiId):null}))};
+    if(onSave){await onSave(af);}else{setFaturalar(prev=>{const ex=prev.find(x=>x.id===af.id);return ex?prev.map(x=>x.id===af.id?af:x):[...prev,af];});}
     setView("list");setForm({...emptyForm,afNo:nextNo});
   };
 
-  const sil=(id)=>{if(!confirm("Bu faturayı silmek istediğinize emin misiniz?"))return;setFaturalar(prev=>prev.filter(f=>f.id!==id));};
+  const sil=(id)=>{if(onDel){onDel(id);}else{if(!confirm("Bu faturayı silmek istediğinize emin misiniz?"))return;setFaturalar(prev=>prev.filter(f=>f.id!==id));}};
   const edit=(f)=>{setForm({...f,firmaId:String(f.firmaId),projeId:f.projeId?String(f.projeId):"",kalemler:f.kalemler.map(k=>({...k,malzemeId:k.malzemeId?String(k.malzemeId):""}))});setView("form");};
   const durumGuncelle=(af,yeniDurum)=>setFaturalar(prev=>prev.map(f=>f.id===af.id?{...f,durum:yeniDurum}:f));
 
@@ -3130,6 +3133,10 @@ const AlisFaturalariPage=({faturalar,setFaturalar,siparisler,teklifler,firmalar,
                 {KDV_ORANLARI.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}
               </select>
               <button onClick={()=>kalemSil(k.id)} style={{background:"none",border:"none",color:T.err,cursor:"pointer",fontSize:"18px",padding:"2px"}}>×</button>
+            </div>
+            <div style={{marginTop:"6px",paddingLeft:"36px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}}>
+              <input style={{...iS,fontSize:"12px",background:"#f9f9f9"}} value={k.aciklama||""} onChange={e=>kalemUp(k.id,"aciklama",e.target.value)} placeholder="Kalem notu..." onFocus={foc} onBlur={blr}/>
+              {form.projeId&&(()=>{const prj=projeler.find(p=>p.id===parseInt(form.projeId));const bkList=prj?.butceKalemleri||[];return bkList.length>0?<select style={{...iS,fontSize:"12px",background:k.butceKalemiId?"#f6ffed":"#fff7e6",borderColor:k.butceKalemiId?"#b7eb8f":"#ffe58f"}} value={k.butceKalemiId||""} onChange={e=>kalemUp(k.id,"butceKalemiId",e.target.value?parseInt(e.target.value):null)}><option value="">— Bütçe Kalemi Eşleştir —</option>{bkList.map(bk=>{const pt=parseFloat(bk.planlananToplam||0);return <option key={bk.id} value={bk.id}>[{bk.malzemeKodu||"?"}] {bk.malzemeAd||"?"}{pt>0?` (${pt.toLocaleString("tr-TR")} ₺)`:""}</option>;})}</select>:null;})()}
             </div>
           </div>;
         })}
@@ -3579,6 +3586,65 @@ const kalemToLocal = (k) => ({
   iskonto1: parseFloat(k.iskonto1)||0, iskonto2: parseFloat(k.iskonto2)||0,
   netFiyat: parseFloat(k.net_fiyat)||0, kdvOrani: k.kdv_orani||"20",
   maliyetEsas: k.maliyet_esas||"net", not: k.kalem_notu||""
+});
+
+// Sipariş dönüşüm fonksiyonları
+const siparisToLocal = (s, kalemler=[]) => ({
+  id:s.id, spNo:s.sp_no||"", teklifId:s.teklif_id, teklifNo:s.teklif_no||"",
+  firmaId:s.firma_id, firmaAd:s.firma_ad||"", projeId:s.proje_id, projeAd:s.proje_ad||"",
+  siparisTarihi:s.siparis_tarihi||"", terminTarihi:s.termin_tarihi||"",
+  teslimatAdresi:s.teslimat_adresi||"", teslimKosulu:s.teslim_kosulu||"Şantiye Teslim",
+  odemeVadesi:s.odeme_vadesi||"", paraBirimi:s.para_birimi||"TL",
+  aciklama:s.aciklama||"", durum:s.durum||"taslak", kalemler
+});
+const siparisKalemToLocal = (k) => ({
+  id:k.id, siparisId:k.siparis_id, malzemeId:k.malzeme_id, malzemeAd:k.malzeme_ad||"",
+  malzemeKodu:k.malzeme_kodu||"", birim:k.birim||"", miktar:parseFloat(k.miktar)||0,
+  netFiyat:parseFloat(k.net_fiyat)||0, kdvOrani:k.kdv_orani||"20",
+  teslimMiktar:parseFloat(k.teslim_miktar)||0, aciklama:k.aciklama||"",
+  butceKalemiId:k.butce_kalemi_id||null
+});
+const siparisToDb = (s) => ({
+  sp_no:s.spNo||"", teklif_id:s.teklifId||null, teklif_no:s.teklifNo||"",
+  firma_id:s.firmaId||null, firma_ad:s.firmaAd||"", proje_id:s.projeId||null, proje_ad:s.projeAd||"",
+  siparis_tarihi:s.siparisTarihi||null, termin_tarihi:s.terminTarihi||null,
+  teslimat_adresi:s.teslimatAdresi||"", teslim_kosulu:s.teslimKosulu||"",
+  odeme_vadesi:s.odemeVadesi||"", para_birimi:s.paraBirimi||"TL",
+  aciklama:s.aciklama||"", durum:s.durum||"taslak"
+});
+const siparisKalemToDb = (k, siparisId) => ({
+  siparis_id:siparisId, malzeme_id:k.malzemeId||null, malzeme_ad:k.malzemeAd||"",
+  malzeme_kodu:k.malzemeKodu||"", birim:k.birim||"", miktar:k.miktar||0,
+  net_fiyat:k.netFiyat||0, kdv_orani:k.kdvOrani||"20", teslim_miktar:k.teslimMiktar||0,
+  aciklama:k.aciklama||"", butce_kalemi_id:k.butceKalemiId||null
+});
+
+// Fatura dönüşüm fonksiyonları
+const faturaToLocal = (f, kalemler=[]) => ({
+  id:f.id, afNo:f.af_no||"", spId:f.siparis_id, spNo:f.sp_no||"",
+  teklifId:f.teklif_id, teklifNo:f.teklif_no||"",
+  firmaId:f.firma_id, firmaAd:f.firma_ad||"", projeId:f.proje_id, projeAd:f.proje_ad||"",
+  faturaNo:f.fatura_no||"", faturaTarihi:f.fatura_tarihi||"", vadeTarihi:f.vade_tarihi||"",
+  paraBirimi:f.para_birimi||"TL", aciklama:f.aciklama||"", durum:f.durum||"beklemede", kalemler
+});
+const faturaKalemToLocal = (k) => ({
+  id:k.id, faturaId:k.fatura_id, malzemeId:k.malzeme_id, malzemeAd:k.malzeme_ad||"",
+  malzemeKodu:k.malzeme_kodu||"", birim:k.birim||"", miktar:parseFloat(k.miktar)||0,
+  netFiyat:parseFloat(k.net_fiyat)||0, kdvOrani:k.kdv_orani||"20",
+  aciklama:k.aciklama||"", butceKalemiId:k.butce_kalemi_id||null
+});
+const faturaToDb = (f) => ({
+  af_no:f.afNo||"", siparis_id:f.spId||null, sp_no:f.spNo||"",
+  teklif_id:f.teklifId||null, teklif_no:f.teklifNo||"",
+  firma_id:f.firmaId||null, firma_ad:f.firmaAd||"", proje_id:f.projeId||null, proje_ad:f.projeAd||"",
+  fatura_no:f.faturaNo||"", fatura_tarihi:f.faturaTarihi||null, vade_tarihi:f.vadeTarihi||null,
+  para_birimi:f.paraBirimi||"TL", aciklama:f.aciklama||"", durum:f.durum||"beklemede"
+});
+const faturaKalemToDb = (k, faturaId) => ({
+  fatura_id:faturaId, malzeme_id:k.malzemeId||null, malzeme_ad:k.malzemeAd||"",
+  malzeme_kodu:k.malzemeKodu||"", birim:k.birim||"", miktar:k.miktar||0,
+  net_fiyat:k.netFiyat||0, kdv_orani:k.kdvOrani||"20",
+  aciklama:k.aciklama||"", butce_kalemi_id:k.butceKalemiId||null
 });
 
 /* ========== PROJELER MODÜLÜ ========== */
@@ -5219,13 +5285,13 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
   // Gerçekleşen
   const gerceklesen=useMemo(()=>{
     if(!selProjeId)return[];
-    return faturalar.filter(f=>f.projeId===selProjeId).flatMap(f=>(f.kalemler||[]).map(k=>({...k,faturaNo:f.faturaNo||"",firmaAd:f.firmaAd||""})));
+    return faturalar.filter(f=>f.projeId===selProjeId&&f.durum!=="iptal").flatMap(f=>(f.kalemler||[]).map(k=>({...k,faturaNo:f.faturaNo||f.afNo||"",firmaAd:f.firmaAd||"",butceKalemiId:k.butceKalemiId||null})));
   },[selProjeId,faturalar]);
 
   // Taahhüt
   const taahhut=useMemo(()=>{
     if(!selProjeId)return[];
-    return siparisler.filter(s=>s.projeId===selProjeId).flatMap(s=>(s.kalemler||[]).map(k=>({...k,spNo:s.spNo||"",firmaAd:s.firmaAd||""})));
+    return siparisler.filter(s=>s.projeId===selProjeId&&s.durum!=="iptal"&&s.durum!=="tamamlandi").flatMap(s=>(s.kalemler||[]).map(k=>({...k,spNo:s.spNo||"",firmaAd:s.firmaAd||"",butceKalemiId:k.butceKalemiId||null})));
   },[selProjeId,siparisler]);
 
   // Blok m² hesabı
@@ -5457,8 +5523,8 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
           {filtrelenmis.length===0
             ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{kalemListesi.length===0?"Henüz kalem eklenmemiş. \"Kalem Ekle\" veya \"Omurga Oluştur\" butonunu kullanın.":"Filtreye uygun kalem yok."}</div>
             :<>
-              <div style={{display:"grid",gridTemplateColumns:"130px 1fr 90px 70px 80px 90px 110px 90px 110px 40px 30px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
-                {[{label:"Kod",alan:"mlzKodu"},{label:"Malzeme/Hizmet",alan:"mlzAd"},{label:"Blok",alan:"blok"},{label:"Birim",alan:null},{label:"Miktar",alan:null},{label:"B.Fiyat",alan:null},{label:"KDV Hariç",alan:null},{label:"KDV Tut.",alan:null},{label:"KDV Dahil",alan:null},{label:"%",alan:"yuzde"},{label:"",alan:null}].map((h,i)=><div key={i} onClick={h.alan?()=>siraToggle(h.alan):undefined} style={{fontSize:"11px",fontWeight:600,color:siralama.alan===h.alan?"#1677ff":T.t2,textTransform:"uppercase",cursor:h.alan?"pointer":"default",userSelect:"none",display:"flex",alignItems:"center",gap:"4px"}}>{h.label}{h.alan&&siralama.alan===h.alan&&<span style={{fontSize:"10px"}}>{siralama.yon==="asc"?"▲":"▼"}</span>}</div>)}
+              <div style={{display:"grid",gridTemplateColumns:"120px 1fr 80px 60px 70px 80px 100px 80px 100px 90px 90px 90px 35px 25px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
+                {[{label:"Kod",alan:"mlzKodu"},{label:"Malzeme/Hizmet",alan:"mlzAd"},{label:"Blok",alan:"blok"},{label:"Birim",alan:null},{label:"Miktar",alan:null},{label:"B.Fiyat",alan:null},{label:"KDV Hariç",alan:null},{label:"KDV Tut.",alan:null},{label:"KDV Dahil",alan:null},{label:"Taahhüt",alan:null},{label:"Gerçekleşen",alan:null},{label:"Kalan",alan:null},{label:"%",alan:"yuzde"},{label:"",alan:null}].map((h,i)=><div key={i} onClick={h.alan?()=>siraToggle(h.alan):undefined} style={{fontSize:"11px",fontWeight:600,color:siralama.alan===h.alan?"#1677ff":T.t2,textTransform:"uppercase",cursor:h.alan?"pointer":"default",userSelect:"none",display:"flex",alignItems:"center",gap:"4px"}}>{h.label}{h.alan&&siralama.alan===h.alan&&<span style={{fontSize:"10px"}}>{siralama.yon==="asc"?"▲":"▼"}</span>}</div>)}
               </div>
               {(()=>{
                 let topMiktar=0,topKdvHaric=0,topKdv=0,topKdvDahil=0;
@@ -5476,7 +5542,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
                   const satKdvDahil=satKdvHaric+satKdv;
                   const bFiyat=satMiktar>0?satKdvHaric/satMiktar:0;
                   topMiktar+=satMiktar;topKdvHaric+=satKdvHaric;topKdv+=satKdv;topKdvDahil+=satKdvDahil;
-                  return <div key={k.id} onClick={()=>satirTikla(k)} style={{display:"grid",gridTemplateColumns:"130px 1fr 90px 70px 80px 90px 110px 90px 110px 40px 30px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtrelenmis.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
+                  return <div key={k.id} onClick={()=>satirTikla(k)} style={{display:"grid",gridTemplateColumns:"120px 1fr 80px 60px 70px 80px 100px 80px 100px 90px 90px 90px 35px 25px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtrelenmis.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
                     onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
                     onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
                     <div style={{fontSize:"13px",color:T.t3}}>{k.mlzKodu||"—"}</div>
@@ -5488,21 +5554,37 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
                     <div style={{fontSize:"13px",fontWeight:600,color:satKdvHaric?T.text:T.t3}}>{satKdvHaric?satKdvHaric.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
                     <div style={{fontSize:"13px",color:satKdv?T.t2:T.t3}}>{satKdv?satKdv.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
                     <div style={{fontSize:"13px",fontWeight:700,color:satKdvDahil?T.text:T.t3}}>{satKdvDahil?satKdvDahil.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                    <div style={{fontSize:"12px",fontWeight:600,color:T.primary}}>{satKdvHaric&&ozet.planlananTop>0?(satKdvHaric/ozet.planlananTop*100).toFixed(1)+"%":"—"}</div>
-                    <button onClick={e=>{e.stopPropagation();if(confirm("Bu kalemi silmek istiyor musunuz?"))delButceKalemi(k.id);}} style={{padding:"0",border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={16}/></button>
+                    {(()=>{
+                      const bkTaahhut=taahhut.filter(t=>t.butceKalemiId===k.id).reduce((s,t)=>s+(parseFloat(t.netFiyat||0)*parseFloat(t.miktar||0)),0);
+                      const bkGercek=gerceklesen.filter(g=>g.butceKalemiId===k.id).reduce((s,g)=>s+(parseFloat(g.netFiyat||0)*parseFloat(g.miktar||0)),0);
+                      const bkKalan=satKdvHaric-bkTaahhut-bkGercek;
+                      return <><div style={{fontSize:"12px",color:bkTaahhut?"#fa8c16":T.t3,fontWeight:bkTaahhut?600:400}}>{bkTaahhut?bkTaahhut.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                      <div style={{fontSize:"12px",color:bkGercek?"#1677ff":T.t3,fontWeight:bkGercek?600:400}}>{bkGercek?bkGercek.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                      <div style={{fontSize:"12px",fontWeight:600,color:bkKalan<0?"#ff4d4f":bkKalan>0?"#52c41a":T.t3}}>{satKdvHaric?bkKalan.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div></>;
+                    })()}
+                    <div style={{fontSize:"11px",fontWeight:600,color:T.primary}}>{satKdvHaric&&ozet.planlananTop>0?(satKdvHaric/ozet.planlananTop*100).toFixed(1)+"%":"—"}</div>
+                    <button onClick={e=>{e.stopPropagation();if(confirm("Bu kalemi silmek istiyor musunuz?"))delButceKalemi(k.id);}} style={{padding:"0",border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={14}/></button>
                   </div>;
                 });
                 return <>{rows}
                   {/* ALT TOPLAMLAR */}
-                  <div style={{display:"grid",gridTemplateColumns:"130px 1fr 90px 70px 80px 90px 110px 90px 110px 40px 30px",padding:"8px 12px",gap:"8px",alignItems:"center",background:"#384248",borderTop:`2px solid ${T.border}`}}>
+                  <div style={{display:"grid",gridTemplateColumns:"120px 1fr 80px 60px 70px 80px 100px 80px 100px 90px 90px 90px 35px 25px",padding:"8px 12px",gap:"8px",alignItems:"center",background:"#384248",borderTop:`2px solid ${T.border}`}}>
                     <div></div><div></div><div></div>
                     <div></div>
                     <div></div>
                     <div></div>
                     <div style={{fontSize:"13px",fontWeight:700,color:"#fff"}}>{topKdvHaric>0?topKdvHaric.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
                     <div style={{fontSize:"13px",fontWeight:700,color:"#d1d9de"}}>{topKdv>0?topKdv.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                    <div style={{fontSize:"14px",fontWeight:700,color:"#52c41a"}}>{topKdvDahil>0?topKdvDahil.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                    <div style={{fontSize:"12px",fontWeight:700,color:"#fff"}}>100%</div>
+                    <div style={{fontSize:"13px",fontWeight:700,color:"#52c41a"}}>{topKdvDahil>0?topKdvDahil.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                    {(()=>{
+                      const tTop=taahhut.reduce((s,t)=>s+(parseFloat(t.netFiyat||0)*parseFloat(t.miktar||0)),0);
+                      const gTop=gerceklesen.reduce((s,g)=>s+(parseFloat(g.netFiyat||0)*parseFloat(g.miktar||0)),0);
+                      const kTop=topKdvHaric-tTop-gTop;
+                      return <><div style={{fontSize:"12px",fontWeight:700,color:"#fa8c16"}}>{tTop>0?tTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                      <div style={{fontSize:"12px",fontWeight:700,color:"#1677ff"}}>{gTop>0?gTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                      <div style={{fontSize:"12px",fontWeight:700,color:kTop<0?"#ff4d4f":"#52c41a"}}>{topKdvHaric?kTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div></>;
+                    })()}
+                    <div style={{fontSize:"11px",fontWeight:700,color:"#fff"}}>100%</div>
                     <div></div>
                   </div>
                 </>;
@@ -5740,10 +5822,10 @@ export default function App(){
   const[faturalar,setFaturalar]=useState([]);
 
   /* ---- VERİTABANINDAN YÜKLEMELERi ---- */
-  const loadAll = useCallback(async () => {
-    setLoading(true);
+  const loadAll = useCallback(async (ilkYukleme=false) => {
+    if(ilkYukleme) setLoading(true);
     try {
-      const [fDb, kDb, nDb, mDb, katDb, agDb, tDb, tkDb, sbDb, bkDb, ilDb, adDb, pDb] = await Promise.all([
+      const [fDb, kDb, nDb, mDb, katDb, agDb, tDb, tkDb, sbDb, bkDb, ilDb, adDb, pDb, spDb, spkDb, afDb, afkDb] = await Promise.all([
         sbGet('firmalar','order=id.asc'),
         sbGet('kisiler','order=id.asc'),
         sbGet('notlar','order=id.asc'),
@@ -5757,6 +5839,10 @@ export default function App(){
         sbGet('firma_iletisim','order=sira_no.asc,id.asc'),
         sbGet('firma_adresler','order=sira_no.asc,id.asc'),
         sbGet('projeler','order=id.asc'),
+        sbGet('satinalma_siparisleri','order=id.asc'),
+        sbGet('satinalma_siparis_kalemleri','order=id.asc'),
+        sbGet('alis_faturalari','order=id.asc'),
+        sbGet('alis_fatura_kalemleri','order=id.asc'),
       ]);
       const firmaList = fDb.map(f => {
         const loc = firmaToLocal(f);
@@ -5778,6 +5864,8 @@ export default function App(){
       setAltKategoriler(katDb.map(katToLocal));
       setAltGruplar(agDb.map(altGrpToLocal));
       setTeklifler(teklifList);
+      setSiparisler(spDb.map(s=>{const kalemler=spkDb.filter(k=>k.siparis_id===s.id).map(siparisKalemToLocal);return siparisToLocal(s,kalemler);}));
+      setFaturalar(afDb.map(f=>{const kalemler=afkDb.filter(k=>k.fatura_id===f.id).map(faturaKalemToLocal);return faturaToLocal(f,kalemler);}));
       setProjeler(pDb.map(projeToLocal));
     } catch(e) {
       // Supabase bağlantısı yoksa sessizce devam et — local state ile çalışır
@@ -5786,7 +5874,7 @@ export default function App(){
     setLoading(false);
   }, []);
 
-  useEffect(()=>{ loadAll(); },[loadAll]);
+  useEffect(()=>{ loadAll(true); },[loadAll]);
 
   const saveFirma = async (form) => {
     try {
@@ -5967,6 +6055,76 @@ export default function App(){
     catch(e) { setTeklifler(prev=>prev.filter(t=>t.id!==id)); }
   };
 
+  // Sipariş kaydet/sil
+  const saveSiparis = async (form) => {
+    try {
+      const dbData = siparisToDb(form);
+      let siparisId;
+      if(!form.id || form._isNew) {
+        const [saved] = await sbPost('satinalma_siparisleri', dbData);
+        siparisId = saved.id;
+        form.id = siparisId;
+        form._isNew = false;
+      } else {
+        await sbPatch('satinalma_siparisleri', form.id, dbData);
+        siparisId = form.id;
+        await sbReq(`satinalma_siparis_kalemleri?siparis_id=eq.${siparisId}`, {method:'DELETE', prefer:'', headers:{'Prefer':'count=none'}});
+      }
+      if(form.kalemler && form.kalemler.length > 0) {
+        const kDb = form.kalemler.filter(k=>k.malzemeAd||k.malzemeId).map(k=>siparisKalemToDb(k, siparisId));
+        if(kDb.length>0) await sbPost('satinalma_siparis_kalemleri', kDb);
+      }
+    } catch(e) {
+      console.warn("Sipariş kaydetme hatası:", e.message);
+    }
+    setSiparisler(prev => {
+      const exists = prev.find(s=>s.id===form.id);
+      if(exists) return prev.map(s=>s.id===form.id?form:s);
+      return [...prev, {...form, id:form.id||Date.now()}];
+    });
+  };
+  const delSiparis = async (id) => {
+    if(!confirm("Bu siparişi silmek istediğinize emin misiniz?")) return;
+    try { await sbDel('satinalma_siparisleri', id); }
+    catch(e) { console.warn("Sipariş silme hatası:", e.message); }
+    setSiparisler(prev=>prev.filter(s=>s.id!==id));
+  };
+
+  // Fatura kaydet/sil
+  const saveFatura = async (form) => {
+    try {
+      const dbData = faturaToDb(form);
+      let faturaId;
+      if(!form.id || form._isNew) {
+        const [saved] = await sbPost('alis_faturalari', dbData);
+        faturaId = saved.id;
+        form.id = faturaId;
+        form._isNew = false;
+      } else {
+        await sbPatch('alis_faturalari', form.id, dbData);
+        faturaId = form.id;
+        await sbReq(`alis_fatura_kalemleri?fatura_id=eq.${faturaId}`, {method:'DELETE', prefer:'', headers:{'Prefer':'count=none'}});
+      }
+      if(form.kalemler && form.kalemler.length > 0) {
+        const kDb = form.kalemler.filter(k=>k.malzemeAd||k.malzemeId).map(k=>faturaKalemToDb(k, faturaId));
+        if(kDb.length>0) await sbPost('alis_fatura_kalemleri', kDb);
+      }
+    } catch(e) {
+      console.warn("Fatura kaydetme hatası:", e.message);
+    }
+    setFaturalar(prev => {
+      const exists = prev.find(f=>f.id===form.id);
+      if(exists) return prev.map(f=>f.id===form.id?form:f);
+      return [...prev, {...form, id:form.id||Date.now()}];
+    });
+  };
+  const delFatura = async (id) => {
+    if(!confirm("Bu faturayı silmek istediğinize emin misiniz?")) return;
+    try { await sbDel('alis_faturalari', id); }
+    catch(e) { console.warn("Fatura silme hatası:", e.message); }
+    setFaturalar(prev=>prev.filter(f=>f.id!==id));
+  };
+
   /* ---- NOT EKLE ---- */
   const addNote = async (firmaId, metin) => {
     try {
@@ -6011,7 +6169,7 @@ export default function App(){
   };
 
   /* ---- TEKLİFTEN SP OLUŞTUR ---- */
-  const spOlusturTeklifden = (teklif) => {
+  const spOlusturTeklifden = async (teklif) => {
     // Teklifi SP'ye dönüştürüldü olarak işaretle
     setTeklifler(prev=>prev.map(t=>t.id===teklif.id?{...t,durum:"sp_donustu"}:t));
     // SP sayfasına geç - SatinalmaSiparisleriPage otomatik doldurur
@@ -6028,9 +6186,9 @@ export default function App(){
       teslimatAdresi:"",teslimKosulu:"Şantiye Teslim",odemeVadesi:"",
       paraBirimi:teklif.paraBirimi,aciklama:`${teklif.teklifNo} teklifinden oluşturuldu`,
       durum:"taslak",
-      kalemler:(teklif.kalemler||[]).map(k=>({...k,id:Date.now()+Math.random(),teslimMiktar:0,aciklama:""}))
+      kalemler:(teklif.kalemler||[]).map(k=>({...k,id:Date.now()+Math.random(),teslimMiktar:0,aciklama:"",butceKalemiId:null}))
     };
-    setSiparisler(prev=>[...prev,yeniSp]);
+    await saveSiparis(yeniSp);
     setPage("satinalma");
     alert(`✅ ${spNo} numaralı Satınalma Siparişi oluşturuldu!\nSatınalma Siparişleri sayfasına yönlendiriliyorsunuz.`);
   };
@@ -6057,8 +6215,8 @@ export default function App(){
         {page==="malzemeler"&&<MalzemelerPage malzemeler={malzemeler} setMalzemeler={setMalzemeler} onSaveMalzeme={saveMalzeme} onDelMalzeme={delMalzeme} firmalar={firmalar} altKategoriler={altKategoriler} setAltKategoriler={setAltKategoriler} altGruplar={altGruplar} setAltGruplar={setAltGruplar} teklifler={teklifler} setTeklifler={setTeklifler} onSaveKat={saveKat} onDelKat={delKat} onSaveAltGrp={saveAltGrp} onDelAltGrp={delAltGrp} onSaveTeklif={saveTeklif} onDelTeklif={delTeklif} projeler={projeler}/>}
         {page==="projeler"&&<ProjelerPage projeler={projeler} setProjeler={setProjeler} onSave={saveProje} onDel={delProje} firmalar={firmalar} dosyaKategorileri={dosyaKategorileri} setDosyaKategorileri={setDosyaKategorileri} setPage={setPage} goToFirma={goToFirma}/>}
         {page==="teklifler"&&<AlinanTekliflerYonetim teklifler={teklifler} setTeklifler={setTeklifler} onSave={saveTeklif} onDel={delTeklif} malzemeler={malzemeler} firmalar={firmalar} projeler={projeler} onSpOlustur={spOlusturTeklifden}/>}
-        {page==="satinalma"&&<SatinalmaSiparisleriPage siparisler={siparisler} setSiparisler={setSiparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler}/>}
-        {page==="alis_fatura"&&<AlisFaturalariPage faturalar={faturalar} setFaturalar={setFaturalar} siparisler={siparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler}/>}
+        {page==="satinalma"&&<SatinalmaSiparisleriPage siparisler={siparisler} setSiparisler={setSiparisler} onSave={saveSiparis} onDel={delSiparis} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler}/>}
+        {page==="alis_fatura"&&<AlisFaturalariPage faturalar={faturalar} setFaturalar={setFaturalar} onSave={saveFatura} onDel={delFatura} siparisler={siparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler}/>}
         {page==="maliyet"&&<MaliyetPage projeler={projeler} setProjeler={setProjeler} malzemeler={malzemeler} faturalar={faturalar} siparisler={siparisler}/>}
       </div>
     </div>
