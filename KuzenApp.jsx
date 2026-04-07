@@ -32,6 +32,33 @@ const sbPost = (table, data) => sbReq(table, {method:'POST', body:JSON.stringify
 const sbPatch = (table, id, data) => sbReq(`${table}?id=eq.${id}`, {method:'PATCH', body:JSON.stringify(data)});
 const sbDel = (table, id) => sbReq(`${table}?id=eq.${id}`, {method:'DELETE', prefer:'', headers:{'Prefer':'count=none'}});
 
+/* ========== SUPABASE STORAGE ========== */
+const STORAGE_BUCKET = "operon_dosyalar";
+const sbUpload = async (filePath, file) => {
+  const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${filePath}`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'true' },
+    body: file
+  });
+  if (!r.ok) { const e = await r.text(); throw new Error(e); }
+  return filePath;
+};
+const sbStorageUrl = (filePath) => `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${filePath}`;
+const sbStorageDel = async (filePath) => {
+  await fetch(`${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${filePath}`, {
+    method: 'DELETE',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+};
+const dosyaUrl = (d) => {
+  if (!d) return "";
+  if (typeof d === "string") return d.startsWith("data:") ? d : (d.startsWith("http") ? d : sbStorageUrl(d));
+  if (d.storagePath) return sbStorageUrl(d.storagePath);
+  if (d.data && d.data.startsWith("data:")) return d.data;
+  return "";
+};
+const safeName = (name) => (name || "dosya").replace(/[^a-zA-Z0-9._-]/g, "_").substring(0, 80);
+
 const fmtDate=(d)=>{if(!d)return"—";const p=d.split("-");if(p.length!==3)return d;return`${p[2]}.${p[1]}.${p[0]}`;};
 const toTitleCase=(v)=>{
   const trUpper=(c)=>{if(c==='i')return 'İ';if(c==='ı')return 'I';return c.toUpperCase();};
@@ -1011,7 +1038,7 @@ const FirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar})=>{
                       ?<img src={form.kisiler[editKisiIdx].resim} alt="kişi" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
                       :<><span style={{fontSize:"24px",color:T.t3}}>📷</span><span style={{fontSize:"10px",color:T.t3,marginTop:"4px"}}>Fotoğraf</span></>}
                   </div>
-                  <input id={`resim-${editKisiIdx}`} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>upK(editKisiIdx,"resim",ev.target.result);r.readAsDataURL(f);}}/>
+                  <input id={`resim-${editKisiIdx}`} type="file" accept="image/*" style={{display:"none"}} onChange={async e=>{const f=e.target.files[0];if(!f)return;const dosyaId=Date.now();const path=`firmalar/kisi_${dosyaId}_${safeName(f.name)}`;try{await sbUpload(path,f);upK(editKisiIdx,"resim",sbStorageUrl(path));}catch(err){alert("Fotoğraf yüklenemedi");}}}/>
                   <div style={{display:"flex",flexDirection:"column",gap:"4px",marginTop:"4px"}}>
                     {!form.kisiler[editKisiIdx]?.resim&&
                       <button onClick={()=>document.getElementById(`resim-${editKisiIdx}`).click()} style={{width:"88px",padding:"3px",fontSize:"11px",border:`1px solid ${T.primary}`,borderRadius:"4px",background:T.pBg,color:T.primary,cursor:"pointer"}}>📷 Resim Yükle</button>}
@@ -1594,18 +1621,19 @@ const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKate
 
   const addN=()=>{if(!nn.trim())return;const n={id:Date.now(),tarih:new Date().toISOString().split("T")[0],yazar:"Admin",metin:nn};setForm(p=>({...p,notlar:[...p.notlar,n]}));setNn("");};
 
-  const resimEkle=(e)=>{
+  const resimEkle=async(e)=>{
     const files=Array.from(e.target.files||[]);
-    files.forEach(file=>{
-      if(!file.type.startsWith("image/")){alert(`${file.name} bir resim dosyası değil!`);return;}
-      if(file.size>5*1024*1024){alert(`${file.name} 5MB'dan büyük!`);return;}
-      const reader=new FileReader();
-      reader.onload=(ev)=>{
-        const r={id:Date.now()+Math.random(),ad:file.name,boyut:file.size,tip:file.type,data:ev.target.result,tarih:new Date().toISOString().split("T")[0]};
+    for(const file of files){
+      if(!file.type.startsWith("image/")){alert(`${file.name} bir resim dosyası değil!`);continue;}
+      if(file.size>5*1024*1024){alert(`${file.name} 5MB'dan büyük!`);continue;}
+      const dosyaId=Date.now()+Math.floor(Math.random()*1000);
+      const path=`malzemeler/${dosyaId}_${safeName(file.name)}`;
+      try{
+        await sbUpload(path,file);
+        const r={id:dosyaId,ad:file.name,boyut:file.size,tip:file.type,storagePath:path,data:"",tarih:new Date().toISOString().split("T")[0]};
         setForm(p=>({...p,resimler:[...p.resimler,r]}));
-      };
-      reader.readAsDataURL(file);
-    });
+      }catch(err){console.error("Resim yükleme hatası:",err);alert(`${file.name} yüklenemedi`);}
+    }
     e.target.value="";
   };
   const resimSil=(rid)=>{setForm(p=>({...p,resimler:p.resimler.filter(r=>r.id!==rid)}));};
@@ -1761,7 +1789,7 @@ const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKate
           {form.resimler.length===0?<div style={{textAlign:"center",padding:"40px",color:T.t3,background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`}}><div style={{fontSize:"48px",marginBottom:"8px"}}>📷</div>Henüz görsel eklenmemiş</div>:
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:"12px"}}>{form.resimler.map((r,i)=>
             <div key={r.id} style={{borderRadius:T.r,border:`1px solid ${T.border}`,overflow:"hidden",background:"#fff",boxShadow:T.sh,position:"relative"}}>
-              <div onClick={()=>setBuyukResim(r)} style={{width:"100%",height:"140px",background:`url(${r.data}) center/cover no-repeat`,cursor:"pointer",position:"relative"}}>
+              <div onClick={()=>setBuyukResim(r)} style={{width:"100%",height:"140px",background:`url(${dosyaUrl(r)}) center/cover no-repeat`,cursor:"pointer",position:"relative"}}>
                 <div style={{position:"absolute",top:"6px",left:"6px",background:"rgba(0,0,0,0.55)",color:"#fff",fontSize:"11px",padding:"1px 8px",borderRadius:"4px",fontWeight:600}}>{i+1}/{form.resimler.length}</div>
               </div>
               <div style={{padding:"8px 10px"}}>
@@ -1777,7 +1805,7 @@ const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKate
           {/* Büyük resim modal */}
           {buyukResim&&<div onClick={()=>setBuyukResim(null)} style={{position:"fixed",inset:0,zIndex:1100,background:"rgba(0,0,0,0.8)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
             <div onClick={e=>e.stopPropagation()} style={{position:"relative",maxWidth:"90vw",maxHeight:"90vh"}}>
-              <img src={buyukResim.data} alt={buyukResim.ad} style={{maxWidth:"90vw",maxHeight:"85vh",borderRadius:"8px",boxShadow:"0 8px 32px rgba(0,0,0,0.5)"}}/>
+              <img src={dosyaUrl(buyukResim)} alt={buyukResim.ad} style={{maxWidth:"90vw",maxHeight:"85vh",borderRadius:"8px",boxShadow:"0 8px 32px rgba(0,0,0,0.5)"}}/>
               <div style={{position:"absolute",bottom:"-36px",left:0,right:0,textAlign:"center",color:"#fff",fontSize:"13px"}}>{buyukResim.ad} • {fmtBoyut(buyukResim.boyut)}</div>
               <button onClick={()=>setBuyukResim(null)} style={{position:"absolute",top:"-12px",right:"-12px",width:"32px",height:"32px",borderRadius:"50%",border:"none",background:"#fff",color:T.text,fontSize:"16px",cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             </div>
@@ -3679,16 +3707,19 @@ const newProjeId=()=>"PRJ-"+new Date().getFullYear()+"-"+String(Date.now()).slic
 /* --- Görsel Portal --- */
 const GorselPortal=({gorseller,setGorseller,readonly})=>{
   const[light,setLight]=useState(null);
-  const ekle=(e)=>{
+  const ekle=async(e)=>{
     const files=Array.from(e.target.files);
-    files.forEach(f=>{
-      const r=new FileReader();
-      r.onload=ev=>setGorseller(prev=>[...prev,{id:Date.now()+Math.random(),ad:f.name,aciklama:"",data:ev.target.result,tarih:new Date().toISOString().split("T")[0]}]);
-      r.readAsDataURL(f);
-    });
+    for(const f of files){
+      const dosyaId=Date.now()+Math.floor(Math.random()*1000);
+      const path=`gorseller/${dosyaId}_${safeName(f.name)}`;
+      try{
+        await sbUpload(path,f);
+        setGorseller(prev=>[...prev,{id:dosyaId,ad:f.name,aciklama:"",storagePath:path,data:"",tarih:new Date().toISOString().split("T")[0]}]);
+      }catch(err){console.error("Görsel yükleme hatası:",err);alert(`${f.name} yüklenemedi`);}
+    }
     e.target.value="";
   };
-  const sil=(id)=>{if(!confirm("Görseli silmek istiyor musunuz?"))return;setGorseller(prev=>prev.filter(g=>g.id!==id));};
+  const sil=(id)=>{if(!confirm("Görseli silmek istiyor musunuz?"))return;const g=gorseller.find(x=>x.id===id);if(g?.storagePath)sbStorageDel(g.storagePath).catch(()=>{});setGorseller(prev=>prev.filter(g=>g.id!==id));};
   const upAciklama=(id,v)=>setGorseller(prev=>prev.map(g=>g.id===id?{...g,aciklama:v}:g));
   return <div>
     {!readonly&&<label style={{display:"inline-flex",alignItems:"center",gap:"8px",padding:"8px 16px",borderRadius:T.r,border:`2px dashed ${T.primary}`,color:T.primary,fontSize:"13px",fontWeight:500,cursor:"pointer",marginBottom:"16px",background:T.pBg}}>
@@ -3697,7 +3728,7 @@ const GorselPortal=({gorseller,setGorseller,readonly})=>{
     {gorseller.length===0&&<div style={{padding:"40px",textAlign:"center",color:T.t3,fontSize:"13px",border:`1px dashed ${T.border}`,borderRadius:T.r}}>Henüz görsel eklenmemiş</div>}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:"14px"}}>
       {gorseller.map(g=><div key={g.id} style={{position:"relative",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fafafa",overflow:"hidden"}}>
-        <img src={g.data} alt={g.ad} onClick={()=>setLight(g)} style={{width:"100%",height:"130px",objectFit:"cover",cursor:"pointer",display:"block"}}/>
+        <img src={dosyaUrl(g)} alt={g.ad} onClick={()=>setLight(g)} style={{width:"100%",height:"130px",objectFit:"cover",cursor:"pointer",display:"block"}}/>
         {!readonly&&<button onClick={()=>sil(g.id)} style={{position:"absolute",top:"6px",right:"6px",background:"rgba(0,0,0,0.6)",border:"none",color:"#fff",borderRadius:"50%",width:"24px",height:"24px",cursor:"pointer",fontSize:"13px",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>}
         <div style={{padding:"8px"}}>
           {!readonly
@@ -3714,7 +3745,7 @@ const GorselPortal=({gorseller,setGorseller,readonly})=>{
       </div>)}
     </div>
     {light&&<div onClick={()=>setLight(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"12px"}}>
-      <img src={light.data} alt={light.ad} style={{maxWidth:"90vw",maxHeight:"82vh",objectFit:"contain",borderRadius:"8px"}}/>
+      <img src={dosyaUrl(light)} alt={light.ad} style={{maxWidth:"90vw",maxHeight:"82vh",objectFit:"contain",borderRadius:"8px"}}/>
       {light.aciklama&&<div style={{color:"#fff",fontSize:"14px",opacity:0.85,background:"rgba(0,0,0,0.4)",padding:"6px 16px",borderRadius:"20px"}}>{light.aciklama}</div>}
       <button onClick={()=>setLight(null)} style={{position:"fixed",top:"20px",right:"24px",background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",fontSize:"24px",cursor:"pointer",borderRadius:"50%",width:"40px",height:"40px"}}>×</button>
     </div>}
@@ -3755,17 +3786,20 @@ const SearchSel=({value,options,onChange,placeholder,width})=>{
 const DosyaPortal=({dosyalar,setDosyalar,readonly,dosyaTurleri,setDosyaTurleri})=>{
   const tumTurler=dosyaTurleri&&dosyaTurleri.length>0?dosyaTurleri:DOSYA_TURLERI;
   const[yeniTur,setYeniTur]=useState("");
-  const ekle=(e)=>{
+  const ekle=async(e)=>{
     const files=Array.from(e.target.files);
-    files.forEach(f=>{
-      const r=new FileReader();
-      r.onload=ev=>setDosyalar(prev=>[...prev,{id:Date.now()+Math.random(),ad:f.name,tur:"Diğer",boyut:Math.round(f.size/1024),data:ev.target.result,tarih:new Date().toISOString().split("T")[0]}]);
-      r.readAsDataURL(f);
-    });
+    for(const f of files){
+      const dosyaId=Date.now()+Math.floor(Math.random()*1000);
+      const path=`dosyalar/${dosyaId}_${safeName(f.name)}`;
+      try{
+        await sbUpload(path,f);
+        setDosyalar(prev=>[...prev,{id:dosyaId,ad:f.name,tur:"Diğer",boyut:Math.round(f.size/1024),storagePath:path,data:"",tarih:new Date().toISOString().split("T")[0]}]);
+      }catch(err){console.error("Dosya yükleme hatası:",err);alert(`${f.name} yüklenemedi`);}
+    }
     e.target.value="";
   };
-  const sil=(id)=>{if(!confirm("Dosyayı silmek istiyor musunuz?"))return;setDosyalar(prev=>prev.filter(d=>d.id!==id));};
-  const indir=(d)=>{const a=document.createElement("a");a.href=d.data;a.download=d.ad;a.click();};
+  const sil=(id)=>{if(!confirm("Dosyayı silmek istiyor musunuz?"))return;const d=dosyalar.find(x=>x.id===id);if(d?.storagePath)sbStorageDel(d.storagePath).catch(()=>{});setDosyalar(prev=>prev.filter(d=>d.id!==id));};
+  const indir=(d)=>{const url=dosyaUrl(d);const a=document.createElement("a");a.href=url;a.download=d.ad;a.target="_blank";a.click();};
   const dosyaIkon=(ad)=>{const ext=(ad||"").split(".").pop().toLowerCase();if(["pdf"].includes(ext))return"📄";if(["doc","docx"].includes(ext))return"📝";if(["xls","xlsx"].includes(ext))return"📊";if(["dwg","dxf"].includes(ext))return"📐";if(["jpg","jpeg","png","gif"].includes(ext))return"🖼️";return"📎";};
   const turEkle=()=>{const t=yeniTur.trim();if(!t||tumTurler.includes(t))return;if(setDosyaTurleri)setDosyaTurleri(prev=>[...prev,t]);setYeniTur("");};
   const turSil=(t)=>{if(!setDosyaTurleri)return;if(!confirm(`"${t}" türünü silmek istiyor musunuz?`))return;setDosyaTurleri(prev=>prev.filter(x=>x!==t));};
@@ -3811,17 +3845,18 @@ const DosyaModal=({dosya,onSave,onClose,onDel,kategoriler,getAltKatlar})=>{
   const secDosya=()=>{
     const input=document.createElement("input");
     input.type="file";
-    input.onchange=(e)=>{
+    input.onchange=async(e)=>{
       const file=e.target.files[0];if(!file)return;
-      const reader=new FileReader();
-      reader.onload=(ev)=>{
-        u("ad",file.name);u("boyut",Math.round(file.size/1024));u("tip",file.type);u("data",ev.target.result);u("resim",file.type.startsWith("image/"));
+      const dosyaId=Date.now()+Math.floor(Math.random()*1000);
+      const path=`projeler/${dosyaId}_${safeName(file.name)}`;
+      try{
+        await sbUpload(path,file);
+        u("ad",file.name);u("boyut",Math.round(file.size/1024));u("tip",file.type);u("storagePath",path);u("data","");u("resim",file.type.startsWith("image/"));
         const ext=(file.name||"").split(".").pop().toLowerCase();
         const turMap={"pdf":"PDF","doc":"Word","docx":"Word","xls":"Excel","xlsx":"Excel","csv":"Excel","dwg":"AutoCAD","dxf":"AutoCAD","jpg":"Görsel","jpeg":"Görsel","png":"Görsel","gif":"Görsel","webp":"Görsel","tif":"Taranmış Belge","tiff":"Taranmış Belge","bmp":"Görsel"};
         u("dosyaTuru",turMap[ext]||"Diğer");
         if(!form.tarih)u("tarih",new Date().toISOString().split("T")[0]);
-      };
-      reader.readAsDataURL(file);
+      }catch(err){console.error("Dosya yükleme hatası:",err);alert("Dosya yüklenemedi: "+err.message);}
     };
     input.click();
   };
@@ -3846,9 +3881,9 @@ const DosyaModal=({dosya,onSave,onClose,onDel,kategoriler,getAltKatlar})=>{
         <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
           <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Dosya</label>
           <div style={{display:"flex",alignItems:"center",gap:"8px",height:"36px"}}>
-            {form.data
+            {(form.storagePath||form.data)
               ?<div style={{display:"flex",alignItems:"center",gap:"8px",flex:1,height:"36px"}}>
-                {form.resim&&<img src={form.data} alt="" style={{width:"32px",height:"32px",objectFit:"cover",borderRadius:"4px"}}/>}
+                {form.resim&&<img src={dosyaUrl(form)} alt="" style={{width:"32px",height:"32px",objectFit:"cover",borderRadius:"4px"}}/>}
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:"14px",color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",lineHeight:"18px"}}>{form.ad}</div>
                   <div style={{fontSize:"12px",color:T.t3,lineHeight:"16px"}}>{fmtBoyut(form.boyut)} · {form.tarih}</div>
@@ -3896,7 +3931,7 @@ const DosyaModal=({dosya,onSave,onClose,onDel,kategoriler,getAltKatlar})=>{
         {/* BÜYÜK GÖRSEL ÖNİZLEME */}
         {form.resim&&form.data&&<div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px"}}>
           <div></div>
-          <img src={form.data} alt={form.ad} style={{maxWidth:"100%",maxHeight:"300px",objectFit:"contain",borderRadius:T.r,border:`1px solid ${T.border}`}}/>
+          <img src={dosyaUrl(form)} alt={form.ad} style={{maxWidth:"100%",maxHeight:"300px",objectFit:"contain",borderRadius:T.r,border:`1px solid ${T.border}`}}/>
         </div>}
       </div>
     </div>
@@ -3960,8 +3995,8 @@ const MerkeziDosyaPortal=({tumDosyalar,setTumDosyalar,dosyaKategorileri,bloklar=
     setDosyaModal(null);
   };
 
-  const delDosya=(id)=>{setTumDosyalar(prev=>prev.filter(d=>d.id!==id));};
-  const indir=(d)=>{const a=document.createElement("a");a.href=d.data;a.download=d.ad;a.click();};
+  const delDosya=(id)=>{const d=(tumDosyalar||[]).find(x=>x.id===id);if(d?.storagePath)sbStorageDel(d.storagePath).catch(()=>{});setTumDosyalar(prev=>prev.filter(d=>d.id!==id));};
+  const indir=(d)=>{const url=dosyaUrl(d);const a=document.createElement("a");a.href=url;a.download=d.ad;a.target="_blank";a.click();};
 
   return <div>
     {dosyaModal&&<DosyaModal dosya={dosyaModal} onSave={saveDosya} onDel={delDosya} onClose={()=>setDosyaModal(null)} kategoriler={kategoriler} getAltKatlar={getAltKatlar}/>}
@@ -4019,7 +4054,7 @@ const MerkeziDosyaPortal=({tumDosyalar,setTumDosyalar,dosyaKategorileri,bloklar=
             <div key={d.id} onClick={()=>setDosyaModal(d)} style={{display:"grid",gridTemplateColumns:"64px 160px 160px 90px 80px 80px 1fr",padding:"6px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtrelenmis.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"80px"}}
               onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
               onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
-              {d.resim?<img src={d.data} alt="" style={{width:"68px",height:"68px",objectFit:"cover",borderRadius:"4px"}}/>:<span style={{fontSize:"28px",textAlign:"center",display:"block"}}>{dosyaIkon(d.ad)}</span>}
+              {d.resim?<img src={dosyaUrl(d)} alt="" style={{width:"68px",height:"68px",objectFit:"cover",borderRadius:"4px"}}/>:<span style={{fontSize:"28px",textAlign:"center",display:"block"}}>{dosyaIkon(d.ad)}</span>}
               <div style={{fontSize:"14px",color:T.t2}}>{d.anaKategori||"—"}</div>
               <div style={{fontSize:"14px",color:T.t2}}>{d.altKategori||"—"}</div>
               <div style={{fontSize:"14px",color:T.t2}}>{d.dosyaTuru||"—"}</div>
@@ -4037,7 +4072,7 @@ const MerkeziDosyaPortal=({tumDosyalar,setTumDosyalar,dosyaKategorileri,bloklar=
 
     {/* LIGHTBOX */}
     {light&&<div onClick={()=>setLight(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"12px"}}>
-      <img src={light.data} alt={light.ad} style={{maxWidth:"90vw",maxHeight:"82vh",objectFit:"contain",borderRadius:"8px"}}/>
+      <img src={dosyaUrl(light)} alt={light.ad} style={{maxWidth:"90vw",maxHeight:"82vh",objectFit:"contain",borderRadius:"8px"}}/>
       <button onClick={()=>setLight(null)} style={{position:"fixed",top:"20px",right:"24px",background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",fontSize:"24px",cursor:"pointer",borderRadius:"50%",width:"40px",height:"40px"}}>×</button>
     </div>}
   </div>;
@@ -4174,7 +4209,7 @@ const SeviyeModal=({blokAd,sev,onSave,onClose,onDosyaEkle,ilgiliDosyalar=[]})=>{
             <button onClick={()=>{if(onDosyaEkle)onDosyaEkle(blokAd,sev.seviyeId);}} style={{...iS,cursor:"pointer",color:T.primary,display:"flex",alignItems:"center",gap:"8px",background:"#fff"}}><FolderPlus size={18}/> Dosya Ekle</button>
             {ilgiliDosyalar.length>0&&<div style={{display:"flex",flexDirection:"column",gap:"4px"}}>
               {ilgiliDosyalar.map(d=><div key={d.id} style={{display:"flex",alignItems:"center",gap:"8px",padding:"4px 8px",borderRadius:"4px",background:"#fafafa",border:`1px solid ${T.border}`,fontSize:"13px",color:T.text}}>
-                {d.resim?<img src={d.data} alt="" style={{width:"24px",height:"24px",objectFit:"cover",borderRadius:"3px"}}/>:<span style={{fontSize:"16px"}}>{(()=>{const ext=(d.ad||"").split(".").pop().toLowerCase();if(["pdf"].includes(ext))return"📄";if(["doc","docx"].includes(ext))return"📝";if(["xls","xlsx"].includes(ext))return"📊";return"📎";})()}</span>}
+                {d.resim?<img src={dosyaUrl(d)} alt="" style={{width:"24px",height:"24px",objectFit:"cover",borderRadius:"3px"}}/>:<span style={{fontSize:"16px"}}>{(()=>{const ext=(d.ad||"").split(".").pop().toLowerCase();if(["pdf"].includes(ext))return"📄";if(["doc","docx"].includes(ext))return"📝";if(["xls","xlsx"].includes(ext))return"📊";return"📎";})()}</span>}
                 <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.aciklama||d.ad}</span>
                 <span style={{fontSize:"11px",color:T.t3}}>{d.tarih}</span>
               </div>)}
@@ -4840,18 +4875,19 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
             const dosyaEkle=(blokAd,seviyeId)=>{
               const input=document.createElement("input");
               input.type="file";input.multiple=true;
-              input.onchange=(e)=>{
-                Array.from(e.target.files).forEach(file=>{
-                  const reader=new FileReader();
-                  reader.onload=(ev)=>{
+              input.onchange=async(e)=>{
+                for(const file of Array.from(e.target.files)){
+                  const dosyaId=Date.now()+Math.floor(Math.random()*1000);
+                  const path=`projeler/yd_${dosyaId}_${safeName(file.name)}`;
+                  try{
+                    await sbUpload(path,file);
                     const isImg=file.type.startsWith("image/");
                     const ext=(file.name||"").split(".").pop().toLowerCase();
                     const turMap={"pdf":"PDF","doc":"Word","docx":"Word","xls":"Excel","xlsx":"Excel","dwg":"AutoCAD","dxf":"AutoCAD","jpg":"Görsel","jpeg":"Görsel","png":"Görsel","gif":"Görsel","webp":"Görsel","tif":"Taranmış Belge","tiff":"Taranmış Belge"};
-                    const yeni={id:Date.now()+Math.random(),ad:file.name,aciklama:"",anaKategori:"Yapı Denetim Seviyeleri",altKategori:altKatAd,dosyaTuru:turMap[ext]||"Diğer",boyut:Math.round(file.size/1024),tip:file.type,data:ev.target.result,tarih:new Date().toISOString().split("T")[0],resim:isImg};
+                    const yeni={id:dosyaId,ad:file.name,aciklama:"",anaKategori:"Yapı Denetim Seviyeleri",altKategori:altKatAd,dosyaTuru:turMap[ext]||"Diğer",boyut:Math.round(file.size/1024),tip:file.type,storagePath:path,data:"",tarih:new Date().toISOString().split("T")[0],resim:isImg};
                     u("tumDosyalar",[...(form.tumDosyalar||[]),yeni]);
-                  };
-                  reader.readAsDataURL(file);
-                });
+                  }catch(err){console.error("Dosya yükleme hatası:",err);alert(`${file.name} yüklenemedi`);}
+                }
               };
               input.click();
             };
