@@ -248,7 +248,7 @@ CREATE TABLE projeler (
   tahmini_teslim TEXT DEFAULT '',
   fiili_teslim TEXT DEFAULT '',
   toplam_m2 TEXT DEFAULT '',
-  ortak_alan_m2 TEXT DEFAULT '',
+  -- ortak_alan_m2 artık bloklar JSONB içinde her blok objesinde tutulur (ortakAlanM2)
   kat_sayisi TEXT DEFAULT '',
   toplam_bolum TEXT DEFAULT '',
   arsa_m2 TEXT DEFAULT '',

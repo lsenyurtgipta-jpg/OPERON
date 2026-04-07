@@ -3533,7 +3533,7 @@ const projeToLocal = (p) => ({
   il: p.il||"", ilce: p.ilce||"", mahalle: p.mahalle||"", adres: p.adres||"",
   ada: p.ada||"", parsel: p.parsel||"",
   baslangicTarihi: p.baslangic_tarihi||"", tahminiTeslim: p.tahmini_teslim||"", fiiliTeslim: p.fiili_teslim||"",
-  toplamM2: p.toplam_m2||"", ortakAlanM2: p.ortak_alan_m2||"", katSayisi: p.kat_sayisi||"", toplamBolum: p.toplam_bolum||"",
+  toplamM2: p.toplam_m2||"", katSayisi: p.kat_sayisi||"", toplamBolum: p.toplam_bolum||"",
   arsaM2: p.arsa_m2||"", emsal: p.emsal||"", toplamEmsal: p.toplam_emsal||"",
   anlasmaYontemi: p.anlasma_yontemi||"", arsaSahibiPay: p.arsa_sahibi_pay||"", muteahhitPay: p.muteahhit_pay||"",
   aciklama: p.aciklama||"",
@@ -3556,7 +3556,7 @@ const projeToDb = (p) => ({
   il: p.il||"", ilce: p.ilce||"", mahalle: p.mahalle||"", adres: p.adres||"",
   ada: p.ada||"", parsel: p.parsel||"",
   baslangic_tarihi: p.baslangicTarihi||"", tahmini_teslim: p.tahminiTeslim||"", fiili_teslim: p.fiiliTeslim||"",
-  toplam_m2: p.toplamM2||"", ortak_alan_m2: p.ortakAlanM2||"", kat_sayisi: p.katSayisi||"", toplam_bolum: p.toplamBolum||"",
+  toplam_m2: p.toplamM2||"", kat_sayisi: p.katSayisi||"", toplam_bolum: p.toplamBolum||"",
   arsa_m2: p.arsaM2||"", emsal: p.emsal||"", toplam_emsal: p.toplamEmsal||"",
   anlasma_yontemi: p.anlasmaYontemi||"", arsa_sahibi_pay: p.arsaSahibiPay||"", muteahhit_pay: p.muteahhitPay||"",
   aciklama: p.aciklama||"",
@@ -4283,7 +4283,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
     id:null,projeKodu:"",ad:"",kisaAd:"",tur:"",durum:"",
     il:"",ilce:"",mahalle:"",adres:"",ada:"",parsel:"",
     baslangicTarihi:"",tahminiTeslim:"",fiiliTeslim:"",
-    toplamM2:"",ortakAlanM2:"",katSayisi:"",toplamBolum:"",
+    toplamM2:"",katSayisi:"",toplamBolum:"",
     arsaM2:"",emsal:"",toplamEmsal:"",
     anlasmaYontemi:"",arsaSahibiPay:"",muteahhitPay:"",
     aciklama:"",
@@ -4336,7 +4336,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
     const eskiDurum=form.durum;
     if(eskiDurum===yeniDurum)return;
     const kayit={id:Date.now(),eskiDurum:eskiDurum||"(Yok)",yeniDurum,tarih:new Date().toISOString(),kullanici:"Admin"};
-    setForm(p=>({...p,durum:yeniDurum,durumTarihce:[...(p.durumTarihce||[]),kayit]}));
+    setForm(p=>{const updated={...p,durum:yeniDurum,durumTarihce:[...(p.durumTarihce||[]),kayit]};setTimeout(()=>onSave(updated),0);return updated;});
   };
 
   const tabs=[
@@ -4362,18 +4362,20 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
   const saveBolum=(b)=>{
     setForm(p=>{
       const exists=p.bolumler.find(x=>x.id===b.id);
-      return{...p,bolumler:exists?p.bolumler.map(x=>x.id===b.id?b:x):[...p.bolumler,b]};
+      const updated={...p,bolumler:exists?p.bolumler.map(x=>x.id===b.id?b:x):[...p.bolumler,b]};
+      setTimeout(()=>onSave(updated),0);
+      return updated;
     });
   };
-  const delBolum=(id)=>{if(!confirm("Bölümü silmek istiyor musunuz?"))return;setForm(p=>({...p,bolumler:p.bolumler.filter(b=>b.id!==id)}));};
+  const delBolum=(id)=>{if(!confirm("Bölümü silmek istiyor musunuz?"))return;setForm(p=>{const updated={...p,bolumler:p.bolumler.filter(b=>b.id!==id)};setTimeout(()=>onSave(updated),0);return updated;});};
 
   // Firma bağlantısı
-  const addFirmaBaglanti=()=>setForm(p=>({...p,firmaBaglantilari:[...p.firmaBaglantilari,{id:Date.now(),firmaId:"",firmaAd:"",rol:"",notlar:""}]}));
-  const upFirma=(i,f,v)=>setForm(p=>{const arr=[...p.firmaBaglantilari];arr[i]={...arr[i],[f]:v};return{...p,firmaBaglantilari:arr};});
-  const delFirmaBaglanti=(i)=>setForm(p=>({...p,firmaBaglantilari:p.firmaBaglantilari.filter((_,j)=>j!==i)}));
+  const addFirmaBaglanti=()=>setForm(p=>{const updated={...p,firmaBaglantilari:[...p.firmaBaglantilari,{id:Date.now(),firmaId:"",firmaAd:"",rol:"",notlar:""}]};setTimeout(()=>onSave(updated),0);return updated;});
+  const upFirma=(i,f,v)=>setForm(p=>{const arr=[...p.firmaBaglantilari];arr[i]={...arr[i],[f]:v};const updated={...p,firmaBaglantilari:arr};setTimeout(()=>onSave(updated),0);return updated;});
+  const delFirmaBaglanti=(i)=>setForm(p=>{const updated={...p,firmaBaglantilari:p.firmaBaglantilari.filter((_,j)=>j!==i)};setTimeout(()=>onSave(updated),0);return updated;});
 
   // Not ekle
-  const addNot=()=>{if(!nn.trim())return;setForm(p=>({...p,projeNotlari:[...p.projeNotlari,{id:Date.now(),tarih:new Date().toISOString().split("T")[0],yazar:"Admin",metin:nn}]}));setNn("");};
+  const addNot=()=>{if(!nn.trim())return;setForm(p=>{const updated={...p,projeNotlari:[...p.projeNotlari,{id:Date.now(),tarih:new Date().toISOString().split("T")[0],yazar:"Admin",metin:nn}]};setTimeout(()=>onSave(updated),0);return updated;});setNn("");};
 
   // Bölüm durum özeti
   const durumOzet=useMemo(()=>{
@@ -4589,10 +4591,15 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
               <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Net Toplam m²</label>
               <div style={{...iS,background:"#fff",color:T.text,fontWeight:700,cursor:"default",userSelect:"none"}}>{(form.bolumler||[]).length>0?(form.bolumler||[]).reduce((s,b)=>s+parseFloat(b.netM2||0),0).toLocaleString("tr-TR")+" m²":"—"}</div>
             </div>
-            {/* ORTAK ALAN */}
+            {/* ORTAK ALAN TOPLAM (blok bazlı) */}
             <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
               <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Ortak Alan m²</label>
-              <input style={{...iS,fontWeight:700}} value={form._ortakEdit?form.ortakAlanM2||"":(form.ortakAlanM2?form.ortakAlanM2+" m²":"")} onChange={e=>{const v=e.target.value.replace(/[^0-9.,]/g,"").replace(",",".");u("ortakAlanM2",v);}} placeholder="0" onFocus={()=>u("_ortakEdit",true)} onBlur={()=>u("_ortakEdit",false)}/>
+              <div style={{...iS,background:"#fff",color:T.text,fontWeight:700,cursor:"default",userSelect:"none"}}>{(()=>{const t=(form.bloklar||[]).reduce((s,b)=>s+parseFloat(b.ortakAlanM2||0),0);return t>0?t.toLocaleString("tr-TR")+" m²":"—";})()}</div>
+            </div>
+            {/* PROJE TOPLAM ALAN */}
+            <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
+              <label style={{fontSize:"13px",fontWeight:600,color:T.primary,textAlign:"right",height:"36px",lineHeight:"36px"}}>Proje Toplam Alan</label>
+              <div style={{...iS,background:"#e6f4ff",color:T.primary,fontWeight:700,cursor:"default",userSelect:"none",border:"1px solid #1677ff33"}}>{(()=>{const bloklar=form.bloklar||[];const bolumler=form.bolumler||[];const t=bloklar.reduce((s,bl)=>{const blBrut=bolumler.filter(b=>b.blok===bl.ad).reduce((ss,b)=>ss+parseFloat(b.brutM2||0),0);return s+blBrut+parseFloat(bl.ortakAlanM2||0);},0);return t>0?t.toLocaleString("tr-TR")+" m²":"—";})()}</div>
             </div>
             {/* SAHİPLİK ÖZET - anlaşma yöntemi varsa */}
             {form.anlasmaYontemi&&(()=>{
@@ -4649,11 +4656,14 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
           if(!ad||!ad.trim())return;
           const upper=toTitleCase(ad.trim());
           if(bloklar.some(b=>b.ad===upper)){alert("Bu blok zaten ekli!");return;}
-          u("bloklar",[...bloklar,{id:Date.now(),ad:upper}]);
-          const mevcutSeviyeler=form.blokSeviyeler||[];
-          if(!mevcutSeviyeler.some(bs=>bs.blokAd===upper)){
-            u("blokSeviyeler",[...mevcutSeviyeler,{id:Date.now()+1,blokAd:upper,seviyeler:YAPI_DENETIM_SEVIYELERI.map(s=>({seviyeId:s.id,tamamlandi:false,tarih:"",aciklama:"",dosyalar:[],gorseller:[]}))}]);
-          }
+          setForm(p=>{
+            const yeniBloklar=[...(p.bloklar||[]),{id:Date.now(),ad:upper,ortakAlanM2:""}];
+            const mevcutSeviyeler=p.blokSeviyeler||[];
+            const yeniSeviyeler=mevcutSeviyeler.some(bs=>bs.blokAd===upper)?mevcutSeviyeler:[...mevcutSeviyeler,{id:Date.now()+1,blokAd:upper,seviyeler:YAPI_DENETIM_SEVIYELERI.map(s=>({seviyeId:s.id,tamamlandi:false,tarih:"",aciklama:"",dosyalar:[],gorseller:[]}))}];
+            const updated={...p,bloklar:yeniBloklar,blokSeviyeler:yeniSeviyeler};
+            setTimeout(()=>onSave(updated),0);
+            return updated;
+          });
         };
 
         const addBolumToBlok=(blokAd)=>{
@@ -4664,6 +4674,9 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
         const renderBlokTable=(blokAd,blokBolumler)=>{
           const topBrut=blokBolumler.reduce((s,b)=>s+parseFloat(b.brutM2||0),0);
           const topNet=blokBolumler.reduce((s,b)=>s+parseFloat(b.netM2||0),0);
+          const blokObj=(form.bloklar||[]).find(b=>b.ad===blokAd);
+          const ortakAlan=parseFloat(blokObj?.ortakAlanM2||0);
+          const brutToplami=topBrut+ortakAlan;
 
           return <div key={blokAd} style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden",marginBottom:"16px"}}>
             {/* BLOK HEADER */}
@@ -4671,6 +4684,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
               <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
                 <span style={{fontSize:"18px",fontWeight:700,color:"#fff"}}>{blokAd}</span>
                 <span style={{fontSize:"13px",color:"#8799a3"}}>{blokBolumler.length} bölüm</span>
+                <span style={{fontSize:"14px",color:"#8799a3",borderLeft:"1px solid #8799a355",paddingLeft:"12px"}}>Brüt: {topBrut>0?topBrut.toLocaleString("tr-TR"):"0"} · Net: {topNet>0?topNet.toLocaleString("tr-TR"):"0"} · Ortak: {ortakAlan>0?ortakAlan.toLocaleString("tr-TR"):"0"} · <span style={{color:"#52c41a",fontWeight:600}}>Toplam: {brutToplami>0?brutToplami.toLocaleString("tr-TR"):"0"} m²</span></span>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
                 <button onClick={()=>addBolumToBlok(blokAd)} title="Bölüm Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
@@ -4692,9 +4706,11 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
                 }} title="Excel'e Aktar" style={{padding:"0",border:"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center"}}><img src={excelIcon} alt="Excel" style={{width:"35px",height:"35px"}}/></button>
                 <button onClick={()=>{
                   if(!confirm(`"${blokAd}" bloğunu ve tüm bölümlerini silmek istiyor musunuz?`))return;
-                  u("bloklar",(form.bloklar||[]).filter(b=>b.ad!==blokAd));
-                  u("bolumler",(form.bolumler||[]).filter(b=>b.blok!==blokAd));
-                  u("blokSeviyeler",(form.blokSeviyeler||[]).filter(bs=>bs.blokAd!==blokAd));
+                  setForm(p=>{
+                    const updated={...p,bloklar:(p.bloklar||[]).filter(b=>b.ad!==blokAd),bolumler:(p.bolumler||[]).filter(b=>b.blok!==blokAd),blokSeviyeler:(p.blokSeviyeler||[]).filter(bs=>bs.blokAd!==blokAd)};
+                    setTimeout(()=>onSave(updated),0);
+                    return updated;
+                  });
                 }} title="Blok Sil" style={{padding:"0",border:"none",background:"transparent",color:"#ff6b6b",cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={30}/></button>
               </div>
             </div>
@@ -4739,6 +4755,18 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
                     <div></div>
                     {hasAnlasma&&<div></div>}
                   </div>
+                  {/* ORTAK ALAN + BRÜT TOPLAMI */}
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 16px",background:"#384248",gap:"12px",flexWrap:"wrap"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+                      <span style={{fontSize:"13px",fontWeight:600,color:"#8799a3"}}>Ortak Alan m²:</span>
+                      <input style={{width:"90px",padding:"4px 8px",borderRadius:"4px",border:"1px solid #8799a355",background:"#fff",fontSize:"13px",fontWeight:700,color:"#384248",textAlign:"center"}} value={blokObj?.ortakAlanM2||""} onChange={e=>{const v=e.target.value.replace(/[^0-9.,]/g,"").replace(",",".");setForm(p=>{const updated={...p,bloklar:(p.bloklar||[]).map(b=>b.ad===blokAd?{...b,ortakAlanM2:v}:b)};setTimeout(()=>onSave(updated),0);return updated;});}} placeholder="0"/>
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:"16px"}}>
+                      <span style={{fontSize:"13px",color:"#8799a3"}}>Brüt: <strong style={{color:"#fff"}}>{topBrut.toLocaleString("tr-TR")}</strong></span>
+                      <span style={{fontSize:"13px",color:"#8799a3"}}>+ Ortak: <strong style={{color:"#fff"}}>{ortakAlan.toLocaleString("tr-TR")}</strong></span>
+                      <span style={{fontSize:"14px",fontWeight:700,color:"#52c41a",background:"#52c41a22",padding:"4px 12px",borderRadius:"4px"}}>= Brüt Toplamı: {brutToplami.toLocaleString("tr-TR")} m²</span>
+                    </div>
+                  </div>
                 </>;
             })()}
           </div>;
@@ -4778,7 +4806,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
       })()}
 
       {/* DOSYA YÖNETİMİ */}
-      {tab==="dosyaYonetimi"&&<MerkeziDosyaPortal tumDosyalar={form.tumDosyalar||[]} setTumDosyalar={v=>u("tumDosyalar",typeof v==="function"?v(form.tumDosyalar||[]):v)} dosyaKategorileri={form.dosyaKategorileri||DOSYA_KATEGORILERI} bloklar={form.bloklar||[]} bolumler={form.bolumler||[]} blokSeviyeler={form.blokSeviyeler||[]}/>}
+      {tab==="dosyaYonetimi"&&<MerkeziDosyaPortal tumDosyalar={form.tumDosyalar||[]} setTumDosyalar={v=>{setForm(p=>{const yeniDosyalar=typeof v==="function"?v(p.tumDosyalar||[]):v;const updated={...p,tumDosyalar:yeniDosyalar};setTimeout(()=>onSave(updated),0);return updated;});}} dosyaKategorileri={form.dosyaKategorileri||DOSYA_KATEGORILERI} bloklar={form.bloklar||[]} bolumler={form.bolumler||[]} blokSeviyeler={form.blokSeviyeler||[]}/>}
 
       {/* YAPI DENETİM SEVİYELERİ */}
       {tab==="yapiDenetim"&&(()=>{
@@ -4786,10 +4814,15 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
         const tanimliBloklar=form.bloklar||[];
 
         const saveSeviye=(blokAd,sev)=>{
-          u("blokSeviyeler",blokSeviyeler.map(b=>{
-            if(b.blokAd!==blokAd)return b;
-            return{...b,seviyeler:b.seviyeler.map(s=>s.seviyeId===sev.seviyeId?sev:s)};
-          }));
+          setForm(p=>{
+            const yeniSeviyeler=(p.blokSeviyeler||[]).map(b=>{
+              if(b.blokAd!==blokAd)return b;
+              return{...b,seviyeler:b.seviyeler.map(s=>s.seviyeId===sev.seviyeId?sev:s)};
+            });
+            const updated={...p,blokSeviyeler:yeniSeviyeler};
+            setTimeout(()=>onSave(updated),0);
+            return updated;
+          });
           setSeviyeModal(null);
         };
 
@@ -5310,7 +5343,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
     const gerceklesenTop=gerceklesen.reduce((s,k)=>s+(parseFloat(k.netFiyat||0)*parseFloat(k.miktar||0)),0);
     const taahhutTop=taahhut.reduce((s,k)=>s+(parseFloat(k.netFiyat||0)*parseFloat(k.miktar||0)),0);
     const brutM2=selProje?(selProje.bolumler||[]).reduce((s,b)=>s+parseFloat(b.brutM2||0),0):0;
-    const ortakM2=parseFloat(selProje?.ortakAlanM2||0);
+    const ortakM2=(selProje?.bloklar||[]).reduce((s,b)=>s+parseFloat(b.ortakAlanM2||0),0);
     const toplamM2=brutM2+ortakM2;
 
     // Blok bazlı maliyet hesabı
@@ -5334,12 +5367,12 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
       }
     });
 
-    // Blok efektif m² (ortak alan payı dahil)
+    // Blok efektif m² (her bloğun kendi ortak alanı dahil)
     const blokEfektifM2={};
     (selProje?.bloklar||[]).forEach(bl=>{
       const blokBrut=blokM2Harita[bl.ad]||0;
-      const ortakPayi=brutM2>0?ortakM2*blokBrut/brutM2:0;
-      blokEfektifM2[bl.ad]=blokBrut+ortakPayi;
+      const blokOrtak=parseFloat(bl.ortakAlanM2||0);
+      blokEfektifM2[bl.ad]=blokBrut+blokOrtak;
     });
 
     // m² maliyet — sadece kalem girilmiş blokların efektif m²'sine böl
@@ -5430,7 +5463,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
       ?<div style={{padding:"80px",textAlign:"center",color:T.t3,fontSize:"16px",border:`1px dashed ${T.border}`,borderRadius:T.r}}>Maliyet takibi için bir proje seçiniz.</div>
       :<div>
         {pickerOpen&&<MalzemePickerModal malzemeler={malzemeler} onSelect={kalemEkle} onClose={()=>setPickerOpen(false)}/>}
-        {butceModal&&<ButceKalemModal kalem={butceModal} onSave={saveButceKalemi} onDel={delButceKalemi} onClose={()=>setButceModal(null)} malzemeler={malzemeler} projeBloklar={selProje?.bloklar||[]} projeBolumler={selProje?.bolumler||[]} ortakAlanM2={selProje?.ortakAlanM2||""}/>}
+        {butceModal&&<ButceKalemModal kalem={butceModal} onSave={saveButceKalemi} onDel={delButceKalemi} onClose={()=>setButceModal(null)} malzemeler={malzemeler} projeBloklar={selProje?.bloklar||[]} projeBolumler={selProje?.bolumler||[]} ortakAlanM2={String((selProje?.bloklar||[]).reduce((s,b)=>s+parseFloat(b.ortakAlanM2||0),0))}/>}
 
         {/* ÖZET KARTLAR */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:"12px",marginBottom:"16px"}}>
