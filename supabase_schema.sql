@@ -89,9 +89,9 @@ CREATE TABLE malzemeler (
   id BIGSERIAL PRIMARY KEY,
   malzeme_kodu TEXT DEFAULT '',
   ad TEXT DEFAULT '',
-  kategori TEXT DEFAULT '1',
-  alt_kategori TEXT DEFAULT '',
-  alt_kategori_ad TEXT DEFAULT '',
+  tip TEXT DEFAULT 'M',
+  grup TEXT DEFAULT '',
+  grup_ad TEXT DEFAULT '',
   alt_grup TEXT DEFAULT '',
   alt_grup_ad TEXT DEFAULT '',
   birim TEXT DEFAULT 'adet',
@@ -108,7 +108,7 @@ CREATE TABLE malzemeler (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2.5 KATEGORİLER
+-- 2.5 GRUPLAR (İş Kalemi Bazlı Kategoriler)
 CREATE TABLE kategoriler (
   id BIGSERIAL PRIMARY KEY,
   kod TEXT DEFAULT '',
@@ -118,8 +118,8 @@ CREATE TABLE kategoriler (
 -- 2.6 ALT GRUPLAR
 CREATE TABLE alt_gruplar (
   id BIGSERIAL PRIMARY KEY,
-  alt_kategori_kod TEXT DEFAULT '',
-  alt_kategori_ad TEXT DEFAULT '',
+  grup_kod TEXT DEFAULT '',
+  grup_ad TEXT DEFAULT '',
   kod TEXT DEFAULT '',
   ad TEXT DEFAULT ''
 );

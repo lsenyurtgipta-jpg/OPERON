@@ -74,7 +74,7 @@ const phoneErr=(v)=>{const l=phoneDigits(v);if(l===0||l===11)return"";return l<1
 const FIRMA_TURLERI=[{id:"alici",label:"Alıcı",color:"#1677ff",bg:"#e6f4ff",icon:"🏠",kod:"120"},{id:"tedarikci",label:"Tedarikçi",color:"#52c41a",bg:"#f6ffed",icon:"📦",kod:"320"},{id:"taseron",label:"Taşeron",color:"#fa8c16",bg:"#fff7e6",icon:"👷",kod:"321"},{id:"resmi",label:"Resmi Kurum",color:"#f5222d",bg:"#fff1f0",icon:"🏛️",kod:"322"}];
 const PARA_BIRIMLERI=[{id:"TL",label:"₺ Türk Lirası (TL)",kod:"1",symbol:"₺"},{id:"USD",label:"$ Amerikan Doları (USD)",kod:"2",symbol:"$"},{id:"EUR",label:"€ Euro (EUR)",kod:"3",symbol:"€"}];
 /* ========== MALZEME SABİTLERİ ========== */
-const MLZ_KATEGORILER=[{id:"1",label:"Hammadde",color:"#1677ff",bg:"#e6f4ff",icon:"📦"},{id:"2",label:"Mamül",color:"#52c41a",bg:"#f6ffed",icon:"✅"},{id:"3",label:"Yarı Mamül",color:"#fa8c16",bg:"#fff7e6",icon:"🔄"},{id:"4",label:"Alınan Hizmet",color:"#f5222d",bg:"#fff1f0",icon:"🔧"}];
+const MLZ_TIPLER=[{id:"M",label:"Mamül",color:"#52c41a",bg:"#f6ffed",icon:"✅"},{id:"H",label:"Hizmet",color:"#f5222d",bg:"#fff1f0",icon:"🔧"},{id:"R",label:"Hammadde",color:"#1677ff",bg:"#e6f4ff",icon:"📦"},{id:"Y",label:"Yarı Mamül",color:"#fa8c16",bg:"#fff7e6",icon:"🔄"}];
 const MLZ_BIRIMLER=["kg","ton","gr","m³","m²","m","adet","takım","paket","torba","lt","kova","rulo","levha","sefer","saat","gün","ay","götürü","daire"];
 const KDV_ORANLARI=[{id:"0",label:"%0"},{id:"1",label:"%1"},{id:"10",label:"%10"},{id:"20",label:"%20"}];
 const PROJE_TURLERI_OMURGA=[{id:"konut",label:"Konut",icon:"🏘️",color:"#1677ff",bg:"#e6f4ff"},{id:"ticari",label:"Ticari",icon:"🏢",color:"#fa8c16",bg:"#fff7e6"},{id:"karma",label:"Karma",icon:"🏙️",color:"#722ed1",bg:"#f9f0ff"},{id:"altyapi",label:"Altyapı",icon:"🏗️",color:"#52c41a",bg:"#f6ffed"}];
@@ -127,7 +127,7 @@ const YAPI_SINIF_MALIYETLERI={
 const HESAPLAMA_SABLONLARI={
   sgk_insaat_hesaplama:{
     ad:"SGK İnşaat İşçilik Hesabı",
-    kategoriler:["4"],
+    kategoriler:["H"],
     aciklama:"İnşaat m² maliyeti üzerinden SGK asgari işçilik ve prim hesabı",
     icon:"🏛️",
     parametreler:[
@@ -184,7 +184,7 @@ const HESAPLAMA_SABLONLARI={
   },
   yapi_denetim:{
     ad:"Yapı Denetim Ücreti",
-    kategoriler:["4"],
+    kategoriler:["H"],
     aciklama:"4708 sayılı Kanun kapsamında yapı denetim hizmet bedeli hesabı",
     icon:"🏗️",
     parametreler:[
@@ -245,7 +245,7 @@ const HESAPLAMA_SABLONLARI={
   },
   tugla_hesabi:{
     ad:"Tuğla / Duvar Hesabı",
-    kategoriler:["1","3"],
+    kategoriler:["R","Y"],
     aciklama:"Duvar m² üzerinden tuğla adedi ve harç miktarı hesabı",
     icon:"🧱",
     parametreler:[
@@ -283,7 +283,7 @@ const HESAPLAMA_SABLONLARI={
   },
   beton_hesabi:{
     ad:"Beton Hesabı",
-    kategoriler:["1","3"],
+    kategoriler:["R","Y"],
     aciklama:"Beton hacmi üzerinden malzeme miktarı hesabı",
     icon:"🏗️",
     parametreler:[
@@ -317,7 +317,7 @@ const HESAPLAMA_SABLONLARI={
   },
   demir_hesabi:{
     ad:"Donatı / Demir Hesabı",
-    kategoriler:["1","3"],
+    kategoriler:["R","Y"],
     aciklama:"İnşaat alanı veya beton hacmi üzerinden demir miktarı hesabı (İMO kabulleri)",
     icon:"⚙️",
     parametreler:[
@@ -354,7 +354,7 @@ const HESAPLAMA_SABLONLARI={
   },
   siva_hesabi:{
     ad:"Sıva Hesabı",
-    kategoriler:["2"],
+    kategoriler:["M"],
     aciklama:"Duvar alanı üzerinden sıva malzeme miktarı hesabı",
     icon:"🪣",
     parametreler:[
@@ -387,7 +387,7 @@ const HESAPLAMA_SABLONLARI={
   },
   boya_hesabi:{
     ad:"Boya Hesabı",
-    kategoriler:["2"],
+    kategoriler:["M"],
     aciklama:"Boyama alanı üzerinden boya miktarı ve ambalaj hesabı",
     icon:"🎨",
     parametreler:[
@@ -626,30 +626,8 @@ const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,s
     </>}
   </div>;
 };
-const TEKLIF_DEMO=[
-  {id:1,teklifNo:"TKL-2026-001",firmaId:2,firmaAd:"Karadeniz Hazır Beton",teklifTarihi:"2026-02-10",gecerlilikTarihi:"2026-03-10",paraBirimi:"TL",aciklama:"Şantiye teslim, nakliye dahil fiyatlar",durum:"aktif",
-    kalemler:[
-      {id:101,malzemeId:1,malzemeAd:"Portland Çimento CEM I 42.5R",malzemeKodu:"1.001.001.00001",birim:"torba",miktar:500,fiyatTipi:"liste",listeFiyati:220,iskonto1:15,iskonto2:5,netFiyat:177.65,kdvOrani:"20",maliyetEsas:"net",not:"Palet teslim"},
-      {id:102,malzemeId:4,malzemeAd:"C30 Hazır Beton",malzemeKodu:"3.004.004.00001",birim:"m³",miktar:200,fiyatTipi:"net",listeFiyati:0,iskonto1:0,iskonto2:0,netFiyat:2750,kdvOrani:"20",maliyetEsas:"net",not:"Pompalı, şantiye teslim"}
-    ]},
-  {id:2,teklifNo:"TKL-2026-002",firmaId:5,firmaAd:"Atlas Steel Import",teklifTarihi:"2026-02-12",gecerlilikTarihi:"2026-04-12",paraBirimi:"TL",aciklama:"FOB fabrika teslim",durum:"aktif",
-    kalemler:[
-      {id:201,malzemeId:1,malzemeAd:"Portland Çimento CEM I 42.5R",malzemeKodu:"1.001.001.00001",birim:"torba",miktar:1000,fiyatTipi:"net",listeFiyati:0,iskonto1:0,iskonto2:0,netFiyat:185,kdvOrani:"20",maliyetEsas:"net",not:""},
-      {id:202,malzemeId:2,malzemeAd:"Nervürlü İnşaat Demiri Ø12",malzemeKodu:"1.002.002.00001",birim:"ton",miktar:50,fiyatTipi:"liste",listeFiyati:16000,iskonto1:10,iskonto2:0,netFiyat:14400,kdvOrani:"20",maliyetEsas:"net",not:"50 ton üzeri fiyat"},
-      {id:203,malzemeId:3,malzemeAd:"Çelik Kapı - Daire Giriş",malzemeKodu:"2.003.003.00001",birim:"adet",miktar:20,fiyatTipi:"liste",listeFiyati:8500,iskonto1:20,iskonto2:10,netFiyat:6120,kdvOrani:"20",maliyetEsas:"liste",not:"Montaj hariç"}
-    ]},
-  {id:3,teklifNo:"TKL-2026-003",firmaId:2,firmaAd:"Karadeniz Hazır Beton",teklifTarihi:"2026-01-20",gecerlilikTarihi:"2026-02-20",paraBirimi:"TL",aciklama:"Eski dönem fiyatları",durum:"suresi_doldu",
-    kalemler:[
-      {id:301,malzemeId:1,malzemeAd:"Portland Çimento CEM I 42.5R",malzemeKodu:"1.001.001.00001",birim:"torba",miktar:500,fiyatTipi:"net",listeFiyati:0,iskonto1:0,iskonto2:0,netFiyat:165,kdvOrani:"20",maliyetEsas:"net",not:"Eski fiyat"}
-    ]}
-];
-const MLZ_DEMO=[
-  {id:1,malzemeKodu:"1.001.001.00001",ad:"Portland Çimento CEM I 42.5R",kategori:"1",altKategori:"001",altKategoriAd:"Çimento/Bağlayıcı",altGrup:"001",altGrupAd:"Portland Çimento",birim:"torba",birimFiyat:185,paraBirimi:"TL",kdvOrani:"20",marka:"Oyak Çimento",model:"CEM I 42.5R",aciklama:"50 kg torba",tedarikciId:2,durum:"aktif",resimler:[],notlar:[{id:1,tarih:"2026-02-15",yazar:"Admin",metin:"Fiyat güncellendi. Önceki: ₺165"}],createdAt:"2026-01-10"},
-  {id:2,malzemeKodu:"1.002.002.00001",ad:"Nervürlü İnşaat Demiri Ø12",kategori:"1",altKategori:"002",altKategoriAd:"Demir/Çelik",altGrup:"002",altGrupAd:"Nervürlü 12mm",birim:"ton",birimFiyat:14500,paraBirimi:"TL",kdvOrani:"20",marka:"Kardemir",model:"B420C",aciklama:"12mm nervürlü inşaat demiri",tedarikciId:5,durum:"aktif",resimler:[],notlar:[],createdAt:"2026-01-12"},
-  {id:3,malzemeKodu:"2.003.003.00001",ad:"Çelik Kapı - Daire Giriş",kategori:"2",altKategori:"003",altKategoriAd:"Kapı",altGrup:"003",altGrupAd:"Çelik Kapı",birim:"adet",birimFiyat:8500,paraBirimi:"TL",kdvOrani:"20",marka:"Kale",model:"Mono Plus",aciklama:"90x205 cm, çift kilit",tedarikciId:null,durum:"aktif",resimler:[],notlar:[],createdAt:"2026-01-20"},
-  {id:4,malzemeKodu:"3.004.004.00001",ad:"C30 Hazır Beton",kategori:"3",altKategori:"004",altKategoriAd:"Hazır Beton",altGrup:"004",altGrupAd:"C30",birim:"m³",birimFiyat:2850,paraBirimi:"TL",kdvOrani:"20",marka:"Karadeniz Beton",model:"C30/37",aciklama:"C30/37 hazır beton, pompalı",tedarikciId:2,durum:"aktif",resimler:[],notlar:[{id:2,tarih:"2026-02-01",yazar:"Admin",metin:"Yeni dönem fiyatı. Pompa dahil."}],createdAt:"2026-01-08"},
-  {id:5,malzemeKodu:"4.005.005.00001",ad:"Kule Vinç Kiralama",kategori:"4",altKategori:"005",altKategoriAd:"İş Makinesi",altGrup:"005",altGrupAd:"Kule Vinç",birim:"ay",birimFiyat:4500,paraBirimi:"USD",kdvOrani:"20",marka:"","model":"Liebherr 110 EC-B6",aciklama:"Aylık kiralama, operatör hariç",tedarikciId:null,durum:"aktif",hesaplamaSablonu:"sgk_insaat_hesaplama",resimler:[],notlar:[],createdAt:"2026-02-01"},
-];
+const TEKLIF_DEMO=[];
+const MLZ_DEMO=[];
 
 const DEMO=[
   {id:1,firmaKodu:"120.1.00001",ad:"Özkan Ailesi",aciklama:"A Blok Daire 5 alıcısı",turler:["alici"],paraBirimi:"TL",vergiDairesi:"",vergiNo:"12345678901",telefon:"0538 111 00 22",sabitTelefon:"",webAdresi:"",eposta:"m.ozkan@gmail.com",mahalle:"Çay",adres:"Lale Sok. No:14",il:"Samsun",ilce:"Terme",bankaAdi:"İş Bankası",iban:"TR67 0006 4000 0011 2233 4455 66",kisiler:[{id:7,cinsiyet:"Bay",ad:"Mustafa",soyad:"Özkan",telefon:"0538 111 00 22",eposta:"m.ozkan@gmail.com",unvan:""}],notlar:[{id:6,tarih:"2026-02-10",yazar:"Admin",metin:"A Blok Daire 5 sözleşme. ₺3.250.000"},{id:7,tarih:"2026-02-12",yazar:"Admin",metin:"Kapora: ₺500.000"}],belgeler:[],createdAt:"2026-01-05"},
@@ -1423,176 +1401,138 @@ const FirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar})=>{
 /* ========== MALZEME KODU POPUP ========== */
 const MalzemeKoduCreator=({malzemeler,altKategoriler,altGruplar,onComplete,onClose,projeler=[]})=>{
   const[step,setStep]=useState(1);
-  const[selKat,setSelKat]=useState(null);
-  const[selProje,setSelProje]=useState(null); // sadece kategori=4 için
-  const[srcPrj,setSrcPrj]=useState("");
-  const[altKat,setAltKat]=useState("");
-  const[altKatAd,setAltKatAd]=useState("");
+  const[selGrup,setSelGrup]=useState("");
+  const[selGrupAd,setSelGrupAd]=useState("");
   const[altGrp,setAltGrp]=useState("");
   const[altGrpAd,setAltGrpAd]=useState("");
-  const[srcAK,setSrcAK]=useState("");
+  const[selTip,setSelTip]=useState("M");
+  const[srcGrp,setSrcGrp]=useState("");
   const[srcAG,setSrcAG]=useState("");
-  const[srcKat,setSrcKat]=useState("");
   const[mlzAd,setMlzAd]=useState("");
-  const[manuelSiraNo,setManuelSiraNo]=useState("");
 
-  const isHizmet=selKat==="4";
-  const toplamAdim=3; // Tüm kategoriler 3 adım (proje seçimi kaldırıldı)
-
-  const katObj=MLZ_KATEGORILER.find(k=>k.id===selKat);
+  const tipObj=MLZ_TIPLER.find(t=>t.id===selTip);
 
   const getNext=()=>{
-    if(!selKat||!altKat||!altGrp)return"00001";
-    if(isHizmet)return""; // Hizmet kartlarında sıra numarası yok
-    const pre=`${selKat}.${altKat}.${altGrp}.`;
-    const nums=malzemeler.filter(m=>m.malzemeKodu.startsWith(pre)).map(m=>{const p=m.malzemeKodu.split(".");return p[3]?parseInt(p[3],10):0;});
+    if(!selGrup||!altGrp||!selTip)return"00001";
+    const pre=`${selGrup}.${altGrp}.`;
+    const nums=malzemeler.filter(m=>m.malzemeKodu.startsWith(pre)&&m.malzemeKodu.endsWith("."+selTip)).map(m=>{const p=m.malzemeKodu.split(".");return p[2]?parseInt(p[2],10):0;});
     return String((nums.length>0?Math.max(...nums):0)+1).padStart(5,"0");
   };
   const nextNum=getNext();
 
-  // Kod önizleme — tüm kategoriler aynı format, hizmet sıra no yok
-  const kodPreview=isHizmet
-    ?`${selKat||"_"}.${altKat||"___"}.${altGrp||"___"}`
-    :`${selKat||"_"}.${altKat||"___"}.${altGrp||"___"}.${(selKat&&altKat&&altGrp)?nextNum:"_____"}`;
+  const kodPreview=`${selGrup||"___"}.${altGrp||"__"}.${(selGrup&&altGrp)?nextNum:"_____"}.${selTip}`;
 
-  // Tüm kategoriler aynı akış: 1=kategori, 2=altKat, 3=altGrp
+  const sonKod=`${selGrup}.${altGrp}.${nextNum}.${selTip}`;
+
   const ileriGit=()=>{
-    if(step===1){if(!selKat){alert("Kategori seçiniz!");return;}setStep(2);}
-    else if(step===2){if(!altKat||!altKatAd){alert("Listeden bir kategori seçiniz!");return;}setSrcAK("");setStep(3);}
+    if(step===1){if(!selGrup){alert("Grup seçiniz!");return;}setStep(2);}
+    else if(step===2){if(!altGrp||!altGrpAd){alert("Listeden bir alt grup seçiniz!");return;}if(!selTip){alert("Tip seçiniz!");return;}setSrcAG("");setStep(3);}
   };
   const geriGit=()=>{
     if(step===2){setStep(1);}
-    else if(step===3){setSrcAG("");setStep(2);}
+    else if(step===3){setStep(2);}
   };
-
-  const projeFil=projeler.filter(p=>!srcPrj||(p.ad||"").toLowerCase().includes(srcPrj.toLowerCase())||(p.projeKodu||"").toLowerCase().includes(srcPrj.toLowerCase()));
-
-  const altKatStep=2;
-  const altGrpStep=3;
-
-  const sonKod=isHizmet
-    ?`${selKat}.${altKat}.${altGrp}`
-    :`${selKat}.${altKat}.${altGrp}.${nextNum}`;
 
   return <div style={{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.45)"}} onClick={onClose}><div onClick={e=>e.stopPropagation()} style={{width:"560px",background:"#fff",borderRadius:T.rl,boxShadow:T.shM,overflow:"hidden"}}>
     <div style={{padding:"16px 24px",borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-      <div><div style={{fontSize:"16px",fontWeight:600,color:T.text}}>Malzeme Kodu Oluştur</div><div style={{color:T.t2,fontSize:"13px"}}>Adım {step} / {toplamAdim}</div></div>
+      <div><div style={{fontSize:"16px",fontWeight:600,color:T.text}}>Malzeme Kodu Oluştur</div><div style={{color:T.t2,fontSize:"13px"}}>Adım {step} / 3</div></div>
       <button onClick={onClose} style={{background:"none",border:"none",fontSize:"18px",color:T.t3,cursor:"pointer",padding:"4px"}}>✕</button>
     </div>
 
     {/* KOD ÖNİZLEME */}
     <div style={{padding:"14px 24px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",gap:"2px",fontFamily:"'SF Mono','Courier New',monospace",flexWrap:"wrap"}}>
-      <span style={{fontSize:"26px",fontWeight:700,color:selKat?katObj?.color:"#d9d9d9"}}>{selKat||"_"}</span>
-      <span style={{fontSize:"26px",color:"#d9d9d9"}}>.</span>
-      <span style={{fontSize:"26px",fontWeight:700,color:altKat?"#722ED1":"#d9d9d9"}}>{altKat||"___"}</span>
-      <span style={{fontSize:"26px",color:"#d9d9d9"}}>.</span>
-      <span style={{fontSize:"26px",fontWeight:700,color:altGrp?"#fa8c16":"#d9d9d9"}}>{altGrp||"___"}</span>
-      {!isHizmet&&<><span style={{fontSize:"26px",color:"#d9d9d9"}}>.</span>
-      <span style={{fontSize:"26px",fontWeight:700,color:(selKat&&altKat&&altGrp)?T.primary:"#d9d9d9"}}>{(selKat&&altKat&&altGrp)?nextNum:"_____"}</span></>}
-      {isHizmet&&<span style={{fontSize:"13px",color:T.t3,marginLeft:"12px"}}>(sıra no yok)</span>}
+      <span style={{fontSize:"24px",fontWeight:700,color:selGrup?T.primary:"#d9d9d9"}}>{selGrup||"___"}</span>
+      <span style={{fontSize:"24px",color:"#d9d9d9"}}>.</span>
+      <span style={{fontSize:"24px",fontWeight:700,color:altGrp?"#722ED1":"#d9d9d9"}}>{altGrp||"__"}</span>
+      <span style={{fontSize:"24px",color:"#d9d9d9"}}>.</span>
+      <span style={{fontSize:"24px",fontWeight:700,color:(selGrup&&altGrp)?"#fa8c16":"#d9d9d9"}}>{(selGrup&&altGrp)?nextNum:"_____"}</span>
+      <span style={{fontSize:"24px",color:"#d9d9d9"}}>.</span>
+      <span style={{fontSize:"24px",fontWeight:700,color:tipObj?.color||"#d9d9d9"}}>{selTip}</span>
     </div>
 
     <div style={{padding:"24px"}}>
-      {/* ADIM 1: KATEGORİ */}
+      {/* ADIM 1: GRUP SEÇİMİ */}
       {step===1&&<div>
-        <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"8px"}}>Kategori Seçin (1 hane)</div>
-        <div style={{marginBottom:"10px"}}><input style={{width:"100%",padding:"7px 10px",borderRadius:"6px",border:`1px solid ${T.bDark}`,fontSize:"13px",outline:"none",boxSizing:"border-box"}} value={srcKat} onChange={e=>setSrcKat(e.target.value)} placeholder="🔍 Kategori ara..." onFocus={foc} onBlur={blr}/></div>
-        <div style={{display:"flex",flexDirection:"column",gap:"8px",maxHeight:"260px",overflow:"auto"}}>
-          {MLZ_KATEGORILER.filter(k=>!srcKat||k.label.toLowerCase().includes(srcKat.toLowerCase())||k.id.includes(srcKat)).map(k=>{const sel=selKat===k.id;return <button key={k.id} onClick={()=>setSelKat(k.id)} style={{display:"flex",alignItems:"center",gap:"14px",padding:"12px 16px",borderRadius:T.r,border:`1px solid ${sel?k.color:T.border}`,background:sel?k.bg:"#fff",cursor:"pointer",transition:"all .2s",textAlign:"left"}}>
-            <span style={{fontSize:"22px"}}>{k.icon}</span>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:sel?600:500,color:sel?k.color:T.text,fontSize:"14px"}}>{k.label}</div>
-              <div style={{color:T.t2,fontSize:"12px"}}>{k.id==="4"?"Kod: "+k.id+" · Proje kodu otomatik eklenir":"Kod: "+k.id}</div>
-            </div>
-            {sel&&<span style={{color:k.color,fontSize:"16px"}}>✓</span>}
-          </button>;})}
-        </div>
-        <div style={{display:"flex",justifyContent:"flex-end",marginTop:"20px"}}>
-          <button onClick={ileriGit} style={{padding:"8px 24px",borderRadius:"6px",border:"none",background:selKat?T.primary:"#d9d9d9",color:"#fff",fontWeight:500,fontSize:"14px",cursor:selKat?"pointer":"not-allowed"}}>Devam →</button>
-        </div>
-      </div>}
-
-      {/* ADIM 2 (hizmet): PROJE SEÇİMİ */}
-      {/* ALT KATEGORİ ADIMI */}
-      {step===altKatStep&&<div>
-        <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"4px"}}>Kategori Seçin</div>
-        <div style={{fontSize:"12px",color:T.t2,marginBottom:"8px"}}>
-          {selKat&&<span style={{background:MLZ_KATEGORILER.find(k=>k.id===selKat)?.bg,color:MLZ_KATEGORILER.find(k=>k.id===selKat)?.color,padding:"2px 8px",borderRadius:"4px",fontWeight:500}}>{selKat}xx ile başlayan kodlar gösteriliyor</span>}
-        </div>
+        <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"8px"}}>Grup Seçin (3 hane)</div>
+        <div style={{marginBottom:"10px"}}><input style={{width:"100%",padding:"7px 10px",borderRadius:"6px",border:`1px solid ${T.bDark}`,fontSize:"13px",outline:"none",boxSizing:"border-box"}} value={srcGrp} onChange={e=>setSrcGrp(e.target.value)} placeholder="Kod veya isim ara..." onFocus={foc} onBlur={blr}/></div>
         {(()=>{
-          const tum=(altKategoriler||[]).filter(a=>selKat?a.kod.startsWith(selKat):true);
-          if(tum.length===0)return <div style={{padding:"24px",textAlign:"center",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffe58f"}}><div style={{fontSize:"28px",marginBottom:"8px"}}>⚠️</div><div style={{color:"#d48806",fontSize:"13px",fontWeight:500}}>Bu ana kategori için ({selKat}xx) henüz kategori tanımlanmamış.</div><div style={{color:T.t3,fontSize:"12px",marginTop:"4px"}}>Malzemeler → Kategoriler sekmesinden {selKat}xx ile başlayan kod ekleyin.</div></div>;
-          const mevcutlar=tum.filter(a=>{if(!srcAK)return true;const q=srcAK.toLowerCase();return a.kod.includes(q)||a.ad.toLowerCase().includes(q);}).sort((a,b)=>a.kod.localeCompare(b.kod));
-          return <div>
-            <div style={{marginBottom:"8px"}}><input autoFocus style={{width:"100%",padding:"7px 10px",borderRadius:"6px",border:`1px solid ${T.bDark}`,fontSize:"13px",outline:"none",boxSizing:"border-box"}} value={srcAK} onChange={e=>setSrcAK(e.target.value)} placeholder="🔍 Kod veya isim ara..." onFocus={foc} onBlur={blr}/></div>
-            {mevcutlar.length===0
-              ?<div style={{padding:"16px",textAlign:"center",color:T.t3,fontSize:"13px"}}>Sonuç bulunamadı</div>
-              :<div style={{display:"flex",flexDirection:"column",gap:"4px",maxHeight:"240px",overflow:"auto"}}>
-                {mevcutlar.map(a=>{const sel=altKat===a.kod&&altKatAd===a.ad;return <button key={a.id} onClick={()=>{setAltKat(a.kod);setAltKatAd(a.ad);}} style={{display:"flex",alignItems:"center",gap:"10px",padding:"10px 14px",borderRadius:"6px",border:`1px solid ${sel?T.primary:T.border}`,background:sel?T.pBg:"#fff",cursor:"pointer",textAlign:"left",transition:"all .15s"}}>
-                  <span style={{fontFamily:"monospace",fontWeight:700,fontSize:"14px",color:sel?T.primary:T.t2,background:sel?T.primary+"11":"#f5f5f5",padding:"2px 10px",borderRadius:"4px"}}>{a.kod}</span>
-                  <span style={{fontSize:"14px",color:sel?T.primary:T.text,fontWeight:sel?600:400}}>{a.ad}</span>
-                  {sel&&<span style={{marginLeft:"auto",color:T.primary,fontSize:"16px"}}>✓</span>}
-                </button>;})}
-              </div>
-            }
+          const tum=(altKategoriler||[]).filter(a=>{if(!srcGrp)return true;const q=srcGrp.toLowerCase();return a.kod.includes(q)||a.ad.toLowerCase().includes(q);}).sort((a,b)=>a.kod.localeCompare(b.kod));
+          if(tum.length===0)return <div style={{padding:"24px",textAlign:"center",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffe58f"}}><div style={{fontSize:"28px",marginBottom:"8px"}}>⚠️</div><div style={{color:"#d48806",fontSize:"13px",fontWeight:500}}>Henüz grup tanımlanmamış.</div><div style={{color:T.t3,fontSize:"12px",marginTop:"4px"}}>Malzemeler → Grup Yönetimi sekmesinden yeni grup ekleyin.</div></div>;
+          return <div style={{display:"flex",flexDirection:"column",gap:"4px",maxHeight:"280px",overflow:"auto"}}>
+            {tum.map(a=>{const sel=selGrup===a.kod;return <button key={a.id} onClick={()=>{setSelGrup(a.kod);setSelGrupAd(a.ad);}} style={{display:"flex",alignItems:"center",gap:"10px",padding:"10px 14px",borderRadius:"6px",border:`1px solid ${sel?T.primary:T.border}`,background:sel?T.pBg:"#fff",cursor:"pointer",textAlign:"left",transition:"all .15s"}}>
+              <span style={{fontFamily:"monospace",fontWeight:700,fontSize:"14px",color:sel?T.primary:T.t2,background:sel?T.primary+"11":"#f5f5f5",padding:"2px 10px",borderRadius:"4px"}}>{a.kod}</span>
+              <span style={{fontSize:"14px",color:sel?T.primary:T.text,fontWeight:sel?600:400}}>{a.ad}</span>
+              {sel&&<span style={{marginLeft:"auto",color:T.primary,fontSize:"16px"}}>✓</span>}
+            </button>;})}
           </div>;
         })()}
-        <div style={{display:"flex",justifyContent:"space-between",marginTop:"20px"}}>
-          <button onClick={geriGit} style={{padding:"8px 20px",borderRadius:"6px",border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontWeight:500,fontSize:"14px",cursor:"pointer"}}>← Geri</button>
-          <button onClick={ileriGit} style={{padding:"8px 24px",borderRadius:"6px",border:"none",background:(altKat&&altKatAd)?T.primary:"#d9d9d9",color:"#fff",fontWeight:500,fontSize:"14px",cursor:(altKat&&altKatAd)?"pointer":"not-allowed"}}>Devam →</button>
+        <div style={{display:"flex",justifyContent:"flex-end",marginTop:"20px"}}>
+          <button onClick={ileriGit} style={{padding:"8px 24px",borderRadius:"6px",border:"none",background:selGrup?T.primary:"#d9d9d9",color:"#fff",fontWeight:500,fontSize:"14px",cursor:selGrup?"pointer":"not-allowed"}}>Devam →</button>
         </div>
       </div>}
 
-      {/* ALT GRUP ADIMI */}
-      {step===altGrpStep&&<div>
-        <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"8px"}}>Alt Kategori Seçin <span style={{fontSize:"12px",color:T.t3,fontWeight:400}}>({altKatAd})</span></div>
+      {/* ADIM 2: ALT GRUP + TİP SEÇİMİ */}
+      {step===2&&<div>
+        <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"4px"}}>Alt Grup Seçin <span style={{fontSize:"12px",color:T.t3,fontWeight:400}}>({selGrupAd})</span></div>
         {(()=>{
-          const tum=(altGruplar||[]).filter(g=>g.altKategoriKod===altKat);
-          if(tum.length===0)return <div style={{padding:"24px",textAlign:"center",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffe58f"}}><div style={{fontSize:"28px",marginBottom:"8px"}}>⚠️</div><div style={{color:"#d48806",fontSize:"13px",fontWeight:500}}>Bu kategoriye ait alt kategori tanımlanmamış.</div><div style={{color:T.t3,fontSize:"12px",marginTop:"4px"}}>Önce Malzemeler → Alt Kategoriler sekmesinden ekleyin.</div></div>;
+          const tum=(altGruplar||[]).filter(g=>g.grupKod===selGrup);
+          if(tum.length===0)return <div style={{padding:"24px",textAlign:"center",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffe58f"}}><div style={{fontSize:"28px",marginBottom:"8px"}}>⚠️</div><div style={{color:"#d48806",fontSize:"13px",fontWeight:500}}>Bu gruba ait alt grup tanımlanmamış.</div><div style={{color:T.t3,fontSize:"12px",marginTop:"4px"}}>Malzemeler → Grup Yönetimi sekmesinden alt grup ekleyin.</div></div>;
           const mevcutlar=tum.filter(g=>{if(!srcAG)return true;const q=srcAG.toLowerCase();return g.kod.includes(q)||g.ad.toLowerCase().includes(q);}).sort((a,b)=>a.kod.localeCompare(b.kod));
           return <div>
-            <div style={{marginBottom:"8px"}}><input autoFocus style={{width:"100%",padding:"7px 10px",borderRadius:"6px",border:`1px solid ${T.bDark}`,fontSize:"13px",outline:"none",boxSizing:"border-box"}} value={srcAG} onChange={e=>setSrcAG(e.target.value)} placeholder="🔍 Kod veya isim ara..." onFocus={foc} onBlur={blr}/></div>
+            <div style={{marginBottom:"8px"}}><input autoFocus style={{width:"100%",padding:"7px 10px",borderRadius:"6px",border:`1px solid ${T.bDark}`,fontSize:"13px",outline:"none",boxSizing:"border-box"}} value={srcAG} onChange={e=>setSrcAG(e.target.value)} placeholder="Kod veya isim ara..." onFocus={foc} onBlur={blr}/></div>
             {mevcutlar.length===0
               ?<div style={{padding:"16px",textAlign:"center",color:T.t3,fontSize:"13px"}}>Sonuç bulunamadı</div>
-              :<div style={{display:"flex",flexDirection:"column",gap:"4px",maxHeight:"200px",overflow:"auto"}}>
-                {mevcutlar.map(g=>{const sel=altGrp===g.kod&&altGrpAd===g.ad;return <button key={g.id} onClick={()=>{
-                  setAltGrp(g.kod);setAltGrpAd(g.ad);
-                  setMlzAd([altKatAd,g.ad].filter(Boolean).join(" - "));
-                }} style={{display:"flex",alignItems:"center",gap:"10px",padding:"10px 14px",borderRadius:"6px",border:`1px solid ${sel?"#fa8c16":T.border}`,background:sel?"#fff7e6":"#fff",cursor:"pointer",textAlign:"left",transition:"all .15s"}}>
-                  <span style={{fontFamily:"monospace",fontWeight:700,fontSize:"14px",color:sel?"#fa8c16":T.t2,background:sel?"#fa8c1611":"#f5f5f5",padding:"2px 10px",borderRadius:"4px"}}>{g.kod}</span>
-                  <span style={{fontSize:"14px",color:sel?"#fa8c16":T.text,fontWeight:sel?600:400}}>{g.ad}</span>
-                  {sel&&<span style={{marginLeft:"auto",color:"#fa8c16",fontSize:"16px"}}>✓</span>}
+              :<div style={{display:"flex",flexDirection:"column",gap:"4px",maxHeight:"160px",overflow:"auto"}}>
+                {mevcutlar.map(g=>{const sel=altGrp===g.kod&&altGrpAd===g.ad;return <button key={g.id} onClick={()=>{setAltGrp(g.kod);setAltGrpAd(g.ad);}} style={{display:"flex",alignItems:"center",gap:"10px",padding:"10px 14px",borderRadius:"6px",border:`1px solid ${sel?"#722ED1":T.border}`,background:sel?"#f9f0ff":"#fff",cursor:"pointer",textAlign:"left",transition:"all .15s"}}>
+                  <span style={{fontFamily:"monospace",fontWeight:700,fontSize:"14px",color:sel?"#722ED1":T.t2,background:sel?"#722ED111":"#f5f5f5",padding:"2px 10px",borderRadius:"4px"}}>{g.kod}</span>
+                  <span style={{fontSize:"14px",color:sel?"#722ED1":T.text,fontWeight:sel?600:400}}>{g.ad}</span>
+                  {sel&&<span style={{marginLeft:"auto",color:"#722ED1",fontSize:"16px"}}>✓</span>}
                 </button>;})}
               </div>
             }
           </div>;
         })()}
-        {(altGrp&&altGrpAd)&&<div style={{padding:"12px 16px",background:"#f0f5ff",borderRadius:T.r,border:`1px solid ${T.primary}33`,marginTop:"12px"}}>
+        <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginTop:"16px",marginBottom:"8px"}}>Tip Seçin</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px"}}>
+          {MLZ_TIPLER.map(t=>{const sel=selTip===t.id;return <button key={t.id} onClick={()=>setSelTip(t.id)} style={{display:"flex",alignItems:"center",gap:"8px",padding:"8px 12px",borderRadius:"6px",border:`1px solid ${sel?t.color:T.border}`,background:sel?t.bg:"#fff",cursor:"pointer",transition:"all .15s"}}>
+            <span style={{fontSize:"16px"}}>{t.icon}</span>
+            <span style={{fontSize:"13px",fontWeight:sel?600:400,color:sel?t.color:T.text}}>{t.label}</span>
+            <span style={{fontFamily:"monospace",fontSize:"12px",color:T.t3,marginLeft:"auto"}}>{t.id}</span>
+          </button>;})}
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:"20px"}}>
+          <button onClick={geriGit} style={{padding:"8px 20px",borderRadius:"6px",border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontWeight:500,fontSize:"14px",cursor:"pointer"}}>← Geri</button>
+          <button onClick={ileriGit} style={{padding:"8px 24px",borderRadius:"6px",border:"none",background:(altGrp&&altGrpAd&&selTip)?T.primary:"#d9d9d9",color:"#fff",fontWeight:500,fontSize:"14px",cursor:(altGrp&&altGrpAd&&selTip)?"pointer":"not-allowed"}}>Devam →</button>
+        </div>
+      </div>}
+
+      {/* ADIM 3: MALZEME ADI + ONAY */}
+      {step===3&&<div>
+        <div style={{padding:"12px 16px",background:"#f0f5ff",borderRadius:T.r,border:`1px solid ${T.primary}33`,marginBottom:"16px"}}>
           <div style={{fontSize:"12px",color:T.t2,marginBottom:"4px"}}>Oluşturulacak Kod:</div>
-          <div style={{fontFamily:"monospace",fontSize:"16px",fontWeight:700,color:T.primary}}>{kodPreview}</div>
-          <div style={{fontSize:"12px",color:T.t2,marginTop:"4px"}}>{katObj?.label}{isHizmet&&selProje?` → ${selProje.ad}`:""} → {altKatAd} → {altGrpAd}</div>
-        </div>}
-        {(altGrp&&altGrpAd)&&<div style={{marginTop:"12px"}}>
+          <div style={{fontFamily:"monospace",fontSize:"18px",fontWeight:700,color:T.primary}}>{kodPreview}</div>
+          <div style={{fontSize:"12px",color:T.t2,marginTop:"4px"}}>{selGrupAd} → {altGrpAd} → {tipObj?.label}</div>
+        </div>
+        <div style={{marginBottom:"12px"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"6px"}}>
             <label style={{...lS,marginBottom:0}}>Malzeme Açıklaması <span style={{color:T.err}}>*</span></label>
-            <button onClick={()=>setMlzAd([altKatAd,altGrpAd].filter(Boolean).join(" - "))} style={{fontSize:"11px",color:T.primary,background:T.pBg,border:`1px solid ${T.primary}33`,borderRadius:"4px",padding:"2px 8px",cursor:"pointer"}}>✨ Otomatik Öner</button>
+            <button onClick={()=>setMlzAd([selGrupAd,altGrpAd].filter(Boolean).join(" - "))} style={{fontSize:"11px",color:T.primary,background:T.pBg,border:`1px solid ${T.primary}33`,borderRadius:"4px",padding:"2px 8px",cursor:"pointer"}}>Otomatik Öner</button>
           </div>
-          <input style={{...iS,fontSize:"14px",fontWeight:500}} value={mlzAd} onChange={e=>setMlzAd(e.target.value)} placeholder={[altKatAd,altGrpAd].filter(Boolean).join(" - ")} onFocus={foc} onBlur={blr}/>
+          <input style={{...iS,fontSize:"14px",fontWeight:500}} value={mlzAd} onChange={e=>setMlzAd(e.target.value)} placeholder={[selGrupAd,altGrpAd].filter(Boolean).join(" - ")} onFocus={foc} onBlur={blr}/>
           <div style={{fontSize:"11px",color:T.t3,marginTop:"3px"}}>Düzenleyebilirsiniz</div>
-        </div>}
+        </div>
         <div style={{display:"flex",justifyContent:"space-between",marginTop:"16px"}}>
           <button onClick={geriGit} style={{padding:"8px 20px",borderRadius:"6px",border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontWeight:500,fontSize:"14px",cursor:"pointer"}}>← Geri</button>
           <button onClick={()=>{
-            if(!altGrp||!altGrpAd){alert("Listeden bir alt kategori seçiniz!");return;}
             if(!mlzAd.trim()){alert("Malzeme açıklaması giriniz!");return;}
             onComplete({
               malzemeKodu:sonKod,
-              kategori:selKat,
-              altKategori:altKat,altKategoriAd:altKatAd,
+              tip:selTip,
+              grup:selGrup,grupAd:selGrupAd,
               altGrup:altGrp,altGrupAd:altGrpAd,
               mlzAd:mlzAd.trim()
             });
-          }} style={{padding:"8px 24px",borderRadius:"6px",border:"none",background:(altGrp&&altGrpAd&&mlzAd.trim())?T.primary:"#d9d9d9",color:"#fff",fontWeight:500,fontSize:"14px",cursor:(altGrp&&altGrpAd&&mlzAd.trim())?"pointer":"not-allowed"}}>Malzeme Oluştur ✓</button>
+          }} style={{padding:"8px 24px",borderRadius:"6px",border:"none",background:mlzAd.trim()?T.primary:"#d9d9d9",color:"#fff",fontWeight:500,fontSize:"14px",cursor:mlzAd.trim()?"pointer":"not-allowed"}}>Malzeme Oluştur ✓</button>
         </div>
       </div>}
     </div>
@@ -1602,8 +1542,8 @@ const MalzemeKoduCreator=({malzemeler,altKategoriler,altGruplar,onComplete,onClo
 /* ========== MALZEME KARTI - TAM SAYFA FORM ========== */
 const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKategoriler,altGruplar,teklifler=[]})=>{
   const[form,setForm]=useState(()=>malzeme?{...malzeme}:{
-    id:Date.now(),malzemeKodu:initData?.malzemeKodu||"",ad:initData?.mlzAd||"",kategori:initData?.kategori||"1",
-    altKategori:initData?.altKategori||"",altKategoriAd:initData?.altKategoriAd||"",
+    id:Date.now(),malzemeKodu:initData?.malzemeKodu||"",ad:initData?.mlzAd||"",tip:initData?.tip||"M",
+    grup:initData?.grup||"",grupAd:initData?.grupAd||"",
     altGrup:initData?.altGrup||"",altGrupAd:initData?.altGrupAd||"",
     birim:"adet",birimFiyat:0,paraBirimi:"TL",kdvOrani:"20",marka:"",model:"",aciklama:"",
     tedarikciId:null,durum:"aktif",hesaplamaSablonu:"",omurgaProjeTurleri:[],resimler:[],notlar:[],createdAt:new Date().toISOString().split("T")[0]
@@ -1644,7 +1584,7 @@ const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKate
     onSave(form);setSaved(true);setTimeout(()=>setSaved(false),2000);
   };
 
-  const katObj=MLZ_KATEGORILER.find(k=>k.id===form.kategori);
+  const tipObj=MLZ_TIPLER.find(t=>t.id===form.tip);
   const paraObj=PARA_BIRIMLERI.find(p=>p.id===form.paraBirimi);
   const tedFirma=firmalar?.find(f=>f.id===form.tedarikciId);
   const tedOptions=firmalar?.filter(f=>f.turler.includes("tedarikci"))||[];
@@ -1697,9 +1637,9 @@ const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKate
             <div style={{padding:"16px 20px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`}}>
               <div style={{color:T.primary,fontSize:"13px",fontWeight:600,marginBottom:"12px"}}>📂 SINIFLANDIRMA</div>
               <div style={{display:"flex",flexDirection:"column",gap:"16px"}}>
-                <div><label style={lS}>Kategori</label><input style={{...iS,background:"#f0f5ff",color:katObj?.color||T.t2,fontWeight:600}} value={katObj?`${katObj.icon} ${katObj.label}`:""} readOnly/></div>
-                <div style={{display:"grid",gridTemplateColumns:"80px 1fr",gap:"8px"}}><div><label style={lS}>Alt Kat. Kodu</label><input style={{...iS,background:"#f0f5ff",fontFamily:"monospace",textAlign:"center"}} value={form.altKategori} readOnly/></div><div><label style={lS}>Kategori Adı</label><input style={{...iS,textTransform:"uppercase"}} value={form.altKategoriAd} onChange={e=>u("altKategoriAd",toUpperCase(e.target.value))} onFocus={foc} onBlur={blr}/></div></div>
-                <div style={{display:"grid",gridTemplateColumns:"80px 1fr",gap:"8px"}}><div><label style={lS}>Alt Grp Kodu</label><input style={{...iS,background:"#f0f5ff",fontFamily:"monospace",textAlign:"center"}} value={form.altGrup} readOnly/></div><div><label style={lS}>Alt Kategori Adı</label><input style={{...iS,textTransform:"uppercase"}} value={form.altGrupAd} onChange={e=>u("altGrupAd",toUpperCase(e.target.value))} onFocus={foc} onBlur={blr}/></div></div>
+                <div><label style={lS}>Tip</label><input style={{...iS,background:"#f0f5ff",color:tipObj?.color||T.t2,fontWeight:600}} value={tipObj?`${tipObj.icon} ${tipObj.label}`:""} readOnly/></div>
+                <div style={{display:"grid",gridTemplateColumns:"80px 1fr",gap:"8px"}}><div><label style={lS}>Grup Kodu</label><input style={{...iS,background:"#f0f5ff",fontFamily:"monospace",textAlign:"center"}} value={form.grup} readOnly/></div><div><label style={lS}>Grup Adı</label><input style={{...iS,textTransform:"uppercase"}} value={form.grupAd} onChange={e=>u("grupAd",toUpperCase(e.target.value))} onFocus={foc} onBlur={blr}/></div></div>
+                <div style={{display:"grid",gridTemplateColumns:"80px 1fr",gap:"8px"}}><div><label style={lS}>Alt Grp Kodu</label><input style={{...iS,background:"#f0f5ff",fontFamily:"monospace",textAlign:"center"}} value={form.altGrup} readOnly/></div><div><label style={lS}>Alt Grup Adı</label><input style={{...iS,textTransform:"uppercase"}} value={form.altGrupAd} onChange={e=>u("altGrupAd",toUpperCase(e.target.value))} onFocus={foc} onBlur={blr}/></div></div>
               </div>
             </div>
 
@@ -1867,7 +1807,7 @@ const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKate
         })()}
 
         {/* HESAPLAMA */}
-        {tab==="hesaplama"&&<HesaplamaSekmesi kategori={form.kategori} malzemeId={form.id} malzemeAd={form.ad} malzemeKodu={form.malzemeKodu} seciliHesaplama={form.hesaplamaSablonu} onSablonSec={(key)=>setForm(p=>({...p,hesaplamaSablonu:key}))} kdvOrani={form.kdvOrani||"20"}/>}
+        {tab==="hesaplama"&&<HesaplamaSekmesi kategori={form.tip} malzemeId={form.id} malzemeAd={form.ad} malzemeKodu={form.malzemeKodu} seciliHesaplama={form.hesaplamaSablonu} onSablonSec={(key)=>setForm(p=>({...p,hesaplamaSablonu:key}))} kdvOrani={form.kdvOrani||"20"}/>}
 
         {/* NOTLAR */}
         {tab==="notlar"&&<div>
@@ -1887,14 +1827,13 @@ const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKate
   </div>;
 };
 
-/* ========== ALT KATEGORİ & ALT GRUP YÖNETİM BİLEŞENLERİ ========== */
+/* ========== GRUP & ALT GRUP YÖNETİM BİLEŞENLERİ ========== */
 const AltKategoriYonetim=({altKategoriler,setAltKategoriler,onSave,onDel,altGruplar=[],setAltGruplar,onSaveAltGrp,onDelAltGrp})=>{
   const[yeniKod,setYeniKod]=useState("");
   const[yeniAd,setYeniAd]=useState("");
   const[editId,setEditId]=useState(null);
   const[editKod,setEditKod]=useState("");
   const[editAd,setEditAd]=useState("");
-  const[katFiltre,setKatFiltre]=useState("hepsi"); // hepsi, 1, 2, 3, 4
   const[selKat,setSelKat]=useState(null);
   const[yeniGrpKod,setYeniGrpKod]=useState("");
   const[yeniGrpAd,setYeniGrpAd]=useState("");
@@ -1904,34 +1843,30 @@ const AltKategoriYonetim=({altKategoriler,setAltKategoriler,onSave,onDel,altGrup
 
   const ekle=()=>{
     if(!yeniKod||yeniKod.length!==3){alert("Kod 3 hane olmalıdır!");return;}
-    if(!yeniAd.trim()){alert("Kategori adı giriniz!");return;}
+    if(!yeniAd.trim()){alert("Grup adı giriniz!");return;}
     const mevcut=altKategoriler.find(a=>a.kod===yeniKod);
     if(mevcut){alert(`Bu kod (${yeniKod}) zaten "${mevcut.ad}" olarak kullanılıyor!`);return;}
     if(onSave){onSave({kod:yeniKod,ad:yeniAd.trim()});}else{setAltKategoriler(p=>[...p,{id:Date.now(),kod:yeniKod,ad:yeniAd.trim()}]);}
-    // Sonraki kod otomatik
-    const prefix=yeniKod.charAt(0);
-    const sonrakiNo=parseInt(yeniKod.slice(1))+1;
-    setYeniKod(prefix+String(sonrakiNo).padStart(2,"0"));setYeniAd("");
+    const sonrakiNo=parseInt(yeniKod)+1;
+    setYeniKod(String(sonrakiNo).padStart(3,"0"));setYeniAd("");
   };
   const duzenlemeBaslat=(a)=>{setEditId(a.id);setEditKod(a.kod);setEditAd(a.ad);};
   const duzenlemeIptal=()=>{setEditId(null);setEditKod("");setEditAd("");};
   const duzenlemeKaydet=(a)=>{
     if(!editKod||editKod.length!==3){alert("Kod 3 hane olmalıdır!");return;}
-    if(!editAd.trim()){alert("Kategori adı giriniz!");return;}
+    if(!editAd.trim()){alert("Grup adı giriniz!");return;}
     if(onSave){if(onDel)onDel(a.id);onSave({kod:editKod,ad:editAd.trim()});}
     else{setAltKategoriler(p=>p.map(x=>x.id===a.id?{...x,kod:editKod,ad:editAd.trim()}:x));}
     duzenlemeIptal();
   };
-  const sil=(id)=>{if(confirm("Bu kategoriyi silmek istediğinize emin misiniz?")){if(onDel){onDel(id);}else{setAltKategoriler(p=>p.filter(a=>a.id!==id));}}};
+  const sil=(id)=>{if(confirm("Bu grubu silmek istediğinize emin misiniz?")){if(onDel){onDel(id);}else{setAltKategoriler(p=>p.filter(a=>a.id!==id));}}};
 
-  // Alt grup fonksiyonları
   const grpEkle=()=>{
-    if(!selKat){alert("Önce sol taraftan bir kategori seçiniz!");return;}
+    if(!selKat){alert("Önce sol taraftan bir grup seçiniz!");return;}
     if(!yeniGrpKod||yeniGrpKod.length!==2){alert("Kod 2 hane olmalıdır!");return;}
-    if(!yeniGrpAd.trim()){alert("Alt kategori adı giriniz!");return;}
-    if(onSaveAltGrp){onSaveAltGrp({altKategoriKod:selKat.kod,altKategoriAd:selKat.ad,kod:yeniGrpKod,ad:yeniGrpAd.trim()});}
-    else{setAltGruplar(p=>[...p,{id:Date.now(),altKategoriKod:selKat.kod,altKategoriAd:selKat.ad,kod:yeniGrpKod,ad:yeniGrpAd.trim()}]);}
-    // Sonraki sıra no otomatik
+    if(!yeniGrpAd.trim()){alert("Alt grup adı giriniz!");return;}
+    if(onSaveAltGrp){onSaveAltGrp({grupKod:selKat.kod,grupAd:selKat.ad,kod:yeniGrpKod,ad:yeniGrpAd.trim()});}
+    else{setAltGruplar(p=>[...p,{id:Date.now(),grupKod:selKat.kod,grupAd:selKat.ad,kod:yeniGrpKod,ad:yeniGrpAd.trim()}]);}
     const sonrakiNo=parseInt(yeniGrpKod)+1;
     setYeniGrpKod(String(sonrakiNo).padStart(2,"0"));setYeniGrpAd("");
   };
@@ -1939,44 +1874,29 @@ const AltKategoriYonetim=({altKategoriler,setAltKategoriler,onSave,onDel,altGrup
   const grpDuzIptal=()=>{setEditGrpId(null);setEditGrpKod("");setEditGrpAd("");};
   const grpDuzKaydet=(g)=>{
     if(!editGrpKod||editGrpKod.length!==2){alert("Kod 2 hane olmalıdır!");return;}
-    if(!editGrpAd.trim()){alert("Alt kategori adı giriniz!");return;}
-    if(onSaveAltGrp){if(onDelAltGrp)onDelAltGrp(g.id);onSaveAltGrp({altKategoriKod:g.altKategoriKod,altKategoriAd:g.altKategoriAd,kod:editGrpKod,ad:editGrpAd.trim()});}
+    if(!editGrpAd.trim()){alert("Alt grup adı giriniz!");return;}
+    if(onSaveAltGrp){if(onDelAltGrp)onDelAltGrp(g.id);onSaveAltGrp({grupKod:g.grupKod,grupAd:g.grupAd,kod:editGrpKod,ad:editGrpAd.trim()});}
     else{setAltGruplar(p=>p.map(x=>x.id===g.id?{...x,kod:editGrpKod,ad:editGrpAd.trim()}:x));}
     grpDuzIptal();
   };
-  const grpSil=(id)=>{if(confirm("Bu alt kategoriyi silmek istediğinize emin misiniz?")){if(onDelAltGrp){onDelAltGrp(id);}else{setAltGruplar(p=>p.filter(g=>g.id!==id));}}};
+  const grpSil=(id)=>{if(confirm("Bu alt grubu silmek istediğinize emin misiniz?")){if(onDelAltGrp){onDelAltGrp(id);}else{setAltGruplar(p=>p.filter(g=>g.id!==id));}}};
 
-  const sorted=altKategoriler.filter(a=>{
-    if(katFiltre==="hepsi")return true;
-    return a.kod.startsWith(katFiltre);
-  }).slice().sort((a,b)=>a.kod.localeCompare(b.kod));
-  const grpFiltered=selKat?(altGruplar||[]).filter(g=>g.altKategoriKod===selKat.kod).sort((a,b)=>a.kod.localeCompare(b.kod)):[];
+  const sorted=altKategoriler.slice().sort((a,b)=>a.kod.localeCompare(b.kod));
+  const grpFiltered=selKat?(altGruplar||[]).filter(g=>g.grupKod===selKat.kod).sort((a,b)=>a.kod.localeCompare(b.kod)):[];
 
   return <div style={{display:"grid",gridTemplateColumns:"550px 550px",gap:"16px",maxWidth:"1116px"}}>
-    {/* SOL: KATEGORİLER */}
+    {/* SOL: GRUPLAR */}
     <div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#384248"}}>
         <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
-          <span style={{fontSize:"15px",fontWeight:700,color:"#fff"}}>Kategoriler</span>
+          <span style={{fontSize:"15px",fontWeight:700,color:"#fff"}}>Gruplar</span>
           <span style={{fontSize:"12px",color:"#8799a3"}}>{sorted.length}</span>
         </div>
-        <button onClick={ekle} title="Kategori Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
-      </div>
-      {/* FİLTRE BUTONLARI */}
-      <div style={{padding:"6px 12px",borderBottom:`1px solid ${T.border}`,display:"flex",gap:"4px",flexWrap:"wrap"}}>
-        {[{id:"hepsi",label:"Tümü"},{id:"1",label:"Hammadde"},{id:"2",label:"Mamül"},{id:"3",label:"Yarı Mamül"},{id:"4",label:"Hizmet"}].map(f=><button key={f.id} onClick={()=>{
-          setKatFiltre(f.id);
-          if(f.id!=="hepsi"){
-            // Otomatik sonraki kod hesapla
-            const mevcutlar=altKategoriler.filter(a=>a.kod.startsWith(f.id)).map(a=>parseInt(a.kod.slice(1))||0);
-            const sonraki=mevcutlar.length>0?Math.max(...mevcutlar)+1:1;
-            setYeniKod(f.id+String(sonraki).padStart(2,"0"));
-          } else {setYeniKod("");}
-        }} style={{height:"28px",padding:"0 10px",borderRadius:"4px",border:`1px solid ${katFiltre===f.id?"#384248":T.bDark}`,background:katFiltre===f.id?"#384248":"#fff",color:katFiltre===f.id?"#fff":T.t2,fontSize:"12px",cursor:"pointer"}}>{f.label}</button>)}
+        <button onClick={ekle} title="Grup Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
       </div>
       <div style={{padding:"8px 12px",borderBottom:`1px solid ${T.border}`,display:"grid",gridTemplateColumns:"80px 1fr",gap:"8px"}}>
         <input style={{...iS,fontSize:"15px"}} value={yeniKod} onChange={e=>setYeniKod(e.target.value.replace(/\D/g,"").slice(0,3))} placeholder="Kod" maxLength={3} onFocus={foc} onBlur={blr}/>
-        <input style={{...iS,fontSize:"15px"}} value={yeniAd} onChange={e=>setYeniAd(e.target.value)} placeholder="Kategori adı..." onKeyDown={e=>e.key==="Enter"&&ekle()} onFocus={foc} onBlur={blr}/>
+        <input style={{...iS,fontSize:"15px"}} value={yeniAd} onChange={e=>setYeniAd(e.target.value)} placeholder="Grup adı..." onKeyDown={e=>e.key==="Enter"&&ekle()} onFocus={foc} onBlur={blr}/>
       </div>
       <div style={{maxHeight:"500px",overflow:"auto"}}>
         {sorted.map((a,idx)=><div key={a.id}>
@@ -1987,8 +1907,7 @@ const AltKategoriYonetim=({altKategoriler,setAltKategoriler,onSave,onDel,altGrup
               <div style={{display:"flex",gap:"12px"}}><button onClick={()=>duzenlemeKaydet(a)} title="Kaydet" style={{padding:"0",border:"none",background:"transparent",color:"#384248",cursor:"pointer",display:"flex",alignItems:"center"}}><Save size={25}/></button><button onClick={duzenlemeIptal} title="İptal" style={{padding:"0",border:"none",background:"transparent",color:T.t3,cursor:"pointer",display:"flex",alignItems:"center"}}><X size={25}/></button></div>
             </div>
             :<div onClick={()=>{setSelKat(a);grpDuzIptal();setYeniGrpAd("");
-              // Otomatik sonraki sıra no hesapla
-              const mevcutGrplar=(altGruplar||[]).filter(g=>g.altKategoriKod===a.kod).map(g=>parseInt(g.kod)||0);
+              const mevcutGrplar=(altGruplar||[]).filter(g=>g.grupKod===a.kod).map(g=>parseInt(g.kod)||0);
               const sonraki=mevcutGrplar.length>0?Math.max(...mevcutGrplar)+1:1;
               setYeniGrpKod(String(sonraki).padStart(2,"0"));
             }} style={{display:"grid",gridTemplateColumns:"80px 1fr auto",padding:"0 12px",gap:"8px",alignItems:"center",height:"36px",borderBottom:idx<sorted.length-1?`1px solid ${T.border}`:"none",background:selKat?.id===a.id?"#384248":idx%2===0?"#fff":"#fafafa",cursor:"pointer",borderLeft:selKat?.id===a.id?"3px solid #8799a3":"3px solid transparent"}}
@@ -2006,21 +1925,21 @@ const AltKategoriYonetim=({altKategoriler,setAltKategoriler,onSave,onDel,altGrup
       </div>
     </div>
 
-    {/* SAĞ: ALT KATEGORİLER */}
+    {/* SAĞ: ALT GRUPLAR */}
     <div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden"}}>
-      {!selKat?<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"60px",color:T.t3,fontSize:"15px",background:"#fff"}}>Kategori seçiniz</div>:<>
+      {!selKat?<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"60px",color:T.t3,fontSize:"15px",background:"#fff"}}>Grup seçiniz</div>:<>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#384248"}}>
           <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
             <span style={{fontSize:"15px",fontWeight:700,color:"#fff"}}>{selKat.ad}</span>
             <span style={{fontSize:"12px",color:"#8799a3"}}>{grpFiltered.length}</span>
           </div>
-          <button onClick={grpEkle} title="Alt Kategori Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
+          <button onClick={grpEkle} title="Alt Grup Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
         </div>
         <div style={{padding:"8px 12px",borderBottom:`1px solid ${T.border}`,display:"grid",gridTemplateColumns:"80px 1fr",gap:"8px"}}>
           <input style={{...iS,fontSize:"15px"}} value={yeniGrpKod} onChange={e=>setYeniGrpKod(e.target.value.replace(/\D/g,"").slice(0,2))} placeholder="Kod" maxLength={2} onFocus={foc} onBlur={blr}/>
-          <input style={{...iS,fontSize:"15px"}} value={yeniGrpAd} onChange={e=>setYeniGrpAd(e.target.value)} placeholder="Alt kategori adı..." onKeyDown={e=>e.key==="Enter"&&grpEkle()} onFocus={foc} onBlur={blr}/>
+          <input style={{...iS,fontSize:"15px"}} value={yeniGrpAd} onChange={e=>setYeniGrpAd(e.target.value)} placeholder="Alt grup adı..." onKeyDown={e=>e.key==="Enter"&&grpEkle()} onFocus={foc} onBlur={blr}/>
         </div>
-        {grpFiltered.length===0?<div style={{padding:"40px",textAlign:"center",color:T.t3,fontSize:"15px",background:"#fff"}}>Bu kategoride henüz alt kategori yok.</div>:
+        {grpFiltered.length===0?<div style={{padding:"40px",textAlign:"center",color:T.t3,fontSize:"15px",background:"#fff"}}>Bu grupta henüz alt grup yok.</div>:
         grpFiltered.map((g,idx)=><div key={g.id}>
           {editGrpId===g.id
             ?<div style={{display:"grid",gridTemplateColumns:"80px 1fr auto",padding:"0 12px",gap:"8px",alignItems:"center",background:T.pBg,height:"36px"}}>
@@ -2055,12 +1974,12 @@ const AltGrupYonetim=({altKategoriler,altGruplar,setAltGruplar,onSave,onDel})=>{
   const[editAd,setEditAd]=useState("");
 
   const ekle=()=>{
-    if(!selAltKat){alert("Önce sol taraftan bir kategori seçiniz!");return;}
+    if(!selAltKat){alert("Önce sol taraftan bir grup seçiniz!");return;}
     if(!yeniKod||yeniKod.length!==3){alert("Kod 3 hane olmalıdır!");return;}
     if(!yeniAd.trim()){alert("Alt grup adı giriniz!");return;}
-    const mevcut=altGruplar.find(g=>g.kod===yeniKod&&g.altKategoriKod===selAltKat.kod);
-    if(mevcut){alert(`Bu kod (${yeniKod}) bu kategori altında zaten "${mevcut.ad}" olarak kullanılıyor!`);return;}
-    if(onSave){onSave({altKategoriKod:selAltKat.kod,altKategoriAd:selAltKat.ad,kod:yeniKod,ad:yeniAd.trim()});}else{setAltGruplar(p=>[...p,{id:Date.now(),altKategoriKod:selAltKat.kod,altKategoriAd:selAltKat.ad,kod:yeniKod,ad:yeniAd.trim()}]);}
+    const mevcut=altGruplar.find(g=>g.kod===yeniKod&&g.grupKod===selAltKat.kod);
+    if(mevcut){alert(`Bu kod (${yeniKod}) bu grup altında zaten "${mevcut.ad}" olarak kullanılıyor!`);return;}
+    if(onSave){onSave({grupKod:selAltKat.kod,grupAd:selAltKat.ad,kod:yeniKod,ad:yeniAd.trim()});}else{setAltGruplar(p=>[...p,{id:Date.now(),grupKod:selAltKat.kod,grupAd:selAltKat.ad,kod:yeniKod,ad:yeniAd.trim()}]);}
     setYeniKod("");setYeniAd("");
   };
 
@@ -2068,36 +1987,36 @@ const AltGrupYonetim=({altKategoriler,altGruplar,setAltGruplar,onSave,onDel})=>{
   const duzenlemeIptal=()=>{setEditId(null);setEditKod("");setEditAd("");};
   const duzenlemeKaydet=(g)=>{
     if(!editKod||editKod.length!==3){alert("Kod 3 hane olmalıdır!");return;}
-    if(!editAd.trim()){alert("Alt kategori adı giriniz!");return;}
-    const mevcut=altGruplar.find(x=>x.kod===editKod&&x.altKategoriKod===g.altKategoriKod&&x.id!==g.id);
-    if(mevcut){alert(`Bu kod (${editKod}) bu kategori altında zaten "${mevcut.ad}" olarak kullanılıyor!`);return;}
+    if(!editAd.trim()){alert("Alt grup adı giriniz!");return;}
+    const mevcut=altGruplar.find(x=>x.kod===editKod&&x.grupKod===g.grupKod&&x.id!==g.id);
+    if(mevcut){alert(`Bu kod (${editKod}) bu grup altında zaten "${mevcut.ad}" olarak kullanılıyor!`);return;}
     if(onSave){
       if(onDel)onDel(g.id);
-      onSave({altKategoriKod:g.altKategoriKod,altKategoriAd:g.altKategoriAd,kod:editKod,ad:editAd.trim()});
+      onSave({grupKod:g.grupKod,grupAd:g.grupAd,kod:editKod,ad:editAd.trim()});
     }else{
       setAltGruplar(p=>p.map(x=>x.id===g.id?{...x,kod:editKod,ad:editAd.trim()}:x));
     }
     duzenlemeIptal();
   };
 
-  const sil=(id)=>{if(confirm("Bu alt kategoriyi silmek istediğinize emin misiniz?")){if(onDel){onDel(id);}else{setAltGruplar(p=>p.filter(g=>g.id!==id));}}};
+  const sil=(id)=>{if(confirm("Bu alt grubu silmek istediğinize emin misiniz?")){if(onDel){onDel(id);}else{setAltGruplar(p=>p.filter(g=>g.id!==id));}}};
 
   const allAltKat=altKategoriler.slice().sort((a,b)=>a.kod.localeCompare(b.kod));
-  const grpFiltered=selAltKat?altGruplar.filter(g=>g.altKategoriKod===selAltKat.kod).sort((a,b)=>a.kod.localeCompare(b.kod)):[];
+  const grpFiltered=selAltKat?altGruplar.filter(g=>g.grupKod===selAltKat.kod).sort((a,b)=>a.kod.localeCompare(b.kod)):[];
 
   return <div style={{display:"grid",gridTemplateColumns:"375px 375px",gap:"16px",minHeight:"400px"}}>
-    {/* SOL: KATEGORİLER */}
+    {/* SOL: GRUPLAR */}
     <div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#384248"}}>
         <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
-          <span style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>Kategoriler</span>
+          <span style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>Gruplar</span>
           <span style={{fontSize:"13px",color:"#8799a3"}}>{allAltKat.length}</span>
         </div>
       </div>
-      {allAltKat.length===0?<div style={{padding:"40px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>Önce "Kategoriler" sekmesinden kategori ekleyin</div>:
+      {allAltKat.length===0?<div style={{padding:"40px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>Önce "Grup Yönetimi" sekmesinden grup ekleyin</div>:
       <div style={{maxHeight:"500px",overflow:"auto"}}>{allAltKat.map(a=>{
         const sel=selAltKat?.id===a.id;
-        const grpCount=altGruplar.filter(g=>g.altKategoriKod===a.kod).length;
+        const grpCount=altGruplar.filter(g=>g.grupKod===a.kod).length;
         return <div key={a.id} onClick={()=>{setSelAltKat(a);setYeniKod("");setYeniAd("");duzenlemeIptal();}} style={{display:"flex",alignItems:"center",gap:"8px",padding:"10px 14px",cursor:"pointer",borderBottom:`1px solid ${T.border}`,background:sel?"#384248":"#fff",borderLeft:sel?"3px solid #8799a3":"3px solid transparent"}}>
           <span style={{fontFamily:"monospace",fontWeight:700,fontSize:"14px",color:sel?"#8799a3":T.t2}}>{a.kod}</span>
           <span style={{flex:1,fontSize:"14px",fontWeight:sel?600:400,color:sel?"#fff":T.text}}>{a.ad}</span>
@@ -2108,7 +2027,7 @@ const AltGrupYonetim=({altKategoriler,altGruplar,setAltGruplar,onSave,onDel})=>{
 
     {/* SAĞ: ALT GRUPLAR */}
     <div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden"}}>
-      {!selAltKat?<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"60px",color:T.t3,fontSize:"14px",background:"#fff"}}>Kategori seçiniz</div>:<>
+      {!selAltKat?<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"60px",color:T.t3,fontSize:"14px",background:"#fff"}}>Grup seçiniz</div>:<>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#384248"}}>
           <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
             <span style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{selAltKat.ad}</span>
@@ -3249,8 +3168,8 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
 
   const filtered=malzemeler.filter(m=>{
     const q=search.toLowerCase();
-    const ms=m.ad.toLowerCase().includes(q)||m.malzemeKodu.toLowerCase().includes(q)||(m.altKategoriAd||"").toLowerCase().includes(q)||(m.altGrupAd||"").toLowerCase().includes(q)||(m.marka||"").toLowerCase().includes(q);
-    const mk=fKat==="all"||m.kategori===fKat;
+    const ms=m.ad.toLowerCase().includes(q)||m.malzemeKodu.toLowerCase().includes(q)||(m.grupAd||"").toLowerCase().includes(q)||(m.altGrupAd||"").toLowerCase().includes(q)||(m.marka||"").toLowerCase().includes(q);
+    const mk=fKat==="all"||m.tip===fKat;
     return ms&&mk;
   });
 
@@ -3270,7 +3189,7 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
   const mainTabs=[
     {id:"liste",label:"Malzeme Listesi",icon:"🧱",count:malzemeler.length},
     {id:"hesaplamalar",label:"Hesaplamalar",count:Object.keys(HESAPLAMA_SABLONLARI).length},
-    {id:"altkat",label:"Kategoriler",count:altKategoriler.length},
+    {id:"altkat",label:"Grup Yönetimi",count:altKategoriler.length},
   ];
 
   return <div>
@@ -3289,7 +3208,7 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
       <input style={{...iS,maxWidth:"260px"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Malzeme adı, kod veya marka ara..." onFocus={foc} onBlur={blr}/>
       <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
         <button onClick={()=>setFKat("all")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fKat==="all"?"#384248":T.bDark}`,background:fKat==="all"?"#384248":"#fff",color:fKat==="all"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Tümü</button>
-        {MLZ_KATEGORILER.map(k=><button key={k.id} onClick={()=>setFKat(fKat===k.id?"all":k.id)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fKat===k.id?"#384248":T.bDark}`,background:fKat===k.id?"#384248":"#fff",color:fKat===k.id?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>{k.label}</button>)}
+        {MLZ_TIPLER.map(k=><button key={k.id} onClick={()=>setFKat(fKat===k.id?"all":k.id)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fKat===k.id?"#384248":T.bDark}`,background:fKat===k.id?"#384248":"#fff",color:fKat===k.id?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>{k.label}</button>)}
       </div>
     </div>
 
@@ -3303,8 +3222,8 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
         <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
           <button onClick={()=>setShowKod(true)} title="Yeni Malzeme" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
           <button onClick={()=>{
-            const rows=[["Kod","Malzeme Adı","Kategori","Alt Kategori","Birim","Marka"]];
-            filtered.forEach(m=>{const kat=MLZ_KATEGORILER.find(k=>k.id===m.kategori);rows.push([m.malzemeKodu||"",m.ad||"",kat?kat.label:"",m.altKategoriAd||"",m.birim||"",m.marka||""]);});
+            const rows=[["Kod","Malzeme Adı","Tip","Grup","Birim","Marka"]];
+            filtered.forEach(m=>{const tip=MLZ_TIPLER.find(t=>t.id===m.tip);rows.push([m.malzemeKodu||"",m.ad||"",tip?tip.label:"",m.grupAd||"",m.birim||"",m.marka||""]);});
             const csv=rows.map(r=>r.map(c=>`"${c}"`).join(";")).join("\n");
             const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
             const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="malzemeler.csv";a.click();
@@ -3315,10 +3234,10 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
         ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{search||fKat!=="all"?"Sonuç bulunamadı":"Henüz malzeme eklenmemiş."}</div>
         :<>
           <div style={{display:"grid",gridTemplateColumns:"150px 1fr 120px 120px 80px 100px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"19px"}}>
-            {["Kod","Malzeme Adı","Kategori","Alt Kategori","Birim","En Uygun Fiyat"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
+            {["Kod","Malzeme Adı","Tip","Grup","Birim","En Uygun Fiyat"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
           </div>
           {filtered.map((m,idx)=>{
-            const kat=MLZ_KATEGORILER.find(k=>k.id===m.kategori);
+            const tipO=MLZ_TIPLER.find(t=>t.id===m.tip);
             const mlzTek=[];teklifler.forEach(t=>{if(t.durum==="aktif")t.kalemler.forEach(k=>{if(k.malzemeId===m.id)mlzTek.push({...k,paraBirimi:t.paraBirimi});});});
             const enUygun=mlzTek.length>0?mlzTek.reduce((min,k)=>k.netFiyat<min.netFiyat?k:min,mlzTek[0]):null;
             const enUygunPara=enUygun?PARA_BIRIMLERI.find(p=>p.id===enUygun.paraBirimi):null;
@@ -3327,8 +3246,8 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
               onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
               <div style={{fontSize:"15px",color:T.t3,fontWeight:500}}>{m.malzemeKodu||"—"}</div>
               <div style={{fontSize:"15px",fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textTransform:"uppercase"}}>{m.ad}{m.marka?` (${m.marka})`:""}</div>
-              <div style={{fontSize:"15px",color:T.t2,textTransform:"uppercase"}}>{kat?kat.label:"—"}</div>
-              <div style={{fontSize:"15px",color:T.t2,textTransform:"uppercase"}}>{m.altKategoriAd||"—"}</div>
+              <div style={{fontSize:"15px",color:T.t2,textTransform:"uppercase"}}>{tipO?tipO.label:"—"}</div>
+              <div style={{fontSize:"15px",color:T.t2,textTransform:"uppercase"}}>{m.grupAd||"—"}</div>
               <div style={{fontSize:"15px",color:T.t2,textTransform:"uppercase"}}>{m.birim||"—"}</div>
               <div style={{fontSize:"15px",fontWeight:600,color:enUygun?"#389e0d":T.t3}}>{enUygun?`${enUygunPara?.symbol||""}${enUygun.netFiyat.toLocaleString("tr-TR",{minimumFractionDigits:2})}`:"—"}</div>
             </div>;
@@ -3355,7 +3274,7 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
             <div style={{fontSize:"12px",color:T.t2,lineHeight:"1.5",marginBottom:"8px"}}>{s.aciklama}</div>
             <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
               <span style={{fontSize:"11px",padding:"2px 8px",borderRadius:"4px",background:"#e6f4ff",color:T.primary,fontWeight:500}}>{s.parametreler.length} parametre</span>
-              {s.kategoriler.map(k=>{const ko=MLZ_KATEGORILER.find(c=>c.id===k);return ko?<span key={k} style={{fontSize:"11px",padding:"2px 8px",borderRadius:"4px",background:ko.bg,color:ko.color,fontWeight:500}}>{ko.label}</span>:null;})}
+              {s.kategoriler.map(k=>{const ko=MLZ_TIPLER.find(c=>c.id===k);return ko?<span key={k} style={{fontSize:"11px",padding:"2px 8px",borderRadius:"4px",background:ko.bg,color:ko.color,fontWeight:500}}>{ko.label}</span>:null;})}
             </div>
           </div>)}
         </div>
@@ -3528,8 +3447,8 @@ const notToLocal = (n) => ({
   id: n.id, firmaId: n.firma_id, tarih: n.tarih||"", yazar: n.yazar||"Admin", metin: n.metin||""
 });
 const malzemeToLocal = (m) => ({
-  id: m.id, malzemeKodu: m.malzeme_kodu||"", ad: m.ad||"", kategori: m.kategori||"1",
-  altKategori: m.alt_kategori||"", altKategoriAd: m.alt_kategori_ad||"",
+  id: m.id, malzemeKodu: m.malzeme_kodu||"", ad: m.ad||"", tip: m.tip||"M",
+  grup: m.grup||"", grupAd: m.grup_ad||"",
   altGrup: m.alt_grup||"", altGrupAd: m.alt_grup_ad||"", birim: m.birim||"adet",
   birimFiyat: parseFloat(m.birim_fiyat)||0, paraBirimi: m.para_birimi||"TL",
   kdvOrani: m.kdv_orani||"20", marka: m.marka||"", model: m.model||"",
@@ -3540,8 +3459,8 @@ const malzemeToLocal = (m) => ({
   createdAt: m.created_at ? m.created_at.split("T")[0] : new Date().toISOString().split("T")[0]
 });
 const malzemeToDb = (m) => ({
-  malzeme_kodu: m.malzemeKodu, ad: m.ad, kategori: m.kategori,
-  alt_kategori: m.altKategori, alt_kategori_ad: m.altKategoriAd,
+  malzeme_kodu: m.malzemeKodu, ad: m.ad, tip: m.tip,
+  grup: m.grup, grup_ad: m.grupAd,
   alt_grup: m.altGrup, alt_grup_ad: m.altGrupAd, birim: m.birim,
   birim_fiyat: m.birimFiyat, para_birimi: m.paraBirimi, kdv_orani: m.kdvOrani,
   marka: m.marka, model: m.model, aciklama: m.aciklama,
@@ -3551,7 +3470,7 @@ const malzemeToDb = (m) => ({
 });
 const katToLocal = (k) => ({ id: k.id, kod: k.kod, ad: k.ad });
 const altGrpToLocal = (g) => ({
-  id: g.id, altKategoriKod: g.alt_kategori_kod, altKategoriAd: g.alt_kategori_ad,
+  id: g.id, grupKod: g.grup_kod, grupAd: g.grup_ad,
   kod: g.kod, ad: g.ad
 });
 /* --- Proje Mapping --- */
@@ -5275,8 +5194,8 @@ const MalzemePickerModal=({malzemeler,onSelect,onClose})=>{
   const[fKat,setFKat]=useState("all");
   const filtered=malzemeler.filter(m=>{
     const q=src.toLowerCase();
-    const ms=m.ad.toLowerCase().includes(q)||m.malzemeKodu.toLowerCase().includes(q)||(m.altKategoriAd||"").toLowerCase().includes(q);
-    const mk=fKat==="all"||m.kategori===fKat;
+    const ms=m.ad.toLowerCase().includes(q)||m.malzemeKodu.toLowerCase().includes(q)||(m.grupAd||"").toLowerCase().includes(q);
+    const mk=fKat==="all"||m.tip===fKat;
     return ms&&mk;
   });
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
@@ -5287,7 +5206,7 @@ const MalzemePickerModal=({malzemeler,onSelect,onClose})=>{
       </div>
       <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}}>
         <input style={{...iS,flex:1,minWidth:"200px"}} value={src} onChange={e=>setSrc(e.target.value)} placeholder="Ara: kod, ad, kategori..." onFocus={foc} onBlur={blr}/>
-        {MLZ_KATEGORILER.map(k=><button key={k.id} onClick={()=>setFKat(fKat===k.id?"all":k.id)} style={{padding:"4px 10px",borderRadius:"4px",border:`1px solid ${fKat===k.id?k.color:T.border}`,background:fKat===k.id?k.bg:"#fff",color:fKat===k.id?k.color:T.t2,fontSize:"12px",fontWeight:500,cursor:"pointer"}}>{k.icon} {k.label}</button>)}
+        {MLZ_TIPLER.map(k=><button key={k.id} onClick={()=>setFKat(fKat===k.id?"all":k.id)} style={{padding:"4px 10px",borderRadius:"4px",border:`1px solid ${fKat===k.id?k.color:T.border}`,background:fKat===k.id?k.bg:"#fff",color:fKat===k.id?k.color:T.t2,fontSize:"12px",fontWeight:500,cursor:"pointer"}}>{k.icon} {k.label}</button>)}
       </div>
       <div style={{flex:1,overflow:"auto",padding:"8px 16px"}}>
         {filtered.length===0?<div style={{padding:"40px",textAlign:"center",color:T.t3}}>Sonuç bulunamadı</div>:
@@ -5326,7 +5245,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
     if(!selProje)return[];
     return butceKalemleri.map(bk=>{
       const mlz=malzemeler.find(m=>m.id===bk.malzemeId);
-      return{...bk,mlzAd:mlz?.ad||bk.malzemeAd,mlzKodu:mlz?.malzemeKodu||bk.malzemeKodu,mlzBirim:mlz?.birim||bk.birim,mlzKategori:mlz?.kategori||"",mlzAltKategori:mlz?.altKategori||"",mlzAltKategoriAd:mlz?.altKategoriAd||""};
+      return{...bk,mlzAd:mlz?.ad||bk.malzemeAd,mlzKodu:mlz?.malzemeKodu||bk.malzemeKodu,mlzBirim:mlz?.birim||bk.birim,mlzTip:mlz?.tip||"",mlzGrup:mlz?.grup||"",mlzGrupAd:mlz?.grupAd||""};
     });
   },[selProje,butceKalemleri,malzemeler]);
 
@@ -5422,7 +5341,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
     butceKalemleri.forEach(k=>{
       const tutar=parseFloat(k.planlananToplam||0);
       const mlz=malzemeler.find(m=>m.id===k.malzemeId);
-      const katAd=mlz?.altKategoriAd||"Diğer";
+      const katAd=mlz?.grupAd||"Diğer";
       if(!kategoriDagilim[katAd])kategoriDagilim[katAd]={tutar:0};
       kategoriDagilim[katAd].tutar+=tutar;
       // Blok bazında
@@ -6069,10 +5988,10 @@ export default function App(){
   /* ---- ALT GRUP KAYDET ---- */
   const saveAltGrp = async (grp) => {
     try {
-      const [saved] = await sbPost('alt_gruplar', {alt_kategori_kod:grp.altKategoriKod, alt_kategori_ad:grp.altKategoriAd, kod:grp.kod, ad:grp.ad});
-      setAltGruplar(prev=>[...prev, {id:saved.id, altKategoriKod:grp.altKategoriKod, altKategoriAd:grp.altKategoriAd, kod:grp.kod, ad:grp.ad}]);
+      const [saved] = await sbPost('alt_gruplar', {grup_kod:grp.grupKod, grup_ad:grp.grupAd, kod:grp.kod, ad:grp.ad});
+      setAltGruplar(prev=>[...prev, {id:saved.id, grupKod:grp.grupKod, grupAd:grp.grupAd, kod:grp.kod, ad:grp.ad}]);
     } catch(e) {
-      setAltGruplar(prev=>[...prev, {id:Date.now(), altKategoriKod:grp.altKategoriKod, altKategoriAd:grp.altKategoriAd, kod:grp.kod, ad:grp.ad}]);
+      setAltGruplar(prev=>[...prev, {id:Date.now(), grupKod:grp.grupKod, grupAd:grp.grupAd, kod:grp.kod, ad:grp.ad}]);
     }
   };
   const delAltGrp = async (id) => {
