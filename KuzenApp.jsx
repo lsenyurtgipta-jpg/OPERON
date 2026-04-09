@@ -293,7 +293,7 @@ const HESAPLAMA_SABLONLARI={
         {label:"Çimento İhtiyacı",deger:Math.ceil(cimentoKg),birim:"kg"},
         {label:"Kum İhtiyacı",deger:Number(kumM3.toFixed(2)),birim:"m³"}
       );
-      return {baslik:`${tuglaTipAd} — Duvar Hesabı`,satirlar,toplamMaliyet:fireliAdet};
+      return {baslik:`${tuglaTipAd} — Duvar Hesabı`,satirlar,toplamMaliyet:null};
     }
   },
   beton_hesabi:{
@@ -645,8 +645,8 @@ const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,s
               <span style={{fontSize:"13px",color:s.vurgu?"#111827":"#6B7280",fontWeight:s.vurgu?600:400}}>{s.label}</span>
               <span style={{fontSize:"14px",fontWeight:s.vurgu?700:500,color:s.renk==="green"?"#16a34a":"#111827"}}>{fmtN(s.deger)} {s.birim}</span>
             </div>)}
-            {/* KDV SATIRLARI */}
-            <div style={{borderTop:"2px solid #e5e7eb"}}>
+            {/* KDV SATIRLARI — sadece toplamMaliyet varsa göster */}
+            {kdvHaricTutar>0&&<div style={{borderTop:"2px solid #e5e7eb"}}>
               <div style={{display:"flex",justifyContent:"space-between",padding:"10px 16px",background:"#fafafa"}}>
                 <span style={{fontSize:"13px",fontWeight:600,color:"#111827"}}>Tutar (KDV Hariç)</span>
                 <span style={{fontSize:"14px",fontWeight:700,color:"#111827"}}>{fmtN(Number(kdvHaricTutar.toFixed(2)))} ₺</span>
@@ -659,7 +659,7 @@ const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,s
                 <span style={{fontSize:"14px",fontWeight:700,color:"#0958d9"}}>GENEL TOPLAM (KDV Dahil)</span>
                 <span style={{fontSize:"16px",fontWeight:700,color:"#0958d9"}}>{fmtN(Number(kdvDahilTutar.toFixed(2)))} ₺</span>
               </div>
-            </div>
+            </div>}
           </div>
         </div>;
       })()}
