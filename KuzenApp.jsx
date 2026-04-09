@@ -1541,7 +1541,7 @@ const MalzemeKoduCreator=({malzemeler,altKategoriler,altGruplar,onComplete,onClo
 };
 
 /* ========== MALZEME KARTI - TAM SAYFA FORM ========== */
-const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKategoriler,altGruplar,teklifler=[]})=>{
+const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKategoriler,altGruplar,teklifler=[],tumBirimler})=>{
   const[form,setForm]=useState(()=>malzeme?{...malzeme}:{
     id:Date.now(),malzemeKodu:initData?.malzemeKodu||"",ad:initData?.mlzAd||"",tip:initData?.tip||"M",
     grup:initData?.grup||"",grupAd:initData?.grupAd||"",
@@ -1552,7 +1552,7 @@ const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKate
   const[tab,setTab]=useState("genel");
   const[nn,setNn]=useState("");
   const[birimEditMode,setBirimEditMode]=useState(false);
-  const[birimler,setBirimler]=useState([...MLZ_BIRIMLER]);
+  const[birimler,setBirimler]=useState(()=>tumBirimler||[...MLZ_BIRIMLER]);
   const[yeniBirim,setYeniBirim]=useState("");
   const[editBirimIdx,setEditBirimIdx]=useState(-1);
   const[editBirimVal,setEditBirimVal]=useState("");
@@ -3174,17 +3174,24 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
     return ms&&mk;
   });
 
+  // Tüm malzemelerden kullanılan birimleri topla + varsayılanları birleştir
+  const tumBirimler=useMemo(()=>{
+    const set=new Set(MLZ_BIRIMLER);
+    malzemeler.forEach(m=>{if(m.birim)set.add(m.birim);});
+    return [...set];
+  },[malzemeler]);
+
   const handleSave=async(d)=>{if(onSaveMalzeme){d._isNew=(view!=="form-edit");await onSaveMalzeme(d);}else{if(view==="form-edit"){setMalzemeler(p=>p.map(m=>m.id===d.id?d:m));}else{setMalzemeler(p=>[...p,d]);}}};
   const handleEdit=(m)=>{setActiveMlz(m);setView("form-edit");};
   const handleDel=async(id)=>{if(onDelMalzeme){await onDelMalzeme(id);}else{if(confirm("Bu malzemeyi silmek istediğinize emin misiniz?")){setMalzemeler(p=>p.filter(m=>m.id!==id));}}};
   const handleKodComplete=(data)=>{setInitData(data);setShowKod(false);setView("form-new");};
 
   if(view==="form-new"){
-    return <MalzemeKarti malzeme={null} initData={initData} isNew={true} onSave={async(d)=>{await handleSave(d);setInitData(null);}} onBack={()=>{setView("list");setInitData(null);}} firmalar={firmalar} altKategoriler={altKategoriler} altGruplar={altGruplar} teklifler={teklifler}/>;
+    return <MalzemeKarti malzeme={null} initData={initData} isNew={true} onSave={async(d)=>{await handleSave(d);setInitData(null);}} onBack={()=>{setView("list");setInitData(null);}} firmalar={firmalar} altKategoriler={altKategoriler} altGruplar={altGruplar} teklifler={teklifler} tumBirimler={tumBirimler}/>;
   }
   if(view==="form-edit"&&activeMlz){
     const live=malzemeler.find(m=>m.id===activeMlz.id)||activeMlz;
-    return <MalzemeKarti malzeme={live} initData={null} isNew={false} onSave={async(d)=>{await handleSave(d);}} onDel={(id)=>{handleDel(id);setView("list");setActiveMlz(null);}} onBack={()=>{setView("list");setActiveMlz(null);}} firmalar={firmalar} altKategoriler={altKategoriler} altGruplar={altGruplar} teklifler={teklifler}/>;
+    return <MalzemeKarti malzeme={live} initData={null} isNew={false} onSave={async(d)=>{await handleSave(d);}} onDel={(id)=>{handleDel(id);setView("list");setActiveMlz(null);}} onBack={()=>{setView("list");setActiveMlz(null);}} firmalar={firmalar} altKategoriler={altKategoriler} altGruplar={altGruplar} teklifler={teklifler} tumBirimler={tumBirimler}/>;
   }
 
   const mainTabs=[
