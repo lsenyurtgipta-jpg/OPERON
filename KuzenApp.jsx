@@ -451,6 +451,7 @@ const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,s
   const[sonuc,setSonuc]=useState(kayitliSonuc||null);
   const[kayitlar,setKayitlar]=useState([]);
   const[kopyalandi,setKopyalandi]=useState(false);
+  const[birimFiyat,setBirimFiyat]=useState("");
 
   useEffect(()=>{if(zorSablon)setSeciliSablon(zorSablon);},[zorSablon]);
 
@@ -635,7 +636,7 @@ const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,s
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px"}}>
             <div style={{fontSize:"15px",fontWeight:700,color:"#0958d9"}}>{sonuc.baslik}</div>
             <div style={{display:"flex",gap:"8px"}}>
-              {onSonucAktar&&<button onClick={()=>onSonucAktar(kdvHaricTutar)} style={{padding:"6px 14px",borderRadius:"6px",border:"none",background:"#52c41a",color:"#fff",fontSize:"12px",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:"4px"}}>
+              {onSonucAktar&&<button onClick={()=>{const anaSatir=sonuc.satirlar.find(s=>s.ana);const bf=Number(birimFiyat)||0;const tutar=kdvHaricTutar>0?kdvHaricTutar:(anaSatir&&bf>0?anaSatir.deger*bf:0);onSonucAktar(tutar);}} style={{padding:"6px 14px",borderRadius:"6px",border:"none",background:"#52c41a",color:"#fff",fontSize:"12px",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:"4px"}}>
                 <ArrowDownFromLine size={14}/> Tutarı Aktar
               </button>}
             </div>
@@ -645,7 +646,7 @@ const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,s
               <span style={{fontSize:"13px",color:s.vurgu?"#111827":"#6B7280",fontWeight:s.vurgu?600:400}}>{s.label}</span>
               <span style={{fontSize:"14px",fontWeight:s.vurgu?700:500,color:s.renk==="green"?"#16a34a":"#111827"}}>{fmtN(s.deger)} {s.birim}</span>
             </div>)}
-            {/* KDV SATIRLARI — sadece toplamMaliyet varsa göster */}
+            {/* KDV SATIRLARI — toplamMaliyet varsa direkt göster */}
             {kdvHaricTutar>0&&<div style={{borderTop:"2px solid #e5e7eb"}}>
               <div style={{display:"flex",justifyContent:"space-between",padding:"10px 16px",background:"#fafafa"}}>
                 <span style={{fontSize:"13px",fontWeight:600,color:"#111827"}}>Tutar (KDV Hariç)</span>
@@ -660,6 +661,37 @@ const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,s
                 <span style={{fontSize:"16px",fontWeight:700,color:"#0958d9"}}>{fmtN(Number(kdvDahilTutar.toFixed(2)))} ₺</span>
               </div>
             </div>}
+            {/* BİRİM FİYAT GİRİŞİ — toplamMaliyet yoksa (miktar hesabı), kullanıcı birim fiyat girsin */}
+            {(()=>{
+              const anaSatir=sonuc.satirlar.find(s=>s.ana);
+              if(kdvHaricTutar>0||!anaSatir)return null;
+              const bf=Number(birimFiyat)||0;
+              const toplamTutar=anaSatir.deger*bf;
+              const bfKdv=toplamTutar*(hesapKdvOran/100);
+              const bfDahil=toplamTutar+bfKdv;
+              return <div style={{borderTop:"2px solid #e5e7eb"}}>
+                <div style={{display:"flex",alignItems:"center",gap:"10px",padding:"12px 16px",background:"#fffbe6",borderBottom:"1px solid #f3f4f6"}}>
+                  <span style={{fontSize:"13px",fontWeight:600,color:"#d48806",whiteSpace:"nowrap"}}>Birim Fiyat</span>
+                  <input type="number" value={birimFiyat} onChange={e=>setBirimFiyat(e.target.value)} placeholder="0.00" style={{width:"120px",padding:"6px 10px",borderRadius:"4px",border:"1px solid #fadb14",fontSize:"14px",fontWeight:600,textAlign:"right",background:"#fff"}}/>
+                  <span style={{fontSize:"13px",color:"#d48806"}}>₺ / {anaSatir.birim}</span>
+                  <span style={{fontSize:"12px",color:"#8c8c8c",marginLeft:"auto"}}>× {fmtN(anaSatir.deger)} {anaSatir.birim}</span>
+                </div>
+                {bf>0&&<>
+                  <div style={{display:"flex",justifyContent:"space-between",padding:"10px 16px",background:"#fafafa"}}>
+                    <span style={{fontSize:"13px",fontWeight:600,color:"#111827"}}>Tutar (KDV Hariç)</span>
+                    <span style={{fontSize:"14px",fontWeight:700,color:"#111827"}}>{fmtN(Number(toplamTutar.toFixed(2)))} ₺</span>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",padding:"10px 16px",borderTop:"1px solid #f3f4f6"}}>
+                    <span style={{fontSize:"13px",fontWeight:500,color:"#6B7280"}}>KDV (%{hesapKdvOran})</span>
+                    <span style={{fontSize:"14px",fontWeight:600,color:"#6B7280"}}>{fmtN(Number(bfKdv.toFixed(2)))} ₺</span>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",padding:"12px 16px",background:"#eef6ff",borderTop:"1px solid #e5e7eb"}}>
+                    <span style={{fontSize:"14px",fontWeight:700,color:"#0958d9"}}>GENEL TOPLAM (KDV Dahil)</span>
+                    <span style={{fontSize:"16px",fontWeight:700,color:"#0958d9"}}>{fmtN(Number(bfDahil.toFixed(2)))} ₺</span>
+                  </div>
+                </>}
+              </div>;
+            })()}
           </div>
         </div>;
       })()}
