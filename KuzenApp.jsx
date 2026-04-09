@@ -859,6 +859,7 @@ const FirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar})=>{
       <div style={{flex:1,textAlign:"center"}}>
         <span style={{fontSize:"20px",fontWeight:600,color:"#8799a3",letterSpacing:"0.3px"}}>{form.firmaKodu?`${form.firmaKodu} - `:""}{form.ad||"Yeni Firma"}</span>
       </div>
+      <button onClick={()=>u("aktif",!form.aktif)} title={form.aktif?"Aktif — pasif yapmak için tıkla":"Pasif — aktif yapmak için tıkla"} style={{padding:"4px 12px",borderRadius:"6px",border:`1px solid ${form.aktif?T.ok:T.err}`,background:form.aktif?"#f6ffed":"#fff1f0",color:form.aktif?T.ok:T.err,cursor:"pointer",fontWeight:600,fontSize:"12px",transition:"all .2s"}}>{form.aktif?"✓ Aktif":"✕ Pasif"}</button>
       <button onClick={save} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={32}/></button>
     </div>
 
@@ -3300,6 +3301,7 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
 const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,onClearInitial})=>{
   const[search,setSearch]=useState("");
   const[fTur,setFTur]=useState("all");
+  const[fDurum,setFDurum]=useState("aktif");
   const[showKod,setShowKod]=useState(false);
   // view: "list" | "form-new" | "form-edit" | "detail"
   const[view,setView]=useState("list");
@@ -3315,7 +3317,7 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
   },[initialFirmaId]);
   const[initData,setInitData]=useState(null);
 
-  const filtered=firmalar.filter(f=>{const q=search.toLowerCase();const ms=f.ad.toLowerCase().includes(q)||f.firmaKodu.toLowerCase().includes(q)||(f.aciklama||"").toLowerCase().includes(q)||f.kisiler.some(k=>`${k.ad} ${k.soyad}`.toLowerCase().includes(q));const mt=fTur==="all"||f.turler.includes(fTur);return ms&&mt;});
+  const filtered=firmalar.filter(f=>{const q=search.toLowerCase();const ms=f.ad.toLowerCase().includes(q)||f.firmaKodu.toLowerCase().includes(q)||(f.aciklama||"").toLowerCase().includes(q)||f.kisiler.some(k=>`${k.ad} ${k.soyad}`.toLowerCase().includes(q));const mt=fTur==="all"||f.turler.includes(fTur);const md=fDurum==="all"||(fDurum==="aktif"?f.aktif!==false:f.aktif===false);return ms&&mt&&md;});
 
   const handleSave=async(d)=>{
     if(onSave){d._isNew=(view!=="form-edit");await onSave(d);}
@@ -3323,8 +3325,6 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
   };
 
   const handleEdit=(f)=>{setActiveFirma(f);setView("form-edit");};
-
-  const handleDel=async(id)=>{if(onDel){await onDel(id);}else{if(confirm("Bu firmayı silmek istediğinize emin misiniz?")){setFirmalar(p=>p.filter(f=>f.id!==id));}}};
 
   const handleKodComplete=(data)=>{setInitData(data);setShowKod(false);setView("form-new");};
 
@@ -3365,6 +3365,9 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
         <button onClick={()=>setFTur("all")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fTur==="all"?"#384248":T.bDark}`,background:fTur==="all"?"#384248":"#fff",color:fTur==="all"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Tümü</button>
         {FIRMA_TURLERI.map(t=><button key={t.id} onClick={()=>setFTur(fTur===t.id?"all":t.id)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fTur===t.id?"#384248":T.bDark}`,background:fTur===t.id?"#384248":"#fff",color:fTur===t.id?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>{t.label}</button>)}
       </div>
+      <div style={{display:"flex",gap:"6px"}}>
+        {[{k:"aktif",l:"Aktif"},{k:"pasif",l:"Pasif"},{k:"all",l:"Tümü"}].map(d=><button key={d.k} onClick={()=>setFDurum(d.k)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fDurum===d.k?(d.k==="aktif"?T.ok:d.k==="pasif"?T.err:"#384248"):T.bDark}`,background:fDurum===d.k?(d.k==="aktif"?"#f6ffed":d.k==="pasif"?"#fff1f0":"#384248"):"#fff",color:fDurum===d.k?(d.k==="aktif"?T.ok:d.k==="pasif"?T.err:"#fff"):T.t2,fontSize:"14px",cursor:"pointer",fontWeight:fDurum===d.k?600:400}}>{d.l}</button>)}
+      </div>
     </div>
 
     {/* PORTAL */}
@@ -3379,19 +3382,21 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
       {filtered.length===0
         ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{search||fTur!=="all"?"Sonuç bulunamadı":"Henüz firma eklenmemiş."}</div>
         :<>
-          <div style={{display:"grid",gridTemplateColumns:"90px 1fr 120px 140px 140px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
-            {["Kod","Firma Adı","Tür","Telefon","Kişi"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
+          <div style={{display:"grid",gridTemplateColumns:"90px 1fr 120px 140px 140px 70px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
+            {["Kod","Firma Adı","Tür","Telefon","Kişi","Durum"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
           </div>
           {filtered.map((f,idx)=>{
             const turLabels=f.turler.map(t=>{const o=FIRMA_TURLERI.find(x=>x.id===t);return o?o.label:t;}).join(", ");
-            return <div key={f.id} onClick={()=>handleEdit(f)} style={{display:"grid",gridTemplateColumns:"90px 1fr 120px 140px 140px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtered.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
+            const isPasif=f.aktif===false;
+            return <div key={f.id} onClick={()=>handleEdit(f)} style={{display:"grid",gridTemplateColumns:"90px 1fr 120px 140px 140px 70px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtered.length-1?`1px solid ${T.border}`:"none",background:isPasif?"#fafafa":(idx%2===0?"#fff":"#fafafa"),cursor:"pointer",height:"44px",opacity:isPasif?0.5:1}}
               onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
-              onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
+              onMouseLeave={e=>e.currentTarget.style.background=isPasif?"#fafafa":(idx%2===0?"#fff":"#fafafa")}>
               <div style={{fontSize:"13px",color:T.t3,fontWeight:500}}>{f.firmaKodu||"—"}</div>
               <div style={{fontSize:"14px",fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.ad}</div>
               <div style={{fontSize:"14px",color:T.t2}}>{turLabels||"—"}</div>
               <div style={{fontSize:"13px",color:T.text}}>{f.telefon||"—"}</div>
               <div style={{fontSize:"13px",color:T.t2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.kisiler[0]?`${f.kisiler[0].ad} ${f.kisiler[0].soyad}`:"—"}</div>
+              <div style={{fontSize:"12px",fontWeight:600,color:isPasif?T.err:T.ok}}>{isPasif?"Pasif":"Aktif"}</div>
             </div>;
           })}
         </>
@@ -3418,8 +3423,8 @@ const firmaToLocal = (f) => ({
 });
 const firmaToDb = (f) => ({
   firma_kodu: f.firmaKodu, ad: f.ad, aciklama: f.aciklama, turler: f.turler,
-  para_birimi: f.paraBirimi,
-  vergi_dairesi: f.vergiDairesi, vergi_no: f.vergiNo,
+  para_birimi: f.paraBirimi, firma_kisi_tipi: f.firmaKisiTipi||"tuzel",
+  vergi_dairesi_il: f.vergiDairesiIl||"", vergi_dairesi: f.vergiDairesi, vergi_no: f.vergiNo,
   tc_kimlik_no: f.tcKimlikNo||"", sicil_no: f.sicilNo||"", kisa_ad: f.kisaAd||"",
   kategori: f.kategori||"",
   telefon: f.telefon, sabit_telefon: f.sabitTelefon, telefon2: f.telefon2||"",
