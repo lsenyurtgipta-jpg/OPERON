@@ -246,39 +246,54 @@ const HESAPLAMA_SABLONLARI={
   tugla_hesabi:{
     ad:"Tuğla / Duvar Hesabı",
     kategoriler:["R","Y"],
-    aciklama:"Duvar m² üzerinden tuğla adedi ve harç miktarı hesabı",
+    aciklama:"En×Boy ile duvar alanı, boşluk düşümü, tuğla adedi ve harç hesabı",
     icon:"🧱",
     parametreler:[
-      {key:"duvarAlani",label:"Duvar Alanı",tip:"sayi",birim:"m²",varsayilan:100},
-      {key:"tuglaTipi",label:"Tuğla Tipi",tip:"secim",secenekler:[{v:"13.5",l:"13,5'luk Yatay Delikli"},{v:"8.5",l:"8,5'luk Yatay Delikli"},{v:"gazbeton",l:"Gazbeton Blok (60x25)"},{v:"briket",l:"20'lik Briket"}],varsayilan:"13.5"},
+      {key:"en",label:"Duvar Eni (Genişlik)",tip:"sayi",birim:"m",varsayilan:10},
+      {key:"boy",label:"Duvar Boyu (Yükseklik)",tip:"sayi",birim:"m",varsayilan:3},
+      {key:"tuglaTipi",label:"Tuğla Tipi",tip:"secim",secenekler:[{v:"13.5",l:"13,5'luk Tuğla"},{v:"10",l:"10'luk Tuğla"}],varsayilan:"13.5"},
       {key:"orumSekli",label:"Örüm Şekli",tip:"secim",secenekler:[{v:"dik",l:"Dik (İnce Duvar)"},{v:"yatik",l:"Yatık (Kalın Duvar)"}],varsayilan:"dik"},
-      {key:"firePay",label:"Fire Payı",tip:"secim",secenekler:[{v:3,l:"%3"},{v:5,l:"%5"},{v:7,l:"%7"}],varsayilan:5}
+      {key:"firePay",label:"Fire Payı",tip:"secim",secenekler:[{v:3,l:"%3"},{v:5,l:"%5"},{v:7,l:"%7"}],varsayilan:5},
+      {key:"bosluklar",label:"Boşluklar (Pencere, Kapı vb.)",tip:"dizi",alanlar:[
+        {key:"ad",label:"Ad",tip:"metin",varsayilan:"Pencere"},
+        {key:"en",label:"En",tip:"sayi",birim:"m",varsayilan:1.2},
+        {key:"boy",label:"Boy",tip:"sayi",birim:"m",varsayilan:1.5},
+        {key:"adet",label:"Adet",tip:"sayi",birim:"ad",varsayilan:1}
+      ],varsayilan:[]}
     ],
     hesapla:(p)=>{
-      const alan=Number(p.duvarAlani)||0, fire=Number(p.firePay)||5;
-      const adetTablosu={"13.5":{dik:25,yatik:35},"8.5":{dik:25,yatik:25},"gazbeton":{dik:7,yatik:7},"briket":{dik:13,yatik:13}};
-      const harcTablosu={"13.5":0.014,"8.5":0.010,"gazbeton":0.003,"briket":0.012};
+      const duvarEn=Number(p.en)||0, duvarBoy=Number(p.boy)||0, fire=Number(p.firePay)||5;
+      const brutAlan=duvarEn*duvarBoy;
+      const bosluklar=Array.isArray(p.bosluklar)?p.bosluklar:[];
+      const boslukToplam=bosluklar.reduce((t,b)=>(Number(b.en)||0)*(Number(b.boy)||0)*(Number(b.adet)||0)+t,0);
+      const netAlan=Math.max(0,brutAlan-boslukToplam);
+      const adetTablosu={"13.5":{dik:25,yatik:35},"10":{dik:25,yatik:45}};
+      const harcTablosu={"13.5":0.014,"10":0.012};
       const tipiObj=adetTablosu[p.tuglaTipi]||adetTablosu["13.5"];
       const birimAdet=tipiObj[p.orumSekli]||tipiObj.dik;
-      const netAdet=Math.ceil(alan*birimAdet);
+      const netAdet=Math.ceil(netAlan*birimAdet);
       const fireliAdet=Math.ceil(netAdet*(1+fire/100));
-      const harcM3=alan*(harcTablosu[p.tuglaTipi]||0.014);
+      const harcM3=netAlan*(harcTablosu[p.tuglaTipi]||0.014);
       const cimentoKg=harcM3*250;
       const kumM3=harcM3;
-      const tuglaTipAd=p.tuglaTipi==="gazbeton"?"Gazbeton":p.tuglaTipi==="briket"?"Briket":`${p.tuglaTipi}'luk Tuğla`;
-      return {
-        baslik:`${tuglaTipAd} — Duvar Hesabı`,
-        satirlar:[
-          {label:"Duvar Alanı",deger:alan,birim:"m²"},
-          {label:`Birim Adet (${p.orumSekli==="dik"?"Dik":"Yatık"})`,deger:birimAdet,birim:"ad/m²"},
-          {label:"Net Tuğla Adedi",deger:netAdet,birim:"adet"},
-          {label:`Fire Dahil (%${fire})`,deger:fireliAdet,birim:"adet",vurgu:true,ana:true},
-          {label:"Harç Miktarı",deger:Number(harcM3.toFixed(3)),birim:"m³"},
-          {label:"Çimento İhtiyacı",deger:Math.ceil(cimentoKg),birim:"kg"},
-          {label:"Kum İhtiyacı",deger:Number(kumM3.toFixed(2)),birim:"m³"}
-        ],
-        toplamMaliyet:fireliAdet
-      };
+      const tuglaTipAd=`${p.tuglaTipi}'luk Tuğla`;
+      const satirlar=[
+        {label:`Brüt Duvar Alanı (${duvarEn} × ${duvarBoy})`,deger:Number(brutAlan.toFixed(2)),birim:"m²"},
+      ];
+      if(bosluklar.length>0){
+        bosluklar.forEach(b=>{const a=(Number(b.en)||0)*(Number(b.boy)||0)*(Number(b.adet)||0);satirlar.push({label:`− ${b.ad||"Boşluk"} (${b.en}×${b.boy} × ${b.adet} ad)`,deger:Number(a.toFixed(2)),birim:"m²"});});
+        satirlar.push({label:"Boşluk Toplamı",deger:Number(boslukToplam.toFixed(2)),birim:"m²",renk:"red"});
+      }
+      satirlar.push(
+        {label:"Net Duvar Alanı",deger:Number(netAlan.toFixed(2)),birim:"m²",vurgu:true},
+        {label:`Birim Adet (${p.orumSekli==="dik"?"Dik":"Yatık"})`,deger:birimAdet,birim:"ad/m²"},
+        {label:"Net Tuğla Adedi",deger:netAdet,birim:"adet"},
+        {label:`Fire Dahil (%${fire})`,deger:fireliAdet,birim:"adet",vurgu:true,ana:true},
+        {label:"Harç Miktarı",deger:Number(harcM3.toFixed(3)),birim:"m³"},
+        {label:"Çimento İhtiyacı",deger:Math.ceil(cimentoKg),birim:"kg"},
+        {label:"Kum İhtiyacı",deger:Number(kumM3.toFixed(2)),birim:"m³"}
+      );
+      return {baslik:`${tuglaTipAd} — Duvar Hesabı`,satirlar,toplamMaliyet:fireliAdet};
     }
   },
   beton_hesabi:{
@@ -448,7 +463,7 @@ const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,s
       s.parametreler.forEach(p=>{yeniP[p.key]=p.varsayilan!==undefined?p.varsayilan:"";});
       if(planlananMiktar){
         if(yeniP.insaatAlani!==undefined)yeniP.insaatAlani=planlananMiktar;
-        if(yeniP.duvarAlani!==undefined)yeniP.duvarAlani=planlananMiktar;
+        if(yeniP.en!==undefined&&yeniP.boy!==undefined)yeniP.en=planlananMiktar;
         if(yeniP.hacim!==undefined)yeniP.hacim=planlananMiktar;
         if(yeniP.deger!==undefined)yeniP.deger=planlananMiktar;
         if(yeniP.alan!==undefined)yeniP.alan=planlananMiktar;
@@ -574,6 +589,32 @@ const HesaplamaSekmesi=({kategori,malzemeId,malzemeAd,malzemeKodu="",zorSablon,s
               <input type="checkbox" checked={!!val} onChange={e=>setParams(p=>({...p,[pm.key]:e.target.checked}))} style={{width:"18px",height:"18px",accentColor:"#1677ff"}}/>
               <label style={{fontSize:"13px",fontWeight:500,color:"#374151"}}>{pm.label}</label>
             </div>;
+            if(pm.tip==="dizi"){
+              const liste=Array.isArray(val)?val:[];
+              const ekle=()=>{const yeni={};pm.alanlar.forEach(a=>{yeni[a.key]=a.varsayilan!==undefined?a.varsayilan:"";});setParams(p=>({...p,[pm.key]:[...(Array.isArray(p[pm.key])?p[pm.key]:[]),yeni]}));};
+              const guncelle=(idx,key,v)=>setParams(p=>{const arr=[...(p[pm.key]||[])];arr[idx]={...arr[idx],[key]:v};return{...p,[pm.key]:arr};});
+              const sil=(idx)=>setParams(p=>({...p,[pm.key]:(p[pm.key]||[]).filter((_,i)=>i!==idx)}));
+              return <div key={pm.key} style={{gridColumn:"1 / -1"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}}>
+                  <label style={{fontSize:"12px",fontWeight:600,color:"#6B7280"}}>{pm.label}</label>
+                  <button onClick={ekle} style={{padding:"4px 12px",borderRadius:"6px",border:"1px solid #1677ff",background:"#e6f4ff",color:"#1677ff",fontSize:"12px",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:"4px"}}>+ Boşluk Ekle</button>
+                </div>
+                {liste.length===0&&<div style={{padding:"12px 16px",background:"#fafafa",borderRadius:"6px",border:"1px dashed #d1d5db",fontSize:"12px",color:"#9CA3AF",textAlign:"center"}}>Boşluk yok — pencere, kapı vb. düşüm için ekleyin</div>}
+                {liste.map((satir,idx)=><div key={idx} style={{display:"flex",gap:"8px",alignItems:"center",marginBottom:"6px",padding:"8px 12px",background:idx%2===0?"#fff":"#fafafa",borderRadius:"6px",border:"1px solid #e5e7eb"}}>
+                  {pm.alanlar.map(a=>
+                    a.tip==="metin"
+                      ?<div key={a.key} style={{flex:2}}><input value={satir[a.key]||""} onChange={e=>guncelle(idx,a.key,e.target.value)} placeholder={a.label} style={{width:"100%",padding:"6px 10px",borderRadius:"4px",border:"1px solid #d1d5db",fontSize:"13px"}}/></div>
+                      :<div key={a.key} style={{flex:1,display:"flex",alignItems:"center",gap:"4px"}}>
+                        <input type="number" value={satir[a.key]||""} onChange={e=>guncelle(idx,a.key,e.target.value)} placeholder={a.label} style={{width:"100%",padding:"6px 10px",borderRadius:"4px",border:"1px solid #d1d5db",fontSize:"13px"}}/>
+                        {a.birim&&<span style={{fontSize:"11px",color:"#9CA3AF",whiteSpace:"nowrap"}}>{a.birim}</span>}
+                      </div>
+                  )}
+                  <div style={{fontSize:"12px",color:"#6B7280",whiteSpace:"nowrap",minWidth:"60px",textAlign:"right"}}>{((Number(satir.en)||0)*(Number(satir.boy)||0)*(Number(satir.adet)||0)).toFixed(2)} m²</div>
+                  <button onClick={()=>sil(idx)} title="Kaldır" style={{padding:"2px",border:"none",background:"transparent",color:"#f5222d",cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={16}/></button>
+                </div>)}
+                {liste.length>0&&<div style={{textAlign:"right",fontSize:"12px",fontWeight:600,color:"#f5222d",marginTop:"4px"}}>Toplam Düşüm: {liste.reduce((t,b)=>(Number(b.en)||0)*(Number(b.boy)||0)*(Number(b.adet)||0)+t,0).toFixed(2)} m²</div>}
+              </div>;
+            }
             return null;
           })}
           <div key="_hesapla_btn" style={{display:"flex",alignItems:"flex-end",paddingTop:"4px"}}>
