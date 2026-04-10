@@ -5057,6 +5057,7 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
   const[saved,setSaved]=useState(false);
   const[hatalar,setHatalar]=useState({});
   const[fiyatSekme,setFiyatSekme]=useState("planlanan");
+  const[hesapModalAcik,setHesapModalAcik]=useState(false);
 
   // Malzeme referansı (erken tanımla — fiyat fonksiyonları kullanıyor)
   const _mlzRef=malzemeler?.find(m=>m.id===fm.malzemeId);
@@ -5077,15 +5078,10 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
     const h={};
     // 1. Blok seçimi zorunlu
     if(projeBloklar.length>0&&(!fm.bloklar||fm.bloklar.length===0))h.bloklar="Blok seçimi zorunludur";
-    if(_hesaplamaVar){
-      // Hesaplamalı kartlar
-      if(!fm.planlananToplam||parseFloat(fm.planlananToplam)<=0)h.hesaplama="Hesaplama yapılmalı ve tutarı aktarılmalıdır";
-    }else{
-      // Normal kartlar — planlanan sekmesinde en az 1 satır ve toplam > 0
-      const pt=fiyatToplamHesapla(fm.planlananSatirlari);
-      if((fm.planlananSatirlari||[]).length===0)h.planlanan="Planlanan fiyat sekmesine en az 1 satır ekleyin";
-      else if(pt.kdvHaricTop<=0)h.planlanan="Planlanan fiyat toplamı sıfırdan büyük olmalıdır";
-    }
+    // Planlanan sekmesinde en az 1 satır ve toplam > 0
+    const pt=fiyatToplamHesapla(fm.planlananSatirlari);
+    if((fm.planlananSatirlari||[]).length===0)h.planlanan="Planlanan fiyat sekmesine en az 1 satır ekleyin";
+    else if(pt.kdvHaricTop<=0)h.planlanan="Planlanan fiyat toplamı sıfırdan büyük olmalıdır";
     setHatalar(h);
     if(Object.keys(h).length>0)return false;
     return true;
@@ -5114,9 +5110,9 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
   const delRevizyon=(id)=>uf("revizyonlar",(fm.revizyonlar||[]).filter(r=>r.id!==id));
   const saveRevDuzenle=(id,field,val)=>{uf("revizyonlar",(fm.revizyonlar||[]).map(r=>r.id===id?{...r,[field]:val}:r));};
 
-  // Toplam hesaplama (hesaplamalı kartlar için mevcut, diğerleri planlanan sekmesinden)
+  // Toplam planlanan sekmesinden hesaplanır
   const planlananTop=fiyatToplamHesapla(fm.planlananSatirlari);
-  const toplam=_hesaplamaVar?parseFloat(fm.planlananToplam||0):planlananTop.kdvHaricTop;
+  const toplam=planlananTop.kdvHaricTop;
 
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
     <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"1200px",maxHeight:"95vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
@@ -5124,7 +5120,7 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
         <button onClick={onClose} title="Kapat" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={28}/></button>
         <div style={{flex:1,textAlign:"center"}}><span style={{fontSize:"16px",fontWeight:600,color:"#8799a3",textTransform:"uppercase"}}>{fm.malzemeKodu?fm.malzemeKodu+" - ":""}{fm.malzemeAd||"Bütçe Kalemi"}</span></div>
         <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
-          <button onClick={()=>{if(!kaydetValidasyon())return;const pt=fiyatToplamHesapla(fm.planlananSatirlari);onSave({...fm,planlananToplam:_hesaplamaVar?toplam:pt.kdvHaricTop,planlananMiktar:_hesaplamaVar?fm.planlananMiktar:String(pt.miktarTop||""),planlananBirimFiyat:_hesaplamaVar?fm.planlananBirimFiyat:(pt.miktarTop>0?String(pt.kdvHaricTop/pt.miktarTop):"")});setSaved(true);setTimeout(()=>setSaved(false),2000);setHatalar({});}} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={30}/></button>
+          <button onClick={()=>{if(!kaydetValidasyon())return;const pt=fiyatToplamHesapla(fm.planlananSatirlari);onSave({...fm,planlananToplam:pt.kdvHaricTop,planlananMiktar:String(pt.miktarTop||""),planlananBirimFiyat:(pt.miktarTop>0?String(pt.kdvHaricTop/pt.miktarTop):"")});setSaved(true);setTimeout(()=>setSaved(false),2000);setHatalar({});}} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={30}/></button>
           {onDel&&<button onClick={()=>{if(!confirm("Bu bütçe kalemini silmek istiyor musunuz?"))return;onDel(fm.id);onClose();}} title="Sil" style={{padding:"0",border:"none",background:"transparent",color:"#ff6b6b",cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={30}/></button>}
         </div>
       </div>
@@ -5144,25 +5140,8 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
           {hatalar.bloklar&&<span style={{fontSize:"11px",color:T.err,fontWeight:600}}>{hatalar.bloklar}</span>}
         </div>}
 
-        {/* HESAPLAMA ENTEGRASYONU */}
-        {_hesaplamaVar&&(()=>{
-          const sablonKey=_mlzRef.hesaplamaSablonu;
-          return <div style={{border:`2px solid ${T.primary}`,borderRadius:T.r,overflow:"hidden"}}>
-            <div style={{padding:"8px 14px",background:"#e6f4ff",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-                <span style={{fontSize:"16px"}}>{HESAPLAMA_SABLONLARI[sablonKey].icon}</span>
-                <span style={{fontSize:"13px",fontWeight:600,color:T.primary}}>{HESAPLAMA_SABLONLARI[sablonKey].ad}</span>
-              </div>
-              <span style={{fontSize:"11px",color:hatalar.hesaplama?T.err:T.t2}}>{hatalar.hesaplama||"Hesaplama sonucu tutara aktarılır"}</span>
-            </div>
-            <div style={{padding:"16px"}}>
-              <HesaplamaSekmesi kategori={_mlzRef.kategori} malzemeId={_mlzRef.id} malzemeAd={_mlzRef.ad} malzemeKodu={_mlzRef.malzemeKodu} zorSablon={sablonKey} kayitliParams={fm.hesaplamaParams||null} kayitliSonuc={fm.hesaplamaSonuc||null} onParamsChange={(p,s)=>{uf("hesaplamaParams",p);uf("hesaplamaSonuc",s);}} kdvOrani={_mlzRef.kdvOrani||"20"} onSonucAktar={(tutar)=>{const t=Math.round(tutar*100)/100;uf("planlananBirimFiyat",String(t));uf("planlananToplam",t);setHatalar(p=>({...p,hesaplama:undefined,planlanan:undefined}));}}/>
-            </div>
-          </div>;
-        })()}
-
-        {/* 3 SEKMELİ FİYAT PORTALI — hesaplamalı kartlarda gizle */}
-        {!_hesaplamaVar&&(()=>{
+        {/* 3 SEKMELİ FİYAT PORTALI — her zaman görünür */}
+        {(()=>{
           const sekmeler=[{id:"piyasa",label:"Piyasa Fiyatı",color:"#fa8c16"},{id:"firma",label:"Firma Fiyatı",color:"#1677ff"},{id:"planlanan",label:"Planlanan Fiyat",color:"#52c41a"}];
           const aktifAlan=fiyatAlanMap[fiyatSekme];
           const satirlar=fm[aktifAlan]||[];
@@ -5170,6 +5149,17 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
           const birim=_mlzRef?.birim||fm.birim||"adet";
 
           return <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
+            {/* HESAPLA BUTONU (yardımcı araç) */}
+            {_hesaplamaVar&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 14px",background:"#fffbe6",borderBottom:`1px solid ${T.border}`}}>
+              <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+                <span style={{fontSize:"16px"}}>{HESAPLAMA_SABLONLARI[_mlzRef.hesaplamaSablonu].icon}</span>
+                <span style={{fontSize:"12px",fontWeight:600,color:"#d48806"}}>{HESAPLAMA_SABLONLARI[_mlzRef.hesaplamaSablonu].ad}</span>
+                <span style={{fontSize:"11px",color:"#8c8c8c"}}>— yardımcı hesap</span>
+              </div>
+              <button onClick={()=>setHesapModalAcik(true)} style={{padding:"4px 14px",borderRadius:T.r,border:"1px solid #fadb14",background:"#fff",color:"#d48806",fontSize:"12px",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:"4px"}}>
+                <RefreshCw size={12}/> Hesapla
+              </button>
+            </div>}
             {/* SEKME BAŞLIKLARI */}
             <div style={{display:"flex",background:"#384248"}}>
               {sekmeler.map(s=><button key={s.id} onClick={()=>setFiyatSekme(s.id)} style={{flex:1,padding:"10px 16px",border:"none",borderBottom:fiyatSekme===s.id?`3px solid ${s.color}`:"3px solid transparent",background:fiyatSekme===s.id?"#4a5568":"transparent",color:fiyatSekme===s.id?"#fff":"#8799a3",fontSize:"13px",fontWeight:fiyatSekme===s.id?700:400,cursor:"pointer",transition:"all .2s"}}>{s.label} ({(fm[fiyatAlanMap[s.id]]||[]).length})</button>)}
@@ -5270,6 +5260,47 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
         </div>
       </div>
     </div>
+    {/* HESAPLAMA YARDIMCI MODAL */}
+    {hesapModalAcik&&_hesaplamaVar&&(()=>{
+      const sablonKey=_mlzRef.hesaplamaSablonu;
+      return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:1100,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+        <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"900px",maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+          <div style={{padding:"12px 20px",background:"#384248",display:"flex",alignItems:"center",gap:"12px",borderRadius:`${T.rl} ${T.rl} 0 0`}}>
+            <span style={{fontSize:"22px"}}>{HESAPLAMA_SABLONLARI[sablonKey].icon}</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:"15px",fontWeight:600,color:"#fff"}}>{HESAPLAMA_SABLONLARI[sablonKey].ad}</div>
+              <div style={{fontSize:"11px",color:"#8799a3"}}>Yardımcı hesap — sonucu "{fiyatSekme==="piyasa"?"Piyasa Fiyatı":fiyatSekme==="firma"?"Firma Fiyatı":"Planlanan Fiyat"}" sekmesine aktarabilirsiniz</div>
+            </div>
+            <button onClick={()=>setHesapModalAcik(false)} style={{padding:"6px 14px",borderRadius:"6px",border:"1px solid #8799a3",background:"transparent",color:"#8799a3",fontSize:"12px",cursor:"pointer",fontWeight:600}}>Kapat</button>
+          </div>
+          <div style={{flex:1,overflow:"auto",padding:"20px"}}>
+            <HesaplamaSekmesi
+              kategori={_mlzRef.kategori}
+              malzemeId={_mlzRef.id}
+              malzemeAd={_mlzRef.ad}
+              malzemeKodu={_mlzRef.malzemeKodu}
+              zorSablon={sablonKey}
+              kayitliParams={fm.hesaplamaParams||null}
+              kayitliSonuc={fm.hesaplamaSonuc||null}
+              onParamsChange={(p,s)=>{uf("hesaplamaParams",p);uf("hesaplamaSonuc",s);}}
+              kdvOrani={_mlzRef.kdvOrani||"20"}
+              onSonucAktar={(tutar)=>{
+                // Sonucu aktif sekmeye yeni satır olarak ekle
+                const anaSatir=fm.hesaplamaSonuc?.satirlar?.find(s=>s.ana);
+                const miktar=anaSatir?anaSatir.deger:1;
+                const birimFiyat=anaSatir&&anaSatir.deger>0?(tutar/anaSatir.deger):tutar;
+                const aciklama=`Hesaplama: ${HESAPLAMA_SABLONLARI[sablonKey].ad}`;
+                const yeniSatir={id:Date.now(),aciklama,miktar:String(miktar),birimFiyat:String(Math.round(birimFiyat*100)/100),kdvOrani:_mlzRef.kdvOrani||"20"};
+                const alan=fiyatAlanMap[fiyatSekme];
+                uf(alan,[...(fm[alan]||[]),yeniSatir]);
+                setHesapModalAcik(false);
+                setHatalar(p=>({...p,planlanan:undefined}));
+              }}
+            />
+          </div>
+        </div>
+      </div>;
+    })()}
   </div>;
 };
 
