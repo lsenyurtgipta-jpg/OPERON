@@ -50,8 +50,12 @@ CREATE TABLE firmalar (
   banka_adi TEXT DEFAULT '',
   iban TEXT DEFAULT '',
   aktif BOOLEAN DEFAULT TRUE,
+  ilgilendigi_projeler JSONB DEFAULT '[]',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migration (mevcut tabloya ekle):
+-- ALTER TABLE firmalar ADD COLUMN IF NOT EXISTS ilgilendigi_projeler JSONB DEFAULT '[]'::jsonb;
 
 -- 2.2 KİŞİLER
 CREATE TABLE kisiler (
