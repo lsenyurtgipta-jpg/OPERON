@@ -5304,6 +5304,122 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
   </div>;
 };
 
+/* ========== OMURGA PICKER MODAL ========== */
+const OmurgaPickerModal=({malzemeler,projeTuru,mevcutIds,onEkle,onClose})=>{
+  const[src,setSrc]=useState("");
+  const[fTip,setFTip]=useState("all");
+  const[fGruplar,setFGruplar]=useState([]);
+  const[secili,setSecili]=useState(new Set());
+
+  // Proje türüne uygun omurga malzemeleri
+  const omurgaMlz=useMemo(()=>malzemeler.filter(m=>(m.omurgaProjeTurleri||[]).includes(projeTuru)),[malzemeler,projeTuru]);
+
+  // Mevcut grup listesi — grup koduna göre sıralı (üretim sırası)
+  const gruplar=useMemo(()=>{
+    const grupKodMap={};
+    omurgaMlz.forEach(m=>{
+      if(m.grupAd&&!(m.grupAd in grupKodMap))grupKodMap[m.grupAd]=m.grup||"";
+    });
+    return Object.keys(grupKodMap).sort((a,b)=>(grupKodMap[a]||"").localeCompare(grupKodMap[b]||"","tr"));
+  },[omurgaMlz]);
+
+  // Filtrelenmiş liste
+  const filtered=useMemo(()=>{
+    const q=src.toLowerCase();
+    return omurgaMlz.filter(m=>{
+      const ms=m.ad.toLowerCase().includes(q)||(m.malzemeKodu||"").toLowerCase().includes(q)||(m.grupAd||"").toLowerCase().includes(q);
+      const mt=fTip==="all"||m.tip===fTip;
+      const mg=fGruplar.length===0||fGruplar.includes(m.grupAd||"");
+      return ms&&mt&&mg;
+    });
+  },[omurgaMlz,src,fTip,fGruplar]);
+
+  // Seçilebilir (zaten eklenmemiş) kalemler
+  const seciliebilir=filtered.filter(m=>!mevcutIds.has(m.id));
+  const tumuSecili=seciliebilir.length>0&&seciliebilir.every(m=>secili.has(m.id));
+
+  const toggle=(id)=>{setSecili(p=>{const n=new Set(p);if(n.has(id))n.delete(id);else n.add(id);return n;});};
+  const tumunuSec=()=>{if(tumuSecili)setSecili(new Set());else setSecili(new Set(seciliebilir.map(m=>m.id)));};
+  const grupToggle=(g)=>setFGruplar(p=>p.includes(g)?p.filter(x=>x!==g):[...p,g]);
+
+  const ekle=()=>{
+    const secilenler=omurgaMlz.filter(m=>secili.has(m.id));
+    if(secilenler.length===0){alert("Hiç kalem seçmediniz.");return;}
+    onEkle(secilenler);
+    onClose();
+  };
+
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+    <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"900px",maxHeight:"85vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      {/* HEADER */}
+      <div style={{padding:"12px 20px",background:"#384248",display:"flex",alignItems:"center",gap:"16px",borderRadius:`${T.rl} ${T.rl} 0 0`}}>
+        <button onClick={onClose} style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={24}/></button>
+        <div style={{flex:1,textAlign:"center"}}>
+          <div style={{fontSize:"15px",fontWeight:600,color:"#fff"}}>OMURGA KALEMLERİNİ SEÇ</div>
+          <div style={{fontSize:"11px",color:"#8799a3",marginTop:"2px"}}>Proje Türü: <strong style={{color:"#fff"}}>{projeTuru}</strong> • {omurgaMlz.length} omurga kalemi</div>
+        </div>
+        <div style={{width:"24px"}}></div>
+      </div>
+
+      {/* FİLTRELER */}
+      <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`,background:"#fafafa"}}>
+        <div style={{display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap",marginBottom:"10px"}}>
+          <input style={{...iS,flex:1,minWidth:"200px"}} value={src} onChange={e=>setSrc(e.target.value)} placeholder="Ara: kod, ad, grup..." onFocus={foc} onBlur={blr}/>
+          {MLZ_TIPLER.map(k=><button key={k.id} onClick={()=>setFTip(fTip===k.id?"all":k.id)} style={{padding:"6px 12px",borderRadius:"4px",border:`1px solid ${fTip===k.id?k.color:T.border}`,background:fTip===k.id?k.bg:"#fff",color:fTip===k.id?k.color:T.t2,fontSize:"12px",fontWeight:500,cursor:"pointer"}}>{k.icon} {k.label}</button>)}
+        </div>
+        {gruplar.length>0&&<div style={{display:"flex",gap:"6px",alignItems:"center",flexWrap:"wrap"}}>
+          <span style={{fontSize:"11px",color:T.t3,fontWeight:600,textTransform:"uppercase",marginRight:"4px"}}>Gruplar:</span>
+          {gruplar.map(g=>{const sel=fGruplar.includes(g);return <button key={g} onClick={()=>grupToggle(g)} style={{padding:"4px 10px",borderRadius:"12px",border:`1px solid ${sel?T.primary:T.border}`,background:sel?T.pBg:"#fff",color:sel?T.primary:T.t2,fontSize:"11px",fontWeight:500,cursor:"pointer"}}>{g}</button>;})}
+          {fGruplar.length>0&&<button onClick={()=>setFGruplar([])} style={{padding:"4px 8px",border:"none",background:"transparent",color:T.t3,fontSize:"11px",cursor:"pointer",textDecoration:"underline"}}>temizle</button>}
+        </div>}
+      </div>
+
+      {/* LİSTE BAŞLIK */}
+      <div style={{display:"grid",gridTemplateColumns:"36px 110px 1fr 90px 150px 60px",gap:"8px",padding:"8px 16px",background:"#f5f7fa",borderBottom:`1px solid ${T.border}`,alignItems:"center"}}>
+        <div><input type="checkbox" checked={tumuSecili} onChange={tumunuSec} style={{cursor:"pointer",width:"16px",height:"16px"}} disabled={seciliebilir.length===0}/></div>
+        <div style={{fontSize:"11px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>Kod</div>
+        <div style={{fontSize:"11px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>Malzeme/Hizmet</div>
+        <div style={{fontSize:"11px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>Tip</div>
+        <div style={{fontSize:"11px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>Grup</div>
+        <div style={{fontSize:"11px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>Birim</div>
+      </div>
+
+      {/* LİSTE */}
+      <div style={{flex:1,overflow:"auto"}}>
+        {filtered.length===0
+          ?<div style={{padding:"40px",textAlign:"center",color:T.t3}}>Sonuç bulunamadı</div>
+          :filtered.map(m=>{
+            const tip=MLZ_TIPLER.find(t=>t.id===m.tip);
+            const ekli=mevcutIds.has(m.id);
+            const isSel=secili.has(m.id);
+            return <div key={m.id} onClick={ekli?undefined:()=>toggle(m.id)} style={{display:"grid",gridTemplateColumns:"36px 110px 1fr 90px 150px 60px",gap:"8px",padding:"10px 16px",borderBottom:`1px solid ${T.border}`,alignItems:"center",cursor:ekli?"not-allowed":"pointer",background:ekli?"#f5f5f5":(isSel?T.pBg:"#fff"),opacity:ekli?0.55:1}}
+              onMouseEnter={e=>{if(!ekli&&!isSel)e.currentTarget.style.background="#fafafa";}} onMouseLeave={e=>{if(!ekli&&!isSel)e.currentTarget.style.background="#fff";}}>
+              <div>
+                <input type="checkbox" checked={ekli||isSel} disabled={ekli} onChange={()=>toggle(m.id)} onClick={e=>e.stopPropagation()} style={{cursor:ekli?"not-allowed":"pointer",width:"16px",height:"16px"}}/>
+              </div>
+              <div style={{fontSize:"12px",color:T.t3,fontFamily:"monospace"}}>{m.malzemeKodu}</div>
+              <div style={{fontSize:"13px",fontWeight:500,color:T.text,display:"flex",alignItems:"center",gap:"8px"}}>
+                {m.ad}
+                {ekli&&<span style={{fontSize:"10px",padding:"2px 6px",borderRadius:"3px",background:"#d9d9d9",color:"#595959",fontWeight:600}}>EKLENDİ</span>}
+              </div>
+              <div>{tip&&<span style={{fontSize:"10px",padding:"2px 6px",borderRadius:"3px",background:tip.bg,color:tip.color,fontWeight:500}}>{tip.icon} {tip.label}</span>}</div>
+              <div style={{fontSize:"11px",color:T.t2}}>{m.grupAd||"—"}</div>
+              <div style={{fontSize:"12px",color:T.t2}}>{m.birim}</div>
+            </div>;
+          })}
+      </div>
+
+      {/* ALT BAR */}
+      <div style={{padding:"12px 16px",borderTop:`1px solid ${T.border}`,background:"#fafafa",display:"flex",alignItems:"center",gap:"12px"}}>
+        <div style={{fontSize:"13px",color:T.t2}}><strong style={{color:T.primary,fontSize:"15px"}}>{secili.size}</strong> kalem seçildi</div>
+        <div style={{flex:1}}></div>
+        <button onClick={onClose} style={{height:"36px",padding:"0 18px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>İptal</button>
+        <button onClick={ekle} disabled={secili.size===0} style={{height:"36px",padding:"0 20px",borderRadius:T.r,border:"none",background:secili.size===0?"#d9d9d9":T.primary,color:"#fff",fontSize:"13px",fontWeight:600,cursor:secili.size===0?"not-allowed":"pointer"}}>Seçilenleri Ekle ({secili.size})</button>
+      </div>
+    </div>
+  </div>;
+};
+
 /* ========== MALZEME PICKER MODAL ========== */
 const MalzemePickerModal=({malzemeler,onSelect,onClose})=>{
   const[src,setSrc]=useState("");
@@ -5343,6 +5459,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
   const[butceModal,setButceModal]=useState(null);
   const[filtre,setFiltre]=useState("hepsi");
   const[pickerOpen,setPickerOpen]=useState(false);
+  const[omurgaPickerOpen,setOmurgaPickerOpen]=useState(false);
   const[siralama,setSiralama]=useState({alan:"mlzKodu",yon:"asc"});
   const siraToggle=(alan)=>setSiralama(p=>p.alan===alan?{alan,yon:p.yon==="asc"?"desc":"asc"}:{alan,yon:"asc"});
   const selProje=projeler.find(p=>p.id===selProjeId);
@@ -5503,18 +5620,19 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
     setButceModal(yeniKalem);
   };
 
-  // Omurga oluştur
+  // Omurga oluştur — modal açar
   const omurgaOlustur=()=>{
     if(!selProje)return;
     const projeTuru=selProje.tur;
     if(!projeTuru){alert("Önce proje türünü belirleyiniz!");return;}
     const omurgaMlz=malzemeler.filter(m=>(m.omurgaProjeTurleri||[]).includes(projeTuru));
     if(omurgaMlz.length===0){alert(`"${projeTuru}" proje türü için omurga malzemesi bulunamadı.`);return;}
-    const mevcutIds=new Set((selProje.butceKalemleri||[]).map(k=>k.malzemeId));
-    const yeniMlz=omurgaMlz.filter(m=>!mevcutIds.has(m.id));
-    if(yeniMlz.length===0){alert("Tüm omurga kalemleri zaten eklenmiş.");return;}
-    if(!confirm(`${yeniMlz.length} adet "${projeTuru}" omurga kalemi eklenecek. Devam?`))return;
-    const yeniKalemler=yeniMlz.map((mlz,idx)=>({id:Date.now()+idx,malzemeId:mlz.id,malzemeAd:mlz.ad,malzemeKodu:mlz.malzemeKodu,birim:mlz.birim,bloklar:[],planlananMiktar:"",planlananBirimFiyat:"",planlananToplam:0,aciklama:""}));
+    setOmurgaPickerOpen(true);
+  };
+
+  // Omurga picker'dan seçilenleri ekle
+  const omurgaKalemEkle=(secilenler)=>{
+    const yeniKalemler=secilenler.map((mlz,idx)=>({id:Date.now()+idx,malzemeId:mlz.id,malzemeAd:mlz.ad,malzemeKodu:mlz.malzemeKodu,birim:mlz.birim,bloklar:[],planlananMiktar:"",planlananBirimFiyat:"",planlananToplam:0,aciklama:""}));
     guncelleProje([...(selProje.butceKalemleri||[]),...yeniKalemler]);
   };
 
@@ -5534,6 +5652,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
       ?<div style={{padding:"80px",textAlign:"center",color:T.t3,fontSize:"16px",border:`1px dashed ${T.border}`,borderRadius:T.r}}>Maliyet takibi için bir proje seçiniz.</div>
       :<div>
         {pickerOpen&&<MalzemePickerModal malzemeler={malzemeler} onSelect={kalemEkle} onClose={()=>setPickerOpen(false)}/>}
+        {omurgaPickerOpen&&<OmurgaPickerModal malzemeler={malzemeler} projeTuru={selProje.tur} mevcutIds={new Set((selProje.butceKalemleri||[]).map(k=>k.malzemeId))} onEkle={omurgaKalemEkle} onClose={()=>setOmurgaPickerOpen(false)}/>}
         {butceModal&&<ButceKalemModal kalem={butceModal} onSave={saveButceKalemi} onDel={delButceKalemi} onClose={()=>setButceModal(null)} malzemeler={malzemeler} projeBloklar={selProje?.bloklar||[]} projeBolumler={selProje?.bolumler||[]} ortakAlanM2={String((selProje?.bloklar||[]).reduce((s,b)=>s+parseFloat(b.ortakAlanM2||0),0))}/>}
 
         {/* ÖZET KARTLAR */}
