@@ -2755,58 +2755,56 @@ const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,fi
 
   /* ===== LİSTE ===== */
   return <div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px",flexWrap:"wrap",gap:"8px"}}>
-      <div>
-        <h2 style={{margin:0,fontSize:"20px",fontWeight:700,color:T.text}}>📋 Teklifler</h2>
-        <p style={{margin:0,fontSize:"13px",color:T.t2}}>{teklifler.length} teklif</p>
+    {/* FİLTRE BAR */}
+    <div style={{display:"flex",gap:"10px",marginBottom:"16px",flexWrap:"wrap",alignItems:"center"}}>
+      <input style={{...iS,maxWidth:"260px"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Teklif no, firma veya proje ara..." onFocus={foc} onBlur={blr}/>
+      <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+        <button onClick={()=>setFDurum("all")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fDurum==="all"?"#384248":T.bDark}`,background:fDurum==="all"?"#384248":"#fff",color:fDurum==="all"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Tümü</button>
+        {TEKLIF_DURUMLARI.map(d=><button key={d.id} onClick={()=>setFDurum(d.id)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fDurum===d.id?"#384248":T.bDark}`,background:fDurum===d.id?"#384248":"#fff",color:fDurum===d.id?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>{d.icon} {d.label}</button>)}
       </div>
-      <button onClick={()=>{setForm({...initForm,teklifNo:nextNo});setView("form");}} style={{padding:"8px 20px",borderRadius:"6px",border:"none",background:T.primary,color:"#fff",cursor:"pointer",fontWeight:600,fontSize:"13px"}}>+ Yeni Teklif</button>
     </div>
-    <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,overflow:"hidden"}}>
-      <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",gap:"10px",alignItems:"center",flexWrap:"wrap"}}>
-        <div style={{flex:1,minWidth:"200px",display:"flex",alignItems:"center",border:`1px solid ${T.bDark}`,borderRadius:"6px",padding:"0 10px",background:"#fff"}}>
-          <span style={{color:T.t3,marginRight:"6px"}}>🔍</span>
-          <input style={{flex:1,padding:"7px 0",border:"none",background:"transparent",color:T.text,fontSize:"13px",outline:"none"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Teklif no, firma, proje veya malzeme ara..."/>
+
+    {/* PORTAL */}
+    <div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#384248"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+          <span style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>Teklifler</span>
+          <span style={{fontSize:"13px",color:"#8799a3"}}>{filtered.length} teklif</span>
         </div>
-        <div style={{display:"flex",gap:"4px",flexWrap:"wrap"}}>
-          <button onClick={()=>setFDurum("all")} style={{padding:"5px 10px",borderRadius:"6px",border:`1px solid ${fDurum==="all"?T.primary:T.bDark}`,background:fDurum==="all"?T.pBg:"#fff",color:fDurum==="all"?T.primary:T.t2,fontSize:"12px",cursor:"pointer"}}>Tümü</button>
-          {TEKLIF_DURUMLARI.map(d=><button key={d.id} onClick={()=>setFDurum(d.id)} style={{padding:"5px 10px",borderRadius:"6px",border:`1px solid ${fDurum===d.id?d.color:T.bDark}`,background:fDurum===d.id?d.bg:"#fff",color:fDurum===d.id?d.color:T.t2,fontSize:"12px",cursor:"pointer"}}>{d.icon} {d.label}</button>)}
+        <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
+          <button onClick={()=>{setForm({...initForm,teklifNo:nextNo});setView("form");}} title="Yeni Teklif" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
+          <button onClick={()=>{
+            const rows=[["Teklif No","Firma","Tarih","Geçerlilik","Durum","Kalem","Tutar (KDV Hariç)"]];
+            filtered.forEach(t=>{const{kdvHaric}=toplamHesapla(t.kalemler||[]);const d=TEKLIF_DURUMLARI.find(x=>x.id===t.durum);rows.push([t.teklifNo||"",t.firmaAd||"",t.teklifTarihi||"",t.gecerlilikTarihi||"",d?d.label:"",String((t.kalemler||[]).length),String(kdvHaric)]);});
+            const csv=rows.map(r=>r.map(c=>`"${c}"`).join(";")).join("\n");
+            const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+            const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="teklifler.csv";a.click();
+          }} title="Excel'e Aktar" style={{padding:"0",border:"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center"}}><img src={excelIcon} alt="Excel" style={{width:"35px",height:"35px"}}/></button>
         </div>
       </div>
       {filtered.length===0
-        ?<div style={{textAlign:"center",padding:"48px",color:T.t3}}>Henüz teklif eklenmemiş</div>
-        :<div>{filtered.map((t,i)=>{
-          const para=PARA_BIRIMLERI.find(p=>p.id===t.paraBirimi);
-          const{kdvHaric}=toplamHesapla(t.kalemler||[]);
-          const durumObj=TEKLIF_DURUMLARI.find(d=>d.id===t.durum)||TEKLIF_DURUMLARI[0];
-          return <div key={t.id} onClick={()=>detay(t)} style={{display:"flex",alignItems:"center",padding:"14px 20px",borderBottom:i<filtered.length-1?`1px solid ${T.border}`:"none",cursor:"pointer",gap:"12px",transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background="#fafafa"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
-            <div style={{width:"40px",height:"40px",borderRadius:T.r,background:durumObj.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:0}}>{durumObj.icon}</div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"3px",flexWrap:"wrap"}}>
-                <span style={{fontFamily:"monospace",fontSize:"13px",fontWeight:700,color:T.primary}}>{t.teklifNo}</span>
-                <span style={{fontWeight:600,fontSize:"14px",color:T.text}}>{t.firmaAd}</span>
-                {t.yetkiliKisiAd&&<span style={{fontSize:"11px",color:T.t2}}>👤 {t.yetkiliKisiAd}</span>}
-                <span style={{padding:"1px 8px",borderRadius:"3px",fontSize:"11px",fontWeight:600,color:durumObj.color,background:durumObj.bg,border:`1px solid ${durumObj.color}33`}}>{durumObj.label}</span>
-                {t.projeAd&&<span style={{fontSize:"11px",color:T.t2,background:"#f0f0f0",padding:"1px 8px",borderRadius:"3px"}}>📁 {t.projeAd}</span>}
-              </div>
-              <div style={{display:"flex",gap:"14px",color:T.t3,fontSize:"12px",flexWrap:"wrap"}}>
-                <span>📅 {fmtDate(t.teklifTarihi)}</span>
-                {t.gecerlilikTarihi&&<span>⏰ {fmtDate(t.gecerlilikTarihi)}{t.gecerlilikGun?` (${t.gecerlilikGun} igün)`:""}</span>}
-                {t.odemeSekli&&<span>💳 {t.odemeSekli}</span>}
-                <span>📦 {(t.kalemler||[]).length} kalem</span>
-                <span style={{color:T.t2}}>{(t.kalemler||[]).slice(0,2).map(k=>k.malzemeAd).join(", ")}{(t.kalemler||[]).length>2?"...":""}</span>
-              </div>
-            </div>
-            <div style={{textAlign:"right",flexShrink:0}}>
-              <div style={{fontWeight:700,fontSize:"15px",color:T.text}}>{para?.symbol}{kdvHaric.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div>
-              <div style={{color:T.t3,fontSize:"11px"}}>KDV hariç</div>
-            </div>
-            <div style={{display:"flex",gap:"6px",flexShrink:0}}>
-              <button onClick={e=>{e.stopPropagation();edit(t);}} style={{height:"30px",padding:"0 10px",borderRadius:"6px",border:`1px solid ${T.primary}33`,background:T.pBg,cursor:"pointer",color:T.primary,fontSize:"12px"}} onMouseEnter={e=>{e.currentTarget.style.background=T.primary;e.currentTarget.style.color="#fff";}} onMouseLeave={e=>{e.currentTarget.style.background=T.pBg;e.currentTarget.style.color=T.primary;}}>✏</button>
-              <button onClick={e=>{e.stopPropagation();sil(t.id);}} style={{height:"30px",padding:"0 10px",borderRadius:"6px",border:`1px solid ${T.err}33`,background:"#fff1f0",cursor:"pointer",color:T.err,fontSize:"12px"}} onMouseEnter={e=>{e.currentTarget.style.background=T.err;e.currentTarget.style.color="#fff";}} onMouseLeave={e=>{e.currentTarget.style.background="#fff1f0";e.currentTarget.style.color=T.err;}}>🗑</button>
-            </div>
-          </div>;
-        })}</div>
+        ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{search||fDurum!=="all"?"Sonuç bulunamadı":"Henüz teklif eklenmemiş."}</div>
+        :<>
+          <div style={{display:"grid",gridTemplateColumns:"120px 1fr 90px 90px 100px 60px 120px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
+            {["Teklif No","Firma","Tarih","Geçerlilik","Durum","Kalem","Tutar"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
+          </div>
+          {filtered.map((t,idx)=>{
+            const para=PARA_BIRIMLERI.find(p=>p.id===t.paraBirimi);
+            const{kdvHaric}=toplamHesapla(t.kalemler||[]);
+            const durumObj=TEKLIF_DURUMLARI.find(d=>d.id===t.durum)||TEKLIF_DURUMLARI[0];
+            return <div key={t.id} onClick={()=>detay(t)} style={{display:"grid",gridTemplateColumns:"120px 1fr 90px 90px 100px 60px 120px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtered.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
+              onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
+              onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
+              <div style={{fontSize:"13px",color:T.primary,fontWeight:600,fontFamily:"monospace"}}>{t.teklifNo}</div>
+              <div style={{fontSize:"14px",fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.firmaAd}</div>
+              <div style={{fontSize:"13px",color:T.t2}}>{fmtDate(t.teklifTarihi)}</div>
+              <div style={{fontSize:"13px",color:T.t3}}>{t.gecerlilikTarihi?fmtDate(t.gecerlilikTarihi):"—"}</div>
+              <div><span style={{padding:"2px 8px",borderRadius:"3px",fontSize:"11px",fontWeight:600,color:durumObj.color,background:durumObj.bg,border:`1px solid ${durumObj.color}33`}}>{durumObj.label}</span></div>
+              <div style={{fontSize:"13px",color:T.t2,textAlign:"center"}}>{(t.kalemler||[]).length}</div>
+              <div style={{fontSize:"14px",fontWeight:600,color:T.text,textAlign:"right"}}>{para?.symbol}{kdvHaric.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div>
+            </div>;
+          })}
+        </>
       }
     </div>
   </div>;
@@ -3057,58 +3055,56 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler
 
   /* LİSTE */
   return <div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px",flexWrap:"wrap",gap:"8px"}}>
-      <div>
-        <h2 style={{margin:0,fontSize:"20px",fontWeight:700,color:T.text}}>🛒 Satınalma Siparişleri</h2>
-        <p style={{margin:0,fontSize:"13px",color:T.t2}}>{siparisler.length} sipariş</p>
+    {/* FİLTRE BAR */}
+    <div style={{display:"flex",gap:"10px",marginBottom:"16px",flexWrap:"wrap",alignItems:"center"}}>
+      <input style={{...iS,maxWidth:"260px"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="SP no, firma veya proje ara..." onFocus={foc} onBlur={blr}/>
+      <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+        <button onClick={()=>setFDurum("all")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fDurum==="all"?"#384248":T.bDark}`,background:fDurum==="all"?"#384248":"#fff",color:fDurum==="all"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Tümü</button>
+        {SP_DURUMLARI.map(d=><button key={d.id} onClick={()=>setFDurum(d.id)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fDurum===d.id?"#384248":T.bDark}`,background:fDurum===d.id?"#384248":"#fff",color:fDurum===d.id?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>{d.icon} {d.label}</button>)}
       </div>
-      <button onClick={()=>{setForm({...emptyForm,spNo:nextNo});setView("form");}} style={{padding:"8px 20px",borderRadius:"6px",border:"none",background:"#52c41a",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:"13px"}}>+ Yeni Sipariş</button>
     </div>
-    <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,overflow:"hidden"}}>
-      <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",gap:"10px",alignItems:"center",flexWrap:"wrap"}}>
-        <div style={{flex:1,minWidth:"200px",display:"flex",alignItems:"center",border:`1px solid ${T.bDark}`,borderRadius:"6px",padding:"0 10px",background:"#fff"}}>
-          <span style={{color:T.t3,marginRight:"6px"}}>🔍</span>
-          <input style={{flex:1,padding:"7px 0",border:"none",background:"transparent",color:T.text,fontSize:"13px",outline:"none"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="SP no, firma, proje veya malzeme ara..."/>
+
+    {/* PORTAL */}
+    <div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#384248"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+          <span style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>Satınalma Siparişleri</span>
+          <span style={{fontSize:"13px",color:"#8799a3"}}>{filtered.length} sipariş</span>
         </div>
-        <div style={{display:"flex",gap:"4px",flexWrap:"wrap"}}>
-          <button onClick={()=>setFDurum("all")} style={{padding:"5px 10px",borderRadius:"6px",border:`1px solid ${fDurum==="all"?"#52c41a":T.bDark}`,background:fDurum==="all"?"#f6ffed":"#fff",color:fDurum==="all"?"#52c41a":T.t2,fontSize:"12px",cursor:"pointer"}}>Tümü</button>
-          {SP_DURUMLARI.map(d=><button key={d.id} onClick={()=>setFDurum(d.id)} style={{padding:"5px 10px",borderRadius:"6px",border:`1px solid ${fDurum===d.id?d.color:T.bDark}`,background:fDurum===d.id?d.bg:"#fff",color:fDurum===d.id?d.color:T.t2,fontSize:"12px",cursor:"pointer"}}>{d.icon} {d.label}</button>)}
+        <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
+          <button onClick={()=>{setForm({...emptyForm,spNo:nextNo});setView("form");}} title="Yeni Sipariş" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
+          <button onClick={()=>{
+            const rows=[["SP No","Firma","Tarih","Termin","Durum","Kalem","Tutar (KDV Hariç)"]];
+            filtered.forEach(s=>{const{kdvHaric}=toplamHesapla(s.kalemler||[]);const d=SP_DURUMLARI.find(x=>x.id===s.durum);rows.push([s.spNo||"",s.firmaAd||"",s.siparisTarihi||"",s.terminTarihi||"",d?d.label:"",String((s.kalemler||[]).length),String(kdvHaric)]);});
+            const csv=rows.map(r=>r.map(c=>`"${c}"`).join(";")).join("\n");
+            const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+            const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="satinalma_siparisleri.csv";a.click();
+          }} title="Excel'e Aktar" style={{padding:"0",border:"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center"}}><img src={excelIcon} alt="Excel" style={{width:"35px",height:"35px"}}/></button>
         </div>
       </div>
       {filtered.length===0
-        ?<div style={{textAlign:"center",padding:"48px",color:T.t3}}><div style={{fontSize:"36px",marginBottom:"8px"}}>🛒</div>Henüz sipariş eklenmemiş</div>
-        :<div>{filtered.map((s,i)=>{
-          const para=PARA_BIRIMLERI.find(p=>p.id===s.paraBirimi);
-          const{kdvHaric}=toplamHesapla(s.kalemler||[]);
-          const durumObj=SP_DURUMLARI.find(d=>d.id===s.durum)||SP_DURUMLARI[0];
-          const gecti=s.terminTarihi&&s.terminTarihi<new Date().toISOString().split("T")[0]&&s.durum!=="tamamlandi";
-          return <div key={s.id} onClick={()=>{setAktifSp(s);setView("detail");}} style={{display:"flex",alignItems:"center",padding:"14px 20px",borderBottom:i<filtered.length-1?`1px solid ${T.border}`:"none",cursor:"pointer",gap:"12px",transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background="#fafafa"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
-            <div style={{width:"40px",height:"40px",borderRadius:T.r,background:durumObj.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:0}}>{durumObj.icon}</div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"3px",flexWrap:"wrap"}}>
-                <span style={{fontFamily:"monospace",fontSize:"13px",fontWeight:700,color:"#52c41a"}}>{s.spNo}</span>
-                <span style={{fontWeight:600,fontSize:"14px",color:T.text}}>{s.firmaAd}</span>
-                <span style={{padding:"1px 8px",borderRadius:"3px",fontSize:"11px",fontWeight:600,color:durumObj.color,background:durumObj.bg,border:`1px solid ${durumObj.color}33`}}>{durumObj.label}</span>
-                {s.projeAd&&<span style={{fontSize:"11px",color:T.t2,background:"#f0f0f0",padding:"1px 8px",borderRadius:"3px"}}>📁 {s.projeAd}</span>}
-                {s.teklifNo&&<span style={{fontSize:"11px",color:T.primary,background:T.pBg,padding:"1px 8px",borderRadius:"3px"}}>🔗 {s.teklifNo}</span>}
-              </div>
-              <div style={{display:"flex",gap:"14px",color:T.t3,fontSize:"12px",flexWrap:"wrap"}}>
-                <span>📅 {fmtDate(s.siparisTarihi)}</span>
-                {s.terminTarihi&&<span style={{color:gecti?T.err:T.t3}}>⏰ Termin: {fmtDate(s.terminTarihi)}{gecti?" ⚠️":""}</span>}
-                <span>📦 {(s.kalemler||[]).length} kalem</span>
-                {s.teslimKosulu&&<span>🚚 {s.teslimKosulu}</span>}
-              </div>
-            </div>
-            <div style={{textAlign:"right",flexShrink:0}}>
-              <div style={{fontWeight:700,fontSize:"15px",color:T.text}}>{para?.symbol}{kdvHaric.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div>
-              <div style={{color:T.t3,fontSize:"11px"}}>KDV hariç</div>
-            </div>
-            <div style={{display:"flex",gap:"6px",flexShrink:0}}>
-              <button onClick={e=>{e.stopPropagation();edit(s);}} style={{height:"30px",padding:"0 10px",borderRadius:"6px",border:"1px solid #b7eb8f",background:"#f6ffed",cursor:"pointer",color:"#52c41a",fontSize:"12px"}}>✏</button>
-              <button onClick={e=>{e.stopPropagation();sil(s.id);}} style={{height:"30px",padding:"0 10px",borderRadius:"6px",border:`1px solid ${T.err}33`,background:"#fff1f0",cursor:"pointer",color:T.err,fontSize:"12px"}}>🗑</button>
-            </div>
-          </div>;
-        })}</div>
+        ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{search||fDurum!=="all"?"Sonuç bulunamadı":"Henüz sipariş eklenmemiş."}</div>
+        :<>
+          <div style={{display:"grid",gridTemplateColumns:"110px 1fr 90px 90px 100px 60px 120px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
+            {["SP No","Firma","Tarih","Termin","Durum","Kalem","Tutar"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
+          </div>
+          {filtered.map((s,idx)=>{
+            const para=PARA_BIRIMLERI.find(p=>p.id===s.paraBirimi);
+            const{kdvHaric}=toplamHesapla(s.kalemler||[]);
+            const durumObj=SP_DURUMLARI.find(d=>d.id===s.durum)||SP_DURUMLARI[0];
+            return <div key={s.id} onClick={()=>{setAktifSp(s);setView("detail");}} style={{display:"grid",gridTemplateColumns:"110px 1fr 90px 90px 100px 60px 120px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtered.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
+              onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
+              onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
+              <div style={{fontSize:"13px",color:"#52c41a",fontWeight:600,fontFamily:"monospace"}}>{s.spNo}</div>
+              <div style={{fontSize:"14px",fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.firmaAd}</div>
+              <div style={{fontSize:"13px",color:T.t2}}>{fmtDate(s.siparisTarihi)}</div>
+              <div style={{fontSize:"13px",color:s.terminTarihi&&s.terminTarihi<new Date().toISOString().split("T")[0]&&s.durum!=="tamamlandi"?T.err:T.t3}}>{s.terminTarihi?fmtDate(s.terminTarihi):"—"}</div>
+              <div><span style={{padding:"2px 8px",borderRadius:"3px",fontSize:"11px",fontWeight:600,color:durumObj.color,background:durumObj.bg,border:`1px solid ${durumObj.color}33`}}>{durumObj.label}</span></div>
+              <div style={{fontSize:"13px",color:T.t2,textAlign:"center"}}>{(s.kalemler||[]).length}</div>
+              <div style={{fontSize:"14px",fontWeight:600,color:T.text,textAlign:"right"}}>{para?.symbol}{kdvHaric.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div>
+            </div>;
+          })}
+        </>
       }
     </div>
   </div>;
@@ -3289,58 +3285,58 @@ const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklif
 
   /* LİSTE */
   return <div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px",flexWrap:"wrap",gap:"8px"}}>
-      <div>
-        <h2 style={{margin:0,fontSize:"20px",fontWeight:700,color:T.text}}>🧾 Alış Faturaları</h2>
-        <p style={{margin:0,fontSize:"13px",color:T.t2}}>{faturalar.length} fatura</p>
+    {/* FİLTRE BAR */}
+    <div style={{display:"flex",gap:"10px",marginBottom:"16px",flexWrap:"wrap",alignItems:"center"}}>
+      <input style={{...iS,maxWidth:"260px"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="AF no, fatura no veya firma ara..." onFocus={foc} onBlur={blr}/>
+      <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+        <button onClick={()=>setFDurum("all")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fDurum==="all"?"#384248":T.bDark}`,background:fDurum==="all"?"#384248":"#fff",color:fDurum==="all"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Tümü</button>
+        {AF_DURUMLARI.map(d=><button key={d.id} onClick={()=>setFDurum(d.id)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fDurum===d.id?"#384248":T.bDark}`,background:fDurum===d.id?"#384248":"#fff",color:fDurum===d.id?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>{d.icon} {d.label}</button>)}
       </div>
-      <button onClick={()=>{setForm({...emptyForm,afNo:nextNo});setView("form");}} style={{padding:"8px 20px",borderRadius:"6px",border:"none",background:"#722ed1",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:"13px"}}>+ Yeni Fatura</button>
     </div>
-    <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,overflow:"hidden"}}>
-      <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",gap:"10px",alignItems:"center",flexWrap:"wrap"}}>
-        <div style={{flex:1,minWidth:"200px",display:"flex",alignItems:"center",border:`1px solid ${T.bDark}`,borderRadius:"6px",padding:"0 10px",background:"#fff"}}>
-          <span style={{color:T.t3,marginRight:"6px"}}>🔍</span>
-          <input style={{flex:1,padding:"7px 0",border:"none",background:"transparent",color:T.text,fontSize:"13px",outline:"none"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="AF no, fatura no, firma veya malzeme ara..."/>
+
+    {/* PORTAL */}
+    <div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#384248"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+          <span style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>Alış Faturaları</span>
+          <span style={{fontSize:"13px",color:"#8799a3"}}>{filtered.length} fatura</span>
         </div>
-        <div style={{display:"flex",gap:"4px",flexWrap:"wrap"}}>
-          <button onClick={()=>setFDurum("all")} style={{padding:"5px 10px",borderRadius:"6px",border:`1px solid ${fDurum==="all"?"#722ed1":T.bDark}`,background:fDurum==="all"?"#f9f0ff":"#fff",color:fDurum==="all"?"#722ed1":T.t2,fontSize:"12px",cursor:"pointer"}}>Tümü</button>
-          {AF_DURUMLARI.map(d=><button key={d.id} onClick={()=>setFDurum(d.id)} style={{padding:"5px 10px",borderRadius:"6px",border:`1px solid ${fDurum===d.id?d.color:T.bDark}`,background:fDurum===d.id?d.bg:"#fff",color:fDurum===d.id?d.color:T.t2,fontSize:"12px",cursor:"pointer"}}>{d.icon} {d.label}</button>)}
+        <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
+          <button onClick={()=>{setForm({...emptyForm,afNo:nextNo});setView("form");}} title="Yeni Fatura" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
+          <button onClick={()=>{
+            const rows=[["AF No","Firma","Fatura No","Tarih","Vade","Durum","Kalem","Tutar (KDV Dahil)"]];
+            filtered.forEach(f=>{const{kdvDahil}=toplamHesapla(f.kalemler||[]);const d=AF_DURUMLARI.find(x=>x.id===f.durum);rows.push([f.afNo||"",f.firmaAd||"",f.faturaNo||"",f.faturaTarihi||"",f.vadeTarihi||"",d?d.label:"",String((f.kalemler||[]).length),String(kdvDahil)]);});
+            const csv=rows.map(r=>r.map(c=>`"${c}"`).join(";")).join("\n");
+            const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+            const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="alis_faturalari.csv";a.click();
+          }} title="Excel'e Aktar" style={{padding:"0",border:"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center"}}><img src={excelIcon} alt="Excel" style={{width:"35px",height:"35px"}}/></button>
         </div>
       </div>
       {filtered.length===0
-        ?<div style={{textAlign:"center",padding:"48px",color:T.t3}}><div style={{fontSize:"36px",marginBottom:"8px"}}>🧾</div>Henüz fatura eklenmemiş</div>
-        :<div>{filtered.map((f,i)=>{
-          const para=PARA_BIRIMLERI.find(p=>p.id===f.paraBirimi);
-          const{kdvHaric,kdvDahil}=toplamHesapla(f.kalemler||[]);
-          const durumObj=AF_DURUMLARI.find(d=>d.id===f.durum)||AF_DURUMLARI[0];
-          const vadePassed=f.vadeTarihi&&f.vadeTarihi<new Date().toISOString().split("T")[0]&&f.durum==="beklemede";
-          return <div key={f.id} style={{display:"flex",alignItems:"center",padding:"14px 20px",borderBottom:i<filtered.length-1?`1px solid ${T.border}`:"none",cursor:"pointer",gap:"12px",transition:"background .15s"}} onClick={()=>{setAktifFatura(f);setView("detail");}} onMouseEnter={e=>e.currentTarget.style.background="#fafafa"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
-            <div style={{width:"40px",height:"40px",borderRadius:T.r,background:durumObj.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:0}}>{durumObj.icon}</div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"3px",flexWrap:"wrap"}}>
-                <span style={{fontFamily:"monospace",fontSize:"13px",fontWeight:700,color:"#722ed1"}}>{f.afNo}</span>
-                <span style={{fontWeight:600,fontSize:"14px",color:T.text}}>{f.firmaAd}</span>
-                <span style={{fontSize:"11px",color:T.t2,background:"#f0f0f0",padding:"1px 8px",borderRadius:"3px"}}>Fatura: {f.faturaNo}</span>
-                <span style={{padding:"1px 8px",borderRadius:"3px",fontSize:"11px",fontWeight:600,color:durumObj.color,background:durumObj.bg,border:`1px solid ${durumObj.color}33`}}>{durumObj.label}</span>
-                {f.projeAd&&<span style={{fontSize:"11px",color:T.t2,background:"#f0f0f0",padding:"1px 8px",borderRadius:"3px"}}>📁 {f.projeAd}</span>}
-                {f.spNo&&<span style={{fontSize:"11px",color:"#52c41a",background:"#f6ffed",padding:"1px 8px",borderRadius:"3px"}}>🔗 {f.spNo}</span>}
-              </div>
-              <div style={{display:"flex",gap:"14px",color:T.t3,fontSize:"12px",flexWrap:"wrap"}}>
-                <span>📅 {fmtDate(f.faturaTarihi)}</span>
-                {f.vadeTarihi&&<span style={{color:vadePassed?T.err:T.t3}}>💳 Vade: {fmtDate(f.vadeTarihi)}{vadePassed?" ⚠️ Gecikti":""}</span>}
-                <span>📦 {(f.kalemler||[]).length} kalem</span>
-              </div>
-            </div>
-            <div style={{textAlign:"right",flexShrink:0}}>
-              <div style={{fontWeight:700,fontSize:"15px",color:"#722ed1"}}>{para?.symbol}{kdvDahil.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div>
-              <div style={{color:T.t3,fontSize:"11px"}}>KDV dahil</div>
-            </div>
-            <div style={{display:"flex",gap:"6px",flexShrink:0}}>
-              <button onClick={e=>{e.stopPropagation();edit(f);}} style={{height:"30px",padding:"0 10px",borderRadius:"6px",border:"1px solid #d3adf7",background:"#f9f0ff",cursor:"pointer",color:"#722ed1",fontSize:"12px"}}>✏</button>
-              <button onClick={e=>{e.stopPropagation();sil(f.id);}} style={{height:"30px",padding:"0 10px",borderRadius:"6px",border:`1px solid ${T.err}33`,background:"#fff1f0",cursor:"pointer",color:T.err,fontSize:"12px"}}>🗑</button>
-            </div>
-          </div>;
-        })}</div>
+        ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{search||fDurum!=="all"?"Sonuç bulunamadı":"Henüz fatura eklenmemiş."}</div>
+        :<>
+          <div style={{display:"grid",gridTemplateColumns:"100px 1fr 100px 90px 90px 100px 60px 120px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
+            {["AF No","Firma","Fatura No","Tarih","Vade","Durum","Kalem","Tutar"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
+          </div>
+          {filtered.map((f,idx)=>{
+            const para=PARA_BIRIMLERI.find(p=>p.id===f.paraBirimi);
+            const{kdvDahil}=toplamHesapla(f.kalemler||[]);
+            const durumObj=AF_DURUMLARI.find(d=>d.id===f.durum)||AF_DURUMLARI[0];
+            const vadePassed=f.vadeTarihi&&f.vadeTarihi<new Date().toISOString().split("T")[0]&&f.durum==="beklemede";
+            return <div key={f.id} onClick={()=>{setAktifFatura(f);setView("detail");}} style={{display:"grid",gridTemplateColumns:"100px 1fr 100px 90px 90px 100px 60px 120px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtered.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
+              onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
+              onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
+              <div style={{fontSize:"13px",color:"#722ed1",fontWeight:600,fontFamily:"monospace"}}>{f.afNo}</div>
+              <div style={{fontSize:"14px",fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.firmaAd}</div>
+              <div style={{fontSize:"13px",color:T.t2}}>{f.faturaNo||"—"}</div>
+              <div style={{fontSize:"13px",color:T.t2}}>{fmtDate(f.faturaTarihi)}</div>
+              <div style={{fontSize:"13px",color:vadePassed?T.err:T.t3}}>{f.vadeTarihi?fmtDate(f.vadeTarihi):"—"}</div>
+              <div><span style={{padding:"2px 8px",borderRadius:"3px",fontSize:"11px",fontWeight:600,color:durumObj.color,background:durumObj.bg,border:`1px solid ${durumObj.color}33`}}>{durumObj.label}</span></div>
+              <div style={{fontSize:"13px",color:T.t2,textAlign:"center"}}>{(f.kalemler||[]).length}</div>
+              <div style={{fontSize:"14px",fontWeight:600,color:T.text,textAlign:"right"}}>{para?.symbol}{kdvDahil.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div>
+            </div>;
+          })}
+        </>
       }
     </div>
   </div>;
