@@ -710,6 +710,21 @@ const DEMO=[
   {id:5,firmaKodu:"320.2.00002",ad:"Atlas Steel Import",aciklama:"Çelik ithalat tedarikçisi",turler:["tedarikci"],paraBirimi:"USD",vergiDairesi:"Terme",vergiNo:"9998887776",telefon:"0536 777 88 99",sabitTelefon:"",webAdresi:"www.atlassteel.com",eposta:"info@atlassteel.com",mahalle:"Atatürk",adres:"Atatürk Cad. No:78/A",il:"Samsun",ilce:"Terme",bankaAdi:"Garanti BBVA",iban:"TR45 0006 2000 1234 5678 9012 34",kisiler:[{id:5,cinsiyet:"Bay",ad:"Hasan",soyad:"Yılmaz",telefon:"0536 777 88 99",eposta:"hasan@atlassteel.com",unvan:"Genel Müdür"}],notlar:[{id:5,tarih:"2026-01-25",yazar:"Admin",metin:"Çelik ithalatı fiyat teklifi alındı"}],belgeler:[],createdAt:"2025-11-10"}
 ];
 const T={primary:"#1677ff",pBg:"#e6f4ff",pDark:"#0958d9",bg:"#F4F7FE",card:"#fff",sidebar:"#384248",border:"#0000001f",bDark:"#d9d9d9",text:"rgb(17,24,39)",t2:"rgb(107,114,128)",t3:"rgb(149,156,169)",ok:"#52c41a",warn:"#faad14",err:"#ff4d4f",r:"8px",rl:"16px",sh:"0 0 5px 5px rgba(0,0,0,0.03)",shM:"0 6px 16px 0 rgba(0,0,0,0.08),0 3px 6px -4px rgba(0,0,0,0.12),0 9px 28px 8px rgba(0,0,0,0.05)",f:"'Be Vietnam',sans-serif"};
+/* ---- AKTİF/PASİF TOGGLE SWITCH ---- */
+const AktifPasifToggle=({aktif,onChange})=>{
+  const toggle=()=>{
+    const mesaj=aktif?"Bu kaydı PASİF'e almak istediğinizden emin misiniz?":"Bu kaydı AKTİF'e almak istediğinizden emin misiniz?";
+    if(!confirm(mesaj))return;
+    onChange(!aktif);
+  };
+  return <button onClick={toggle} title={aktif?"Aktif — pasif yapmak için tıkla":"Pasif — aktif yapmak için tıkla"} style={{display:"flex",alignItems:"center",gap:"8px",padding:"0",border:"none",background:"transparent",cursor:"pointer"}}>
+    <div style={{width:"40px",height:"22px",borderRadius:"11px",background:aktif?"#52c41a":"#d9d9d9",position:"relative",transition:"background .3s",flexShrink:0}}>
+      <div style={{width:"18px",height:"18px",borderRadius:"50%",background:"#fff",position:"absolute",top:"2px",left:aktif?"20px":"2px",transition:"left .3s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
+    </div>
+    <span style={{fontSize:"12px",fontWeight:600,color:aktif?"#52c41a":"#ff4d4f",letterSpacing:"0.3px",whiteSpace:"nowrap"}}>{aktif?"AKTİF":"PASİF"}</span>
+  </button>;
+};
+
 const Badge=({type})=>{const t=FIRMA_TURLERI.find(f=>f.id===type);if(!t)return null;return <span style={{display:"inline-flex",alignItems:"center",gap:"4px",padding:"0 8px",height:"22px",borderRadius:"4px",fontSize:"12px",fontWeight:500,color:t.color,background:t.bg,border:`1px solid ${t.color}33`,lineHeight:"22px"}}>{t.icon} {t.label}</span>;};
 const PBadge=({pb})=>{const p=PARA_BIRIMLERI.find(x=>x.id===pb);if(!p)return null;return <span style={{display:"inline-flex",alignItems:"center",padding:"0 8px",height:"22px",borderRadius:"4px",fontSize:"12px",fontWeight:600,color:"#389e0d",background:"#f6ffed",border:"1px solid #b7eb8f",lineHeight:"22px"}}>{p.symbol} {p.id}</span>;};
 const iS={width:"100%",height:"36px",padding:"0 11px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"16px",outline:"none",transition:"all .3s",boxSizing:"border-box",lineHeight:"36px"};
@@ -741,9 +756,11 @@ const SortBtn=({label,sortState,onSort,sortKey})=>{
   </button>;
 };
 
-const Sidebar=({page,setPage,open})=>{
+const Sidebar=({page,setPage,open,editMode=false})=>{
   const[openGroups,setOpenGroups]=useState({siparisler:true,faturalar:true});
   const toggleGroup=(g)=>setOpenGroups(p=>({...p,[g]:!p[g]}));
+  const[uyariHedef,setUyariHedef]=useState(null);
+  const sayfaDegistir=(hedef)=>{if(editMode){setUyariHedef(hedef);return;}setPage(hedef);};
 
   const items=[
     {id:"dashboard",label:"DASHBOARD"},
@@ -751,8 +768,9 @@ const Sidebar=({page,setPage,open})=>{
     {id:"malzemeler",label:"MALZEMELER"},
     {id:"projeler",label:"PROJELER"},
     {type:"group",groupId:"siparisler",label:"SİPARİŞLER",children:[
-      {id:"satinalma",label:"Satınalma Siparişleri"},
       {id:"teklifler",label:"Teklif Alma"},
+      {id:"satinalma",label:"Satınalma Siparişleri"},
+      {id:"teklif_verme",label:"Teklif Verme"},
       {id:"satinalma_sp",label:"Satış Siparişleri"},
     ]},
     {type:"group",groupId:"faturalar",label:"FATURALAR",children:[
@@ -774,19 +792,21 @@ const Sidebar=({page,setPage,open})=>{
 
   const renderBtn=(it,isSub=false)=>{
     const act=page===it.id;
-    return <button key={it.id} onClick={()=>setPage(it.id)} style={{
+    const disabled=editMode&&!act;
+    return <button key={it.id} onClick={()=>sayfaDegistir(it.id)} style={{
       width:"100%",display:"block",padding:isSub?"9px 16px 9px 36px":"10px 16px",
       marginBottom:"4px",border:"none",borderRadius:"6px",
-      cursor:"pointer",
+      cursor:disabled?"not-allowed":"pointer",
       background:act?SB.active:SB.btn,
-      color:act?"#000":"#fff",
+      color:act?"#000":(disabled?"rgba(255,255,255,0.35)":"#fff"),
       fontFamily:SB.font,fontSize:"14px",fontWeight:400,
       textTransform:isSub?"none":"uppercase",
       textAlign:"left",whiteSpace:"nowrap",
       transition:"all .15s",letterSpacing:isSub?"0":"0.3px",
+      opacity:disabled?0.5:1,
     }}
-    onMouseEnter={e=>{if(!act){e.currentTarget.style.background=SB.hover;e.currentTarget.style.color="#000";}}}
-    onMouseLeave={e=>{if(!act){e.currentTarget.style.background=SB.btn;e.currentTarget.style.color="#fff";}}}
+    onMouseEnter={e=>{if(!act&&!disabled){e.currentTarget.style.background=SB.hover;e.currentTarget.style.color="#000";}}}
+    onMouseLeave={e=>{if(!act&&!disabled){e.currentTarget.style.background=SB.btn;e.currentTarget.style.color=disabled?"rgba(255,255,255,0.35)":"#fff";}}}
     >{it.label}</button>;
   };
 
@@ -801,18 +821,20 @@ const Sidebar=({page,setPage,open})=>{
         if(it.type==="group"){
           const isOpen=openGroups[it.groupId]!==false;
           const childActive=it.children.some(c=>page===c.id);
+          const grpDisabled=editMode&&!childActive;
           return <div key={it.groupId}>
-            <button onClick={()=>toggleGroup(it.groupId)} style={{
+            <button onClick={()=>{if(!grpDisabled)toggleGroup(it.groupId);}} style={{
               width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
               padding:"10px 16px",marginBottom:"4px",border:"none",borderRadius:"6px",
-              cursor:"pointer",background:childActive?SB.active:SB.btn,
-              color:childActive?"#000":"#fff",
+              cursor:grpDisabled?"not-allowed":"pointer",background:childActive?SB.active:SB.btn,
+              color:childActive?"#000":(grpDisabled?"rgba(255,255,255,0.35)":"#fff"),
               fontFamily:SB.font,fontSize:"14px",fontWeight:400,
               textTransform:"uppercase",textAlign:"left",whiteSpace:"nowrap",
               transition:"all .15s",letterSpacing:"0.3px",
+              opacity:grpDisabled?0.5:1,
             }}
-            onMouseEnter={e=>{if(!childActive){e.currentTarget.style.background=SB.hover;e.currentTarget.style.color="#000";}}}
-            onMouseLeave={e=>{if(!childActive){e.currentTarget.style.background=SB.btn;e.currentTarget.style.color="#fff";}}}
+            onMouseEnter={e=>{if(!childActive&&!grpDisabled){e.currentTarget.style.background=SB.hover;e.currentTarget.style.color="#000";}}}
+            onMouseLeave={e=>{if(!childActive&&!grpDisabled){e.currentTarget.style.background=SB.btn;e.currentTarget.style.color=grpDisabled?"rgba(255,255,255,0.35)":"#fff";}}}
             ><span>{it.label}</span><span style={{fontSize:"10px",transition:"transform .2s",transform:isOpen?"rotate(180deg)":"rotate(0)"}}>{isOpen?"▲":"▼"}</span></button>
             {isOpen&&<div style={{display:"flex",flexDirection:"column",gap:"2px",paddingBottom:"2px"}}>
               {it.children.map(c=>renderBtn(c,true))}
@@ -827,8 +849,22 @@ const Sidebar=({page,setPage,open})=>{
       <div style={{width:"32px",height:"32px",borderRadius:"50%",background:"#8799a3",display:"flex",alignItems:"center",justifyContent:"center",color:"#384248",fontWeight:600,fontSize:"13px",flexShrink:0}}>A</div>
       <div><div style={{color:"rgba(255,255,255,0.85)",fontSize:"13px",fontWeight:500,whiteSpace:"nowrap",fontFamily:SB.font}}>Admin</div><div style={{color:"rgba(255,255,255,0.4)",fontSize:"11px",whiteSpace:"nowrap",fontFamily:SB.font}}>Yönetici</div></div>
     </div>
+    {uyariHedef&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1100,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setUyariHedef(null)}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:T.rl,padding:"28px 32px",maxWidth:"420px",width:"90%",boxShadow:T.shM}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"16px"}}>
+          <div style={{width:"40px",height:"40px",borderRadius:"50%",background:"#fff7e6",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",flexShrink:0}}>⚠️</div>
+          <div style={{fontSize:"16px",fontWeight:600,color:T.text}}>Kaydedilmemiş değişiklikler var</div>
+        </div>
+        <div style={{fontSize:"14px",color:T.t2,marginBottom:"24px",lineHeight:"1.5"}}>Şu an bir kayıt düzenliyorsunuz. Kaydetmeden çıkarsanız değişiklikleriniz kaybolacak.</div>
+        <div style={{display:"flex",justifyContent:"flex-end",gap:"10px"}}>
+          <button onClick={()=>setUyariHedef(null)} style={{padding:"8px 20px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"14px",cursor:"pointer"}}>İptal</button>
+          <button onClick={()=>{setPage(uyariHedef);setUyariHedef(null);}} style={{padding:"8px 20px",borderRadius:T.r,border:"none",background:T.err,color:"#fff",fontSize:"14px",fontWeight:600,cursor:"pointer"}}>Kaydetmeden Çık</button>
+        </div>
+      </div>
+    </div>}
   </div>;
 };;
+
 
 const DashPage=({firmalar,malzemeler,teklifler=[],setPage})=>{const topKalem=teklifler.reduce((s,t)=>s+t.kalemler.length,0);const st=[{l:"Toplam Firma",v:firmalar.length,c:"#1677ff",bg:"#e6f4ff",i:"🏢",p:"firmalar"},{l:"Toplam Malzeme",v:malzemeler.length,c:"#722ED1",bg:"#f9f0ff",i:"🧱",p:"malzemeler"},{l:"Alınan Teklifler",v:`${teklifler.length} / ${topKalem}`,c:"#13c2c2",bg:"#e6fffb",i:"📋",p:"malzemeler"},{l:"Tedarikçiler",v:firmalar.filter(f=>f.turler.includes("tedarikci")).length,c:"#52c41a",bg:"#f6ffed",i:"📦",p:"firmalar"}];return <div>
   <div style={{marginBottom:"24px"}}><h2 style={{fontSize:"20px",fontWeight:600,color:T.text,margin:0}}>Dashboard</h2><p style={{color:T.t2,fontSize:"14px",margin:"4px 0 0"}}>OPERON • Genel bakış</p></div>
@@ -958,7 +994,7 @@ const FirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,projele
       <div style={{flex:1,textAlign:"center"}}>
         <span style={{fontSize:"20px",fontWeight:600,color:"#8799a3",letterSpacing:"0.3px"}}>{form.firmaKodu?`${form.firmaKodu} - `:""}{form.ad||"Yeni Firma"}</span>
       </div>
-      <button onClick={()=>u("aktif",!form.aktif)} title={form.aktif?"Aktif — pasif yapmak için tıkla":"Pasif — aktif yapmak için tıkla"} style={{padding:"4px 12px",borderRadius:"6px",border:`1px solid ${form.aktif?T.ok:T.err}`,background:form.aktif?"#f6ffed":"#fff1f0",color:form.aktif?T.ok:T.err,cursor:"pointer",fontWeight:600,fontSize:"12px",transition:"all .2s"}}>{form.aktif?"✓ Aktif":"✕ Pasif"}</button>
+      <div style={{marginRight:"20px"}}><AktifPasifToggle aktif={form.aktif!==false} onChange={v=>u("aktif",v)}/></div>
       <button onClick={save} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={32}/></button>
     </div>
 
@@ -1760,8 +1796,8 @@ const MalzemeKarti=({malzeme,initData,isNew,onSave,onDel,onBack,firmalar,altKate
         <span style={{fontSize:"20px",fontWeight:600,color:"#8799a3",letterSpacing:"0.3px"}}>{form.malzemeKodu?`${form.malzemeKodu} - `:""}{form.ad||"Yeni Malzeme"}</span>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
+        <div style={{marginRight:"20px"}}><AktifPasifToggle aktif={form.durum!=="pasif"} onChange={v=>u("durum",v?"aktif":"pasif")}/></div>
         <button onClick={save} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={32}/></button>
-        {onDel&&!isNew&&<button onClick={()=>onDel(form.id)} title="Malzemeyi Sil" style={{padding:"0",border:"none",background:"transparent",color:"#ff6b6b",cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={32}/></button>}
       </div>
     </div>
 
@@ -2039,7 +2075,7 @@ const AltKategoriYonetim=({altKategoriler,setAltKategoriler,onSave,onDel,altGrup
   const sorted=altKategoriler.slice().sort((a,b)=>a.kod.localeCompare(b.kod));
   const grpFiltered=selKat?(altGruplar||[]).filter(g=>g.grupKod===selKat.kod).sort((a,b)=>a.kod.localeCompare(b.kod)):[];
 
-  return <div style={{display:"grid",gridTemplateColumns:"550px 550px",gap:"16px",maxWidth:"1116px"}}>
+  return <div style={{display:"grid",gridTemplateColumns:"550px 550px",gap:"16px",maxWidth:"1116px",minHeight:"calc(100vh - 180px)"}}>
     {/* SOL: GRUPLAR */}
     <div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#384248"}}>
@@ -2053,7 +2089,7 @@ const AltKategoriYonetim=({altKategoriler,setAltKategoriler,onSave,onDel,altGrup
         <input style={{...iS,fontSize:"15px"}} value={yeniKod} onChange={e=>setYeniKod(e.target.value.replace(/\D/g,"").slice(0,3))} placeholder="Kod" maxLength={3} onFocus={foc} onBlur={blr}/>
         <input style={{...iS,fontSize:"15px"}} value={yeniAd} onChange={e=>setYeniAd(e.target.value)} placeholder="Grup adı..." onKeyDown={e=>e.key==="Enter"&&ekle()} onFocus={foc} onBlur={blr}/>
       </div>
-      <div style={{maxHeight:"500px",overflow:"auto"}}>
+      <div style={{maxHeight:"calc(100vh - 200px)",overflow:"auto"}}>
         {sorted.map((a,idx)=><div key={a.id}>
           {editId===a.id
             ?<div style={{display:"grid",gridTemplateColumns:"80px 1fr auto",padding:"0 12px",gap:"8px",alignItems:"center",background:T.pBg,height:"36px"}}>
@@ -2169,7 +2205,7 @@ const AltGrupYonetim=({altKategoriler,altGruplar,setAltGruplar,onSave,onDel})=>{
         </div>
       </div>
       {allAltKat.length===0?<div style={{padding:"40px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>Önce "Grup Yönetimi" sekmesinden grup ekleyin</div>:
-      <div style={{maxHeight:"500px",overflow:"auto"}}>{allAltKat.map(a=>{
+      <div style={{maxHeight:"calc(100vh - 200px)",overflow:"auto"}}>{allAltKat.map(a=>{
         const sel=selAltKat?.id===a.id;
         const grpCount=altGruplar.filter(g=>g.grupKod===a.kod).length;
         return <div key={a.id} onClick={()=>{setSelAltKat(a);setYeniKod("");setYeniAd("");duzenlemeIptal();}} style={{display:"flex",alignItems:"center",gap:"8px",padding:"10px 14px",cursor:"pointer",borderBottom:`1px solid ${T.border}`,background:sel?"#384248":"#fff",borderLeft:sel?"3px solid #8799a3":"3px solid transparent"}}>
@@ -3311,7 +3347,7 @@ const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklif
 };
 
 /* ========== MALZEMELER SAYFASI (ÜST SEKMELER İLE) ========== */
-const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firmalar,altKategoriler,setAltKategoriler,altGruplar,setAltGruplar,teklifler,setTeklifler,onSaveKat,onDelKat,onSaveAltGrp,onDelAltGrp,onSaveTeklif,onDelTeklif,projeler=[]})=>{
+const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firmalar,altKategoriler,setAltKategoriler,altGruplar,setAltGruplar,teklifler,setTeklifler,onSaveKat,onDelKat,onSaveAltGrp,onDelAltGrp,onSaveTeklif,onDelTeklif,projeler=[],setEditMode})=>{
   const[mainTab,setMainTab]=useState("liste");
   const[search,setSearch]=useState("");
   const[fKat,setFKat]=useState("all");
@@ -3321,11 +3357,13 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
   const[initData,setInitData]=useState(null);
   const[hesapDetay,setHesapDetay]=useState(null);
 
+  const[fDurum,setFDurum]=useState("aktif");
   const filtered=malzemeler.filter(m=>{
     const q=search.toLowerCase();
     const ms=m.ad.toLowerCase().includes(q)||m.malzemeKodu.toLowerCase().includes(q)||(m.grupAd||"").toLowerCase().includes(q)||(m.altGrupAd||"").toLowerCase().includes(q)||(m.marka||"").toLowerCase().includes(q);
     const mk=fKat==="all"||m.tip===fKat;
-    return ms&&mk;
+    const md=fDurum==="all"||(fDurum==="aktif"?m.durum!=="pasif":m.durum==="pasif");
+    return ms&&mk&&md;
   });
 
   // Tüm malzemelerden kullanılan birimleri topla + varsayılanları birleştir
@@ -3336,16 +3374,16 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
   },[malzemeler]);
 
   const handleSave=async(d)=>{if(onSaveMalzeme){d._isNew=(view!=="form-edit");await onSaveMalzeme(d);}else{if(view==="form-edit"){setMalzemeler(p=>p.map(m=>m.id===d.id?d:m));}else{setMalzemeler(p=>[...p,d]);}}};
-  const handleEdit=(m)=>{setActiveMlz(m);setView("form-edit");};
+  const handleEdit=(m)=>{setActiveMlz(m);setView("form-edit");setEditMode?.(true);};
   const handleDel=async(id)=>{if(onDelMalzeme){await onDelMalzeme(id);}else{if(confirm("Bu malzemeyi silmek istediğinize emin misiniz?")){setMalzemeler(p=>p.filter(m=>m.id!==id));}}};
-  const handleKodComplete=(data)=>{setInitData(data);setShowKod(false);setView("form-new");};
+  const handleKodComplete=(data)=>{setInitData(data);setShowKod(false);setView("form-new");setEditMode?.(true);};
 
   if(view==="form-new"){
-    return <MalzemeKarti malzeme={null} initData={initData} isNew={true} onSave={async(d)=>{await handleSave(d);setInitData(null);}} onBack={()=>{setView("list");setInitData(null);}} firmalar={firmalar} altKategoriler={altKategoriler} altGruplar={altGruplar} teklifler={teklifler} tumBirimler={tumBirimler}/>;
+    return <MalzemeKarti malzeme={null} initData={initData} isNew={true} onSave={async(d)=>{await handleSave(d);setInitData(null);setEditMode?.(false);}} onBack={()=>{setView("list");setInitData(null);setEditMode?.(false);}} firmalar={firmalar} altKategoriler={altKategoriler} altGruplar={altGruplar} teklifler={teklifler} tumBirimler={tumBirimler}/>;
   }
   if(view==="form-edit"&&activeMlz){
     const live=malzemeler.find(m=>m.id===activeMlz.id)||activeMlz;
-    return <MalzemeKarti malzeme={live} initData={null} isNew={false} onSave={async(d)=>{await handleSave(d);}} onDel={(id)=>{handleDel(id);setView("list");setActiveMlz(null);}} onBack={()=>{setView("list");setActiveMlz(null);}} firmalar={firmalar} altKategoriler={altKategoriler} altGruplar={altGruplar} teklifler={teklifler} tumBirimler={tumBirimler}/>;
+    return <MalzemeKarti malzeme={live} initData={null} isNew={false} onSave={async(d)=>{await handleSave(d);}} onDel={(id)=>{handleDel(id);setView("list");setActiveMlz(null);setEditMode?.(false);}} onBack={()=>{setView("list");setActiveMlz(null);setEditMode?.(false);}} firmalar={firmalar} altKategoriler={altKategoriler} altGruplar={altGruplar} teklifler={teklifler} tumBirimler={tumBirimler}/>;
   }
 
   const mainTabs=[
@@ -3372,6 +3410,9 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
         <button onClick={()=>setFKat("all")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fKat==="all"?"#384248":T.bDark}`,background:fKat==="all"?"#384248":"#fff",color:fKat==="all"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Tümü</button>
         {MLZ_TIPLER.map(k=><button key={k.id} onClick={()=>setFKat(fKat===k.id?"all":k.id)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fKat===k.id?"#384248":T.bDark}`,background:fKat===k.id?"#384248":"#fff",color:fKat===k.id?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>{k.label}</button>)}
       </div>
+      <div style={{display:"flex",gap:"6px"}}>
+        {[{k:"aktif",l:"Aktif"},{k:"pasif",l:"Pasif"},{k:"all",l:"Tümü"}].map(d=><button key={d.k} onClick={()=>setFDurum(d.k)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fDurum===d.k?(d.k==="aktif"?T.ok:d.k==="pasif"?T.err:"#384248"):T.bDark}`,background:fDurum===d.k?(d.k==="aktif"?"#f6ffed":d.k==="pasif"?"#fff1f0":"#384248"):"#fff",color:fDurum===d.k?(d.k==="aktif"?T.ok:d.k==="pasif"?T.err:"#fff"):T.t2,fontSize:"14px",cursor:"pointer",fontWeight:fDurum===d.k?600:400}}>{d.l}</button>)}
+      </div>
     </div>
 
     {/* PORTAL */}
@@ -3395,23 +3436,25 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
       {filtered.length===0
         ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{search||fKat!=="all"?"Sonuç bulunamadı":"Henüz malzeme eklenmemiş."}</div>
         :<>
-          <div style={{display:"grid",gridTemplateColumns:"150px 1fr 120px 120px 80px 100px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"19px"}}>
-            {["Kod","Malzeme Adı","Tip","Grup","Birim","En Uygun Fiyat"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
+          <div style={{display:"grid",gridTemplateColumns:"150px 1fr 120px 120px 80px 100px 70px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"19px"}}>
+            {["Kod","Malzeme Adı","Tip","Grup","Birim","En Uygun Fiyat","Durum"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
           </div>
           {filtered.map((m,idx)=>{
             const tipO=MLZ_TIPLER.find(t=>t.id===m.tip);
+            const isPasif=m.durum==="pasif";
             const mlzTek=[];teklifler.forEach(t=>{if(t.durum==="aktif")t.kalemler.forEach(k=>{if(k.malzemeId===m.id)mlzTek.push({...k,paraBirimi:t.paraBirimi});});});
             const enUygun=mlzTek.length>0?mlzTek.reduce((min,k)=>k.netFiyat<min.netFiyat?k:min,mlzTek[0]):null;
             const enUygunPara=enUygun?PARA_BIRIMLERI.find(p=>p.id===enUygun.paraBirimi):null;
-            return <div key={m.id} onClick={()=>handleEdit(m)} style={{display:"grid",gridTemplateColumns:"150px 1fr 120px 120px 80px 100px",padding:"8px 12px",gap:"19px",alignItems:"center",borderBottom:idx<filtered.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
+            return <div key={m.id} onClick={()=>handleEdit(m)} style={{display:"grid",gridTemplateColumns:"150px 1fr 120px 120px 80px 100px 70px",padding:"8px 12px",gap:"19px",alignItems:"center",borderBottom:idx<filtered.length-1?`1px solid ${T.border}`:"none",background:isPasif?"#fafafa":(idx%2===0?"#fff":"#fafafa"),cursor:"pointer",height:"44px",opacity:isPasif?0.45:1}}
               onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
-              onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
+              onMouseLeave={e=>e.currentTarget.style.background=isPasif?"#fafafa":(idx%2===0?"#fff":"#fafafa")}>
               <div style={{fontSize:"15px",color:T.t3,fontWeight:500}}>{m.malzemeKodu||"—"}</div>
               <div style={{fontSize:"15px",fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textTransform:"uppercase"}}>{m.ad}{m.marka?` (${m.marka})`:""}</div>
               <div style={{fontSize:"15px",color:T.t2,textTransform:"uppercase"}}>{tipO?tipO.label:"—"}</div>
               <div style={{fontSize:"15px",color:T.t2,textTransform:"uppercase"}}>{m.grupAd||"—"}</div>
               <div style={{fontSize:"15px",color:T.t2,textTransform:"uppercase"}}>{m.birim||"—"}</div>
               <div style={{fontSize:"15px",fontWeight:600,color:enUygun?"#389e0d":T.t3}}>{enUygun?`${enUygunPara?.symbol||""}${enUygun.netFiyat.toLocaleString("tr-TR",{minimumFractionDigits:2})}`:"—"}</div>
+              <div style={{fontSize:"12px",fontWeight:600,color:isPasif?T.err:T.ok}}>{isPasif?"Pasif":"Aktif"}</div>
             </div>;
           })}
         </>
@@ -3459,7 +3502,7 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
 };
 
 /* ========== FİRMALAR SAYFASI (YENİDEN DÜZENLEME) ========== */
-const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,onClearInitial,projeler=[],setPage})=>{
+const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,onClearInitial,projeler=[],setPage,setEditMode})=>{
   const[search,setSearch]=useState("");
   const[fTur,setFTur]=useState("all");
   const[fDurum,setFDurum]=useState("aktif");
@@ -3472,7 +3515,7 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
   useEffect(()=>{
     if(initialFirmaId){
       const f=firmalar.find(x=>x.id===initialFirmaId);
-      if(f){setActiveFirma(f);setView("form-edit");}
+      if(f){setActiveFirma(f);setView("form-edit");setEditMode?.(true);}
       if(onClearInitial)onClearInitial();
     }
   },[initialFirmaId]);
@@ -3485,9 +3528,9 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
     else{if(view==="form-edit"){setFirmalar(p=>p.map(f=>f.id===d.id?d:f));}else{setFirmalar(p=>[...p,d]);}}
   };
 
-  const handleEdit=(f)=>{setActiveFirma(f);setView("form-edit");};
+  const handleEdit=(f)=>{setActiveFirma(f);setView("form-edit");setEditMode?.(true);};
 
-  const handleKodComplete=(data)=>{setInitData(data);setShowKod(false);setView("form-new");};
+  const handleKodComplete=(data)=>{setInitData(data);setShowKod(false);setView("form-new");setEditMode?.(true);};
 
   const onAddNote_local=(fid,txt)=>{const n={id:Date.now(),tarih:new Date().toISOString().split("T")[0],yazar:"Admin",metin:txt};setFirmalar(p=>p.map(f=>f.id===fid?{...f,notlar:[...f.notlar,n]}:f));};
 
@@ -3497,8 +3540,8 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
       firma={null}
       initData={initData}
       isNew={true}
-      onSave={(d)=>{handleSave(d);setView("list");setInitData(null);}}
-      onBack={()=>{setView("list");setInitData(null);}}
+      onSave={(d)=>{handleSave(d);setView("list");setInitData(null);setEditMode?.(false);}}
+      onBack={()=>{setView("list");setInitData(null);setEditMode?.(false);}}
       onAddNote={null}
       firmalar={firmalar}
       projeler={projeler}
@@ -3513,7 +3556,7 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
       initData={{firmaKodu:liveFirma.firmaKodu,turler:liveFirma.turler,paraBirimi:liveFirma.paraBirimi}}
       isNew={false}
       onSave={(d)=>{handleSave(d);}}
-      onBack={()=>{setView("list");setActiveFirma(null);}}
+      onBack={()=>{setView("list");setActiveFirma(null);setEditMode?.(false);}}
       onAddNote={addNote||onAddNote_local}
       firmalar={firmalar}
       projeler={projeler}
@@ -3542,7 +3585,16 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
           <span style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>Firmalar</span>
           <span style={{fontSize:"13px",color:"#8799a3"}}>{filtered.length} firma</span>
         </div>
-        <button onClick={()=>setShowKod(true)} title="Yeni Firma" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
+        <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
+          <button onClick={()=>setShowKod(true)} title="Yeni Firma" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
+          <button onClick={()=>{
+            const rows=[["Kod","Firma Adı","Tür","Telefon","Kişi","Durum"]];
+            filtered.forEach(f=>{const turLabels=f.turler.map(t=>{const o=FIRMA_TURLERI.find(x=>x.id===t);return o?o.label:t;}).join(", ");rows.push([f.firmaKodu||"",f.ad||"",turLabels||"",f.telefon||"",f.kisiler[0]?`${f.kisiler[0].ad} ${f.kisiler[0].soyad}`:"",f.aktif===false?"Pasif":"Aktif"]);});
+            const csv=rows.map(r=>r.map(c=>`"${c}"`).join(";")).join("\n");
+            const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+            const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="firmalar.csv";a.click();
+          }} title="Excel'e Aktar" style={{padding:"0",border:"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center"}}><img src={excelIcon} alt="Excel" style={{width:"35px",height:"35px"}}/></button>
+        </div>
       </div>
       {filtered.length===0
         ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{search||fTur!=="all"?"Sonuç bulunamadı":"Henüz firma eklenmemiş."}</div>
@@ -3648,7 +3700,7 @@ const altGrpToLocal = (g) => ({
 /* --- Proje Mapping --- */
 const projeToLocal = (p) => ({
   id: p.id, projeKodu: p.proje_kodu||"", ad: p.ad||"", kisaAd: p.kisa_ad||"",
-  tur: p.tur||"", durum: p.durum||"",
+  tur: p.tur||"", durum: p.durum||"", aktif: p.aktif!==false,
   il: p.il||"", ilce: p.ilce||"", mahalle: p.mahalle||"", adres: p.adres||"",
   ada: p.ada||"", parsel: p.parsel||"",
   baslangicTarihi: p.baslangic_tarihi||"", tahminiTeslim: p.tahmini_teslim||"", fiiliTeslim: p.fiili_teslim||"",
@@ -3671,7 +3723,7 @@ const projeToLocal = (p) => ({
 });
 const projeToDb = (p) => ({
   proje_kodu: p.projeKodu||"", ad: p.ad||"", kisa_ad: p.kisaAd||"",
-  tur: p.tur||"", durum: p.durum||"",
+  tur: p.tur||"", durum: p.durum||"", aktif: p.aktif!==false,
   il: p.il||"", ilce: p.ilce||"", mahalle: p.mahalle||"", adres: p.adres||"",
   ada: p.ada||"", parsel: p.parsel||"",
   baslangic_tarihi: p.baslangicTarihi||"", tahmini_teslim: p.tahminiTeslim||"", fiili_teslim: p.fiiliTeslim||"",
@@ -4409,7 +4461,7 @@ const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[],anlasmaYontemi
 /* --- Proje Kartı (Form + Sekmeler) --- */
 const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,goToFirma})=>{
   const emptyProje={
-    id:null,projeKodu:"",ad:"",kisaAd:"",tur:"",durum:"",
+    id:null,projeKodu:"",ad:"",kisaAd:"",tur:"",durum:"",aktif:true,
     il:"",ilce:"",mahalle:"",adres:"",ada:"",parsel:"",
     baslangicTarihi:"",tahminiTeslim:"",fiiliTeslim:"",
     toplamM2:"",katSayisi:"",toplamBolum:"",
@@ -4523,8 +4575,8 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
         <span style={{fontSize:"20px",fontWeight:600,color:"#8799a3",letterSpacing:"0.3px"}}>{form.projeKodu?`${form.projeKodu} - `:""}{form.ad||"Yeni Proje"}</span>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
+        <div style={{marginRight:"20px"}}><AktifPasifToggle aktif={form.aktif!==false} onChange={v=>u("aktif",v)}/></div>
         <button onClick={save} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={32}/></button>
-        {onDel&&!isNew&&<button onClick={()=>{onDel(form.id);onBack();}} title="Projeyi Sil" style={{padding:"0",border:"none",background:"transparent",color:"#ff6b6b",cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={32}/></button>}
       </div>
     </div>
 
@@ -5079,6 +5131,13 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
               </div>
               <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
                 <button onClick={yeniBaglanti} title="Firma Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
+                <button onClick={()=>{
+                  const rows=[["Firma Adı","Rol","Notlar"]];
+                  baglantilar.forEach(b=>{const f=firmalar.find(x=>x.id===parseInt(b.firmaId));rows.push([f?.ad||b.firmaAd||"",b.rol||"",b.notlar||""]);});
+                  const csv=rows.map(r=>r.map(c=>`"${c}"`).join(";")).join("\n");
+                  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+                  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${form.ad||"proje"}_firmalar.csv`;a.click();
+                }} title="Excel'e Aktar" style={{padding:"0",border:"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center"}}><img src={excelIcon} alt="Excel" style={{width:"35px",height:"35px"}}/></button>
               </div>
             </div>
             {/* LİSTE */}
@@ -5962,7 +6021,7 @@ const DosyaKategoriYonetim=({dosyaKategorileri,setDosyaKategorileri})=>{
       <div style={{padding:"8px",borderBottom:`1px solid ${T.border}`}}>
         <input style={iS} value={yeniAnaKat} onChange={e=>setYeniAnaKat(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addAnaKat()} placeholder="Yeni kategori adı..." onFocus={foc} onBlur={blr}/>
       </div>
-      <div style={{overflow:"auto",maxHeight:"500px"}}>
+      <div style={{overflow:"auto",maxHeight:"calc(100vh - 200px)"}}>
         {kategoriler.map(k=><div key={k.id} onClick={()=>setSeciliKat(k.id)} style={{display:"flex",alignItems:"center",gap:"8px",padding:"10px 14px",cursor:"pointer",borderBottom:`1px solid ${T.border}`,background:seciliKat===k.id?"#384248":"#fff",borderLeft:seciliKat===k.id?"3px solid #8799a3":"3px solid transparent"}}>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:"14px",fontWeight:seciliKat===k.id?600:400,color:seciliKat===k.id?"#fff":T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{k.ad}</div>
@@ -6556,17 +6615,18 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
 };
 
 /* --- Projeler Liste Sayfası --- */
-const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategorileri,setDosyaKategorileri,setPage,goToFirma})=>{
+const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategorileri,setDosyaKategorileri,setPage,goToFirma,setEditMode})=>{
   const[secili,setSecili]=useState(null);
   const[ara,setAra]=useState("");
   const[durumFil,setDurumFil]=useState("hepsi");
   const[turFil,setTurFil]=useState("hepsi");
   const[mainTab,setMainTab]=useState("projeler");
+  const[aktifFil,setAktifFil]=useState("aktif");
 
-  if(secili==="yeni") return <ProjeKarti proje={null} isNew={true} onSave={async p=>{await onSave(p);setSecili(p.id);}} onBack={()=>setSecili(null)} firmalar={firmalar} setPage={setPage} goToFirma={goToFirma}/>;
+  if(secili==="yeni") return <ProjeKarti proje={null} isNew={true} onSave={async p=>{await onSave(p);setSecili(p.id);}} onBack={()=>{setSecili(null);setEditMode?.(false);}} firmalar={firmalar} setPage={setPage} goToFirma={goToFirma}/>;
   if(secili) {
     const p=projeler.find(x=>x.id===secili);
-    if(p) return <ProjeKarti proje={p} isNew={false} onSave={onSave} onDel={(id)=>{onDel(id);setSecili(null);}} onBack={()=>setSecili(null)} firmalar={firmalar} setPage={setPage} goToFirma={goToFirma}/>;
+    if(p) return <ProjeKarti proje={p} isNew={false} onSave={onSave} onDel={(id)=>{onDel(id);setSecili(null);setEditMode?.(false);}} onBack={()=>{setSecili(null);setEditMode?.(false);}} firmalar={firmalar} setPage={setPage} goToFirma={goToFirma}/>;
   }
 
   const mainTabs=[
@@ -6588,7 +6648,8 @@ const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategoriler
     const araOk=!ara||p.ad.toLowerCase().includes(ara.toLowerCase())||(p.projeKodu||"").toLowerCase().includes(ara.toLowerCase())||(p.il||"").toLowerCase().includes(ara.toLowerCase());
     const durumOk=durumFil==="hepsi"||(p.durum||"")===(durumFil);
     const turOk=turFil==="hepsi"||(p.tur||"")===(turFil);
-    return araOk&&durumOk&&turOk;
+    const aktifOk=aktifFil==="all"||(aktifFil==="aktif"?p.aktif!==false:p.aktif===false);
+    return araOk&&durumOk&&turOk&&aktifOk;
   });
 
   return <div>
@@ -6610,6 +6671,9 @@ const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategoriler
       <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
         {PROJE_TURLERI.map(t=><button key={t.id} onClick={()=>setTurFil(turFil===t.label?"hepsi":t.label)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${turFil===t.label?"#384248":T.bDark}`,background:turFil===t.label?"#384248":"#fff",color:turFil===t.label?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>{t.label}</button>)}
       </div>
+      <div style={{display:"flex",gap:"6px"}}>
+        {[{k:"aktif",l:"Aktif"},{k:"pasif",l:"Pasif"},{k:"all",l:"Tümü"}].map(d=><button key={d.k} onClick={()=>setAktifFil(d.k)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${aktifFil===d.k?(d.k==="aktif"?T.ok:d.k==="pasif"?T.err:"#384248"):T.bDark}`,background:aktifFil===d.k?(d.k==="aktif"?"#f6ffed":d.k==="pasif"?"#fff1f0":"#384248"):"#fff",color:aktifFil===d.k?(d.k==="aktif"?T.ok:d.k==="pasif"?T.err:"#fff"):T.t2,fontSize:"14px",cursor:"pointer",fontWeight:aktifFil===d.k?600:400}}>{d.l}</button>)}
+      </div>
     </div>
 
     {/* PROJE PORTAL */}
@@ -6621,7 +6685,14 @@ const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategoriler
           <span style={{fontSize:"13px",color:"#8799a3"}}>{fil.length} proje</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
-          <button onClick={()=>setSecili("yeni")} title="Yeni Proje" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
+          <button onClick={()=>{setSecili("yeni");setEditMode?.(true);}} title="Yeni Proje" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
+          <button onClick={()=>{
+            const rows=[["Kod","Proje Adı","Tür","Durum","Brüt m²","Net m²","Bölüm","Teslim","Kayıt"]];
+            fil.forEach(p=>{const topBolum=(p.bolumler||[]).length;const satilan=(p.bolumler||[]).filter(b=>b.durum==="satildi").length;const brutToplam=(p.bolumler||[]).reduce((s,b)=>s+parseFloat(b.brutM2||0),0);const netToplam=(p.bolumler||[]).reduce((s,b)=>s+parseFloat(b.netM2||0),0);rows.push([p.projeKodu||"",p.ad||"",p.tur||"",p.durum||"",brutToplam||"",netToplam||"",topBolum>0?`${topBolum} (${satilan})`:"",p.tahminiTeslim||"",p.aktif===false?"Pasif":"Aktif"]);});
+            const csv=rows.map(r=>r.map(c=>`"${c}"`).join(";")).join("\n");
+            const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+            const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="projeler.csv";a.click();
+          }} title="Excel'e Aktar" style={{padding:"0",border:"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center"}}><img src={excelIcon} alt="Excel" style={{width:"35px",height:"35px"}}/></button>
         </div>
       </div>
 
@@ -6631,20 +6702,21 @@ const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategoriler
           {projeler.length===0?"Henüz proje eklenmemiş.":"Sonuç bulunamadı."}
         </div>
         :<>
-          <div style={{display:"grid",gridTemplateColumns:"90px 1fr 100px 100px 90px 90px 80px 90px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
-            {["Kod","Proje Adı","Tür","Durum","Brüt m²","Net m²","Bölüm","Teslim"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
+          <div style={{display:"grid",gridTemplateColumns:"90px 1fr 100px 100px 90px 90px 80px 90px 70px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
+            {["Kod","Proje Adı","Tür","Durum","Brüt m²","Net m²","Bölüm","Teslim","Kayıt"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
           </div>
           {fil.map((p,idx)=>{
             const turObj=PROJE_TURLERI.find(t=>t.label===p.tur);
             const durumObj=PROJE_DURUMLARI.find(d=>d.label===p.durum);
+            const isPasif=p.aktif===false;
             const topBolum=(p.bolumler||[]).length;
             const satilan=(p.bolumler||[]).filter(b=>b.durum==="satildi").length;
             const brutToplam=(p.bolumler||[]).reduce((s,b)=>s+parseFloat(b.brutM2||0),0);
             const netToplam=(p.bolumler||[]).reduce((s,b)=>s+parseFloat(b.netM2||0),0);
-            return <div key={p.id} onClick={()=>setSecili(p.id)}
-              style={{display:"grid",gridTemplateColumns:"90px 1fr 100px 100px 90px 90px 80px 90px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<fil.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
+            return <div key={p.id} onClick={()=>{setSecili(p.id);setEditMode?.(true);}}
+              style={{display:"grid",gridTemplateColumns:"90px 1fr 100px 100px 90px 90px 80px 90px 70px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<fil.length-1?`1px solid ${T.border}`:"none",background:isPasif?"#fafafa":(idx%2===0?"#fff":"#fafafa"),cursor:"pointer",height:"44px",opacity:isPasif?0.45:1}}
               onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
-              onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
+              onMouseLeave={e=>e.currentTarget.style.background=isPasif?"#fafafa":(idx%2===0?"#fff":"#fafafa")}>
               <div style={{fontSize:"14px",color:T.t3,fontWeight:500}}>{p.projeKodu||"—"}</div>
               <div style={{fontSize:"14px",fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.ad}{p.il?` (${p.ilce?p.ilce+"/":""}${p.il})`:""}</div>
               <div style={{fontSize:"14px",color:T.t2}}>{turObj?turObj.label:(p.tur||"—")}</div>
@@ -6653,6 +6725,7 @@ const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategoriler
               <div style={{fontSize:"14px",color:T.text,fontWeight:600}}>{netToplam>0?netToplam.toLocaleString("tr-TR"):"—"}</div>
               <div style={{fontSize:"14px",color:T.t2}}>{topBolum>0?`${topBolum} (${satilan})` :"—"}</div>
               <div style={{fontSize:"13px",color:T.t3}}>{p.tahminiTeslim?fmtDate(p.tahminiTeslim):"—"}</div>
+              <div style={{fontSize:"12px",fontWeight:600,color:isPasif?T.err:T.ok}}>{isPasif?"Pasif":"Aktif"}</div>
             </div>;
           })}
         </>
@@ -6663,6 +6736,7 @@ const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategoriler
 
 export default function App(){
   const[page,setPage]=useState("dashboard");
+  const[editMode,setEditMode]=useState(false);
   const[goToId,setGoToId]=useState(null);
   const goToFirma=(firmaId)=>{setGoToId(firmaId);setPage("firmalar");};
   const[sbOpen,setSbOpen]=useState(true);
@@ -7056,7 +7130,7 @@ export default function App(){
   </div>;
 
   return <div style={{display:"flex",height:"100vh",width:"100vw",background:T.bg,fontFamily:T.f,overflow:"hidden"}}>
-    <Sidebar page={page} setPage={setPage} open={sbOpen}/>
+    <Sidebar page={page} setPage={(p)=>{setEditMode(false);setPage(p);}} open={sbOpen} editMode={editMode}/>
     <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <div style={{height:"56px",minHeight:"56px",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",background:"#fff",borderBottom:`1px solid ${T.border}`,boxShadow:T.sh}}>
         <button onClick={()=>setSbOpen(!sbOpen)} style={{background:"none",border:"none",color:T.t2,cursor:"pointer",padding:"6px",fontSize:"18px",borderRadius:"6px"}} onMouseEnter={e=>e.currentTarget.style.background="#f5f5f5"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>☰</button>
@@ -7067,10 +7141,11 @@ export default function App(){
       </div>
       <div style={{flex:1,overflow:"auto",padding:"24px"}}>
         {page==="dashboard"&&<DashPage firmalar={firmalar} malzemeler={malzemeler} teklifler={teklifler} setPage={setPage}/>}
-        {page==="firmalar"&&<FirmalarPage firmalar={firmalar} setFirmalar={setFirmalar} onSave={saveFirma} onDel={delFirma} addNote={addNote} initialFirmaId={goToId} onClearInitial={()=>setGoToId(null)} projeler={projeler} setPage={setPage}/>}
-        {page==="malzemeler"&&<MalzemelerPage malzemeler={malzemeler} setMalzemeler={setMalzemeler} onSaveMalzeme={saveMalzeme} onDelMalzeme={delMalzeme} firmalar={firmalar} altKategoriler={altKategoriler} setAltKategoriler={setAltKategoriler} altGruplar={altGruplar} setAltGruplar={setAltGruplar} teklifler={teklifler} setTeklifler={setTeklifler} onSaveKat={saveKat} onDelKat={delKat} onSaveAltGrp={saveAltGrp} onDelAltGrp={delAltGrp} onSaveTeklif={saveTeklif} onDelTeklif={delTeklif} projeler={projeler}/>}
-        {page==="projeler"&&<ProjelerPage projeler={projeler} setProjeler={setProjeler} onSave={saveProje} onDel={delProje} firmalar={firmalar} dosyaKategorileri={dosyaKategorileri} setDosyaKategorileri={setDosyaKategorileri} setPage={setPage} goToFirma={goToFirma}/>}
+        {page==="firmalar"&&<FirmalarPage firmalar={firmalar} setFirmalar={setFirmalar} onSave={saveFirma} onDel={delFirma} addNote={addNote} initialFirmaId={goToId} onClearInitial={()=>setGoToId(null)} projeler={projeler} setPage={setPage} setEditMode={setEditMode}/>}
+        {page==="malzemeler"&&<MalzemelerPage malzemeler={malzemeler} setMalzemeler={setMalzemeler} onSaveMalzeme={saveMalzeme} onDelMalzeme={delMalzeme} firmalar={firmalar} altKategoriler={altKategoriler} setAltKategoriler={setAltKategoriler} altGruplar={altGruplar} setAltGruplar={setAltGruplar} teklifler={teklifler} setTeklifler={setTeklifler} onSaveKat={saveKat} onDelKat={delKat} onSaveAltGrp={saveAltGrp} onDelAltGrp={delAltGrp} onSaveTeklif={saveTeklif} onDelTeklif={delTeklif} projeler={projeler} setEditMode={setEditMode}/>}
+        {page==="projeler"&&<ProjelerPage projeler={projeler} setProjeler={setProjeler} onSave={saveProje} onDel={delProje} firmalar={firmalar} dosyaKategorileri={dosyaKategorileri} setDosyaKategorileri={setDosyaKategorileri} setPage={setPage} goToFirma={goToFirma} setEditMode={setEditMode}/>}
         {page==="teklifler"&&<AlinanTekliflerYonetim teklifler={teklifler} setTeklifler={setTeklifler} onSave={saveTeklif} onDel={delTeklif} malzemeler={malzemeler} firmalar={firmalar} projeler={projeler} onSpOlustur={spOlusturTeklifden}/>}
+        {page==="teklif_verme"&&<div style={{padding:"80px",textAlign:"center",color:T.t3,fontSize:"16px",border:`1px dashed ${T.border}`,borderRadius:T.rl}}><div style={{fontSize:"32px",marginBottom:"12px"}}>📋</div>Teklif Verme modülü hazırlanıyor...</div>}
         {page==="satinalma"&&<SatinalmaSiparisleriPage siparisler={siparisler} setSiparisler={setSiparisler} onSave={saveSiparis} onDel={delSiparis} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler}/>}
         {page==="alis_fatura"&&<AlisFaturalariPage faturalar={faturalar} setFaturalar={setFaturalar} onSave={saveFatura} onDel={delFatura} siparisler={siparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler}/>}
         {page==="maliyet"&&<MaliyetPage projeler={projeler} setProjeler={setProjeler} malzemeler={malzemeler} faturalar={faturalar} siparisler={siparisler}/>}
