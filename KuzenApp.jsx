@@ -780,7 +780,7 @@ const Sidebar=({page,setPage,open})=>{
       cursor:"pointer",
       background:act?SB.active:SB.btn,
       color:act?"#000":"#fff",
-      fontFamily:SB.font,fontSize:"16px",fontWeight:400,
+      fontFamily:SB.font,fontSize:"14px",fontWeight:400,
       textTransform:isSub?"none":"uppercase",
       textAlign:"left",whiteSpace:"nowrap",
       transition:"all .15s",letterSpacing:isSub?"0":"0.3px",
@@ -807,7 +807,7 @@ const Sidebar=({page,setPage,open})=>{
               padding:"10px 16px",marginBottom:"4px",border:"none",borderRadius:"6px",
               cursor:"pointer",background:childActive?SB.active:SB.btn,
               color:childActive?"#000":"#fff",
-              fontFamily:SB.font,fontSize:"16px",fontWeight:400,
+              fontFamily:SB.font,fontSize:"14px",fontWeight:400,
               textTransform:"uppercase",textAlign:"left",whiteSpace:"nowrap",
               transition:"all .15s",letterSpacing:"0.3px",
             }}
