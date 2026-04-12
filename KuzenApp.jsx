@@ -2276,6 +2276,86 @@ const addIsGunu=(startDateStr,gun)=>{
   return d.toISOString().split("T")[0];
 };
 
+/* ---- FİRMA PICKER MODAL (teklif/sipariş/fatura için) ---- */
+const FirmaSeciciModal=({firmalar,turFiltre=[],onSelect,onClose,baslik="FİRMA SEÇ"})=>{
+  const[src,setSrc]=useState("");
+  const filtered=firmalar.filter(f=>{
+    if(turFiltre.length>0&&!turFiltre.some(t=>f.turler.includes(t)))return false;
+    if(!src)return true;
+    const q=src.toLowerCase();
+    return f.ad.toLowerCase().includes(q)||(f.firmaKodu||"").toLowerCase().includes(q)||(f.kisiler||[]).some(k=>`${k.ad} ${k.soyad}`.toLowerCase().includes(q));
+  });
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+    <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"750px",maxHeight:"80vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      <div style={{padding:"12px 20px",background:"#384248",display:"flex",alignItems:"center",gap:"16px",borderRadius:`${T.rl} ${T.rl} 0 0`}}>
+        <button onClick={onClose} style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={24}/></button>
+        <span style={{fontSize:"15px",fontWeight:600,color:"#8799a3",flex:1,textAlign:"center"}}>{baslik}</span>
+      </div>
+      <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`}}>
+        <input style={{width:"100%",height:"40px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"15px",outline:"none",boxSizing:"border-box"}} value={src} onChange={e=>setSrc(e.target.value)} placeholder="Firma adı, kodu veya kişi ara..." autoFocus onFocus={foc} onBlur={blr}/>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"100px 1fr 100px 150px",gap:"8px",padding:"8px 16px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
+        {["Kod","Firma Adı","Tür","Kişi"].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>{h}</div>)}
+      </div>
+      <div style={{flex:1,overflow:"auto"}}>
+        {filtered.length===0?<div style={{padding:"40px",textAlign:"center",color:T.t3}}>Sonuç bulunamadı</div>:
+        filtered.map(f=>{
+          const turLabels=f.turler.map(t=>{const o=FIRMA_TURLERI.find(x=>x.id===t);return o?o.label:t;}).join(", ");
+          const ilkKisi=f.kisiler?.[0];
+          return <div key={f.id} onClick={()=>{onSelect(f);onClose();}} style={{display:"grid",gridTemplateColumns:"100px 1fr 100px 150px",gap:"8px",padding:"10px 16px",borderBottom:`1px solid ${T.border}`,cursor:"pointer",alignItems:"center"}}
+            onMouseEnter={e=>e.currentTarget.style.background=T.pBg} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+            <div style={{fontSize:"12px",color:T.t3,fontFamily:"monospace"}}>{f.firmaKodu}</div>
+            <div style={{fontSize:"14px",fontWeight:600,color:T.text}}>{f.ad}</div>
+            <div style={{fontSize:"12px",color:T.t2}}>{turLabels}</div>
+            <div style={{fontSize:"12px",color:T.t2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ilkKisi?`${ilkKisi.ad} ${ilkKisi.soyad}`.trim():"—"}</div>
+          </div>;
+        })}
+      </div>
+    </div>
+  </div>;
+};
+
+/* ---- MALZEME SEÇİCİ MODAL (kalem için) ---- */
+const MalzemeSeciciModal=({malzemeler,onSelect,onClose})=>{
+  const[src,setSrc]=useState("");
+  const[fTip,setFTip]=useState("all");
+  const filtered=malzemeler.filter(m=>{
+    const q=src.toLowerCase();
+    const ms=m.ad.toLowerCase().includes(q)||(m.malzemeKodu||"").toLowerCase().includes(q)||(m.grupAd||"").toLowerCase().includes(q);
+    const mt=fTip==="all"||m.tip===fTip;
+    return ms&&mt;
+  });
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+    <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"800px",maxHeight:"80vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      <div style={{padding:"12px 20px",background:"#384248",display:"flex",alignItems:"center",gap:"16px",borderRadius:`${T.rl} ${T.rl} 0 0`}}>
+        <button onClick={onClose} style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={24}/></button>
+        <span style={{fontSize:"15px",fontWeight:600,color:"#8799a3",flex:1,textAlign:"center"}}>MALZEME / HİZMET SEÇ</span>
+      </div>
+      <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}}>
+        <input style={{flex:1,minWidth:"200px",height:"40px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"15px",outline:"none",boxSizing:"border-box"}} value={src} onChange={e=>setSrc(e.target.value)} placeholder="Kod, ad veya grup ara..." autoFocus onFocus={foc} onBlur={blr}/>
+        {MLZ_TIPLER.map(k=><button key={k.id} onClick={()=>setFTip(fTip===k.id?"all":k.id)} style={{padding:"6px 12px",borderRadius:"4px",border:`1px solid ${fTip===k.id?k.color:T.border}`,background:fTip===k.id?k.bg:"#fff",color:fTip===k.id?k.color:T.t2,fontSize:"12px",fontWeight:500,cursor:"pointer"}}>{k.icon} {k.label}</button>)}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"130px 1fr 80px 120px 60px",gap:"8px",padding:"8px 16px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
+        {["Kod","Malzeme Adı","Tip","Grup","Birim"].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>{h}</div>)}
+      </div>
+      <div style={{flex:1,overflow:"auto"}}>
+        {filtered.length===0?<div style={{padding:"40px",textAlign:"center",color:T.t3}}>Sonuç bulunamadı</div>:
+        filtered.map(m=>{
+          const tip=MLZ_TIPLER.find(t=>t.id===m.tip);
+          return <div key={m.id} onClick={()=>{onSelect(m);onClose();}} style={{display:"grid",gridTemplateColumns:"130px 1fr 80px 120px 60px",gap:"8px",padding:"10px 16px",borderBottom:`1px solid ${T.border}`,cursor:"pointer",alignItems:"center"}}
+            onMouseEnter={e=>e.currentTarget.style.background=T.pBg} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+            <div style={{fontSize:"12px",color:T.t3,fontFamily:"monospace"}}>{m.malzemeKodu}</div>
+            <div style={{fontSize:"14px",fontWeight:500,color:T.text}}>{m.ad}</div>
+            <div style={{fontSize:"12px",color:T.t2}}>{tip?tip.label:"—"}</div>
+            <div style={{fontSize:"12px",color:T.t2}}>{m.grupAd||"—"}</div>
+            <div style={{fontSize:"12px",color:T.t2}}>{m.birim}</div>
+          </div>;
+        })}
+      </div>
+    </div>
+  </div>;
+};
+
 const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,firmalar,projeler=[],onSpOlustur})=>{
   const[view,setView]=useState("list");
   const[search,setSearch]=useState("");
@@ -2292,6 +2372,8 @@ const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,fi
 
   const initForm={id:null,teklifNo:nextNo,firmaId:"",firmaAd:"",yetkiliKisiId:"",yetkiliKisiAd:"",teklifTarihi:new Date().toISOString().split("T")[0],gecerlilikGun:"",gecerlilikTarihi:"",paraBirimi:"TL",odemeSekli:"",aciklama:"",durum:"beklemede",projeId:"",projeAd:"",teslimatSahip:"biz",teslimatAdresId:"",teslimatAdresSerbest:"",odemeSekilleri:[...ODEME_SEKILLERI_DEFAULT],kalemler:[]};
   const[form,setForm]=useState({...initForm});
+  const[firmaPickerOpen,setFirmaPickerOpen]=useState(false);
+  const[mlzPickerKalemId,setMlzPickerKalemId]=useState(null);
   const[odemeEditMode,setOdemeEditMode]=useState(false);
   const[yeniOdemeInput,setYeniOdemeInput]=useState("");
   const uf=(f,v)=>setForm(p=>({...p,[f]:v}));
@@ -2400,31 +2482,28 @@ const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,fi
     // Teslimat adres bilgisi
     const seciliAdres=firmaAdresler.find(a=>String(a.id)===String(form.teslimatAdresId));
 
+    const headerFirmaAd=form.firmaId?firmalar.find(f=>f.id===parseInt(form.firmaId))?.ad||"":"";
+
     return <div>
-      {/* HEADER */}
-      <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"20px",flexWrap:"wrap"}}>
-        <button onClick={()=>{setView("list");setForm({...initForm,teklifNo:nextNo});}} style={{padding:"7px 14px",borderRadius:"6px",border:`1px solid ${T.bDark}`,background:"#fff",color:T.t2,cursor:"pointer",fontSize:"14px"}}>← Teklifler</button>
-        <h2 style={{fontSize:"18px",fontWeight:600,color:T.text,margin:0,flex:1}}>{form.id?"Teklif Düzenle":"Yeni Teklif"}</h2>
-        <span style={{fontFamily:"monospace",fontSize:"14px",color:T.primary,background:T.pBg,padding:"4px 12px",borderRadius:"6px",fontWeight:700}}>{form.teklifNo}</span>
-        <button onClick={save} style={{padding:"8px 24px",borderRadius:"6px",border:"none",background:T.primary,color:"#fff",cursor:"pointer",fontWeight:600,fontSize:"14px"}}>💾 Kaydet</button>
+      {/* HEADER — dark bar */}
+      <div style={{display:"flex",alignItems:"center",gap:"16px",marginBottom:"20px",padding:"12px 20px",background:"#384248",borderRadius:"8px"}}>
+        <button onClick={()=>{setView("list");setForm({...initForm,teklifNo:nextNo});}} title="Geri" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={32}/></button>
+        <div style={{flex:1,textAlign:"center"}}>
+          <span style={{fontSize:"20px",fontWeight:600,color:"#8799a3",letterSpacing:"0.3px"}}>{form.teklifNo}{headerFirmaAd?` - ${headerFirmaAd}`:form.id?"":" - Yeni Teklif"}</span>
+        </div>
+        <button onClick={save} title="Kaydet" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><Save size={32}/></button>
+        {form.id&&<button onClick={()=>sil(form.id)} title="Teklifi Sil" style={{padding:"0",border:"none",background:"transparent",color:"#ff6b6b",cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={32}/></button>}
       </div>
 
       {/* BÖLÜM 1: Temel Bilgiler */}
       <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,padding:"20px 24px",marginBottom:"12px"}}>
         <div style={{fontSize:"11px",fontWeight:700,color:T.t3,letterSpacing:"1px",marginBottom:"14px"}}>TEKLİF BİLGİLERİ</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"14px",marginBottom:"14px"}}>
-          {/* Teklif No */}
-          <div>
-            <label style={lS}>Teklif No</label>
-            <input style={{...iS,fontFamily:"monospace",fontWeight:700,color:T.primary,background:"#f0f5ff"}} value={form.teklifNo} onChange={e=>uf("teklifNo",e.target.value)} onFocus={foc} onBlur={blr}/>
-          </div>
-          {/* Firma */}
+        {firmaPickerOpen&&<FirmaSeciciModal firmalar={firmalar} turFiltre={["tedarikci","taseron"]} onSelect={f=>{uf("firmaId",String(f.id));uf("yetkiliKisiId","");uf("yetkiliKisiAd","");uf("teslimatAdresId","");}} onClose={()=>setFirmaPickerOpen(false)} baslik="TEDARİKÇİ / TAŞERON SEÇ"/>}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 0.7fr 0.7fr",gap:"14px",marginBottom:"14px"}}>
+          {/* Firma — Picker */}
           <div>
             <label style={lS}>Firma *</label>
-            <select style={iS} value={form.firmaId} onChange={e=>{uf("firmaId",e.target.value);uf("yetkiliKisiId","");uf("yetkiliKisiAd","");uf("teslimatAdresId","");}} onFocus={foc} onBlur={blr}>
-              <option value="">— Firma seçiniz —</option>
-              {tedOptions.map(f=><option key={f.id} value={f.id}>{f.ad}</option>)}
-            </select>
+            <button onClick={()=>setFirmaPickerOpen(true)} style={{width:"100%",height:"40px",padding:"0 14px",borderRadius:"6px",border:`1px solid ${T.bDark}`,background:"#fff",color:headerFirmaAd?T.text:T.t3,fontSize:"15px",textAlign:"left",cursor:"pointer",boxSizing:"border-box",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{headerFirmaAd||"— Firma seçiniz —"}</button>
           </div>
           {/* Yetkili Kişi */}
           <div>
@@ -2434,14 +2513,15 @@ const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,fi
               {firmakisiler.map(k=><option key={k.id} value={k.id}>{k.ad} {k.soyad}{k.unvan?` (${k.unvan})`:""}</option>)}
             </select>
           </div>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"14px",marginBottom:"14px"}}>
+          {/* Proje */}
           <div><label style={lS}>Proje (Opsiyonel)</label>
             <select style={iS} value={form.projeId} onChange={e=>uf("projeId",e.target.value)} onFocus={foc} onBlur={blr}>
               <option value="">— Proje seçiniz —</option>
               {projeler.map(p=><option key={p.id} value={p.id}>{p.projeKodu?`[${p.projeKodu}] `:""}{p.ad}</option>)}
             </select>
           </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"14px",marginBottom:"14px"}}>
           <div><label style={lS}>Para Birimi</label>
             <select style={iS} value={form.paraBirimi} onChange={e=>uf("paraBirimi",e.target.value)} onFocus={foc} onBlur={blr}>
               {PARA_BIRIMLERI.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}
@@ -2540,6 +2620,8 @@ const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,fi
         )}
       </div>
 
+      {/* Malzeme Picker Modal */}
+      {mlzPickerKalemId&&<MalzemeSeciciModal malzemeler={malzemeler} onSelect={m=>{kalemGuncelle(mlzPickerKalemId,"malzemeId",String(m.id));}} onClose={()=>setMlzPickerKalemId(null)}/>}
       {/* BÖLÜM 3: Kalemler */}
       <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,overflow:"hidden",marginBottom:"16px"}}>
         <div style={{padding:"12px 20px",borderBottom:`1px solid ${T.border}`,background:"#fafafa",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -2569,10 +2651,7 @@ const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,fi
               <div style={{fontWeight:600,color:T.t3,fontSize:"11px",textAlign:"center",paddingTop:"8px"}}>{idx+1}</div>
               <div style={{fontSize:"10px",color:T.t3,fontFamily:"monospace",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingTop:"8px"}} title={k.malzemeKodu}>{k.malzemeKodu||"—"}</div>
               <div>
-                <select style={{...iS,fontSize:"12px",padding:"5px 8px"}} value={k.malzemeId} onChange={e=>kalemGuncelle(k.id,"malzemeId",e.target.value)} onFocus={foc} onBlur={blr}>
-                  <option value="">— Malzeme —</option>
-                  {malzemeler.map(m=><option key={m.id} value={m.id}>{m.ad}</option>)}
-                </select>
+                <button onClick={()=>setMlzPickerKalemId(k.id)} style={{...iS,fontSize:"12px",padding:"5px 8px",textAlign:"left",cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:mlz?T.text:T.t3}}>{mlz?mlz.ad:"— Malzeme seç —"}</button>
               </div>
               <div><input style={{...iS,fontSize:"12px",padding:"5px 8px",textAlign:"right"}} type="number" min="0" value={k.miktar} onChange={e=>kalemGuncelle(k.id,"miktar",e.target.value)} onFocus={foc} onBlur={blr}/></div>
               <div><input style={{...iS,fontSize:"12px",padding:"5px 8px",background:"#f5f5f5"}} value={k.birim||mlz?.birim||""} onChange={e=>kalemGuncelle(k.id,"birim",e.target.value)} onFocus={foc} onBlur={blr}/></div>
