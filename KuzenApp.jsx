@@ -5268,10 +5268,8 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
     bloklar:k.bloklar||[],
     detaylar:k.detaylar||[],
     ilkPlanlananFiyat:k.ilkPlanlananFiyat||k.planlananBirimFiyat||"",
-    piyasaFiyat:k.piyasaFiyat||"",
     firmaFiyat:k.firmaFiyat||"",
     revizyonlar:k.revizyonlar||[],
-    piyasaSatirlari:k.piyasaSatirlari||[],
     firmaSatirlari:k.firmaSatirlari||[],
     planlananSatirlari:k.planlananSatirlari||[],
   });
@@ -5280,7 +5278,7 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
   const uf=(f,v)=>setFm(p=>({...p,[f]:v}));
   const[saved,setSaved]=useState(false);
   const[hatalar,setHatalar]=useState({});
-  const[fiyatSekme,setFiyatSekme]=useState("planlanan");
+  const[fiyatSekme,setFiyatSekme]=useState("firma");
   const[hesapModalAcik,setHesapModalAcik]=useState(false);
 
   // Malzeme referansı (erken tanımla — fiyat fonksiyonları kullanıyor)
@@ -5288,7 +5286,7 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
   const _hesaplamaVar=_mlzRef?.hesaplamaSablonu&&HESAPLAMA_SABLONLARI[_mlzRef.hesaplamaSablonu];
 
   // Fiyat satır yönetimi
-  const fiyatAlanMap={piyasa:"piyasaSatirlari",firma:"firmaSatirlari",planlanan:"planlananSatirlari"};
+  const fiyatAlanMap={firma:"firmaSatirlari",planlanan:"planlananSatirlari"};
   const addFiyatSatir=(sekme)=>{const alan=fiyatAlanMap[sekme];const varsayilanKdv=_mlzRef?.kdvOrani||"20";uf(alan,[...(fm[alan]||[]),{id:Date.now(),aciklama:"",miktar:"",birimFiyat:"",kdvOrani:varsayilanKdv}]);};
   const upFiyatSatir=(sekme,idx,field,val)=>{const alan=fiyatAlanMap[sekme];const arr=[...(fm[alan]||[])];arr[idx]={...arr[idx],[field]:val};uf(alan,arr);};
   const delFiyatSatir=(sekme,idx)=>{const alan=fiyatAlanMap[sekme];uf(alan,(fm[alan]||[]).filter((_,i)=>i!==idx));};
@@ -5366,7 +5364,7 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
 
         {/* 3 SEKMELİ FİYAT PORTALI — her zaman görünür */}
         {(()=>{
-          const sekmeler=[{id:"piyasa",label:"Piyasa Fiyatı",color:"#fa8c16"},{id:"firma",label:"Firma Fiyatı",color:"#1677ff"},{id:"planlanan",label:"Planlanan Fiyat",color:"#52c41a"}];
+          const sekmeler=[{id:"firma",label:"Firma Fiyatı",color:"#1677ff"},{id:"planlanan",label:"Planlanan Fiyat",color:"#52c41a"}];
           const aktifAlan=fiyatAlanMap[fiyatSekme];
           const satirlar=fm[aktifAlan]||[];
           const toplamlar=fiyatToplamHesapla(satirlar);
