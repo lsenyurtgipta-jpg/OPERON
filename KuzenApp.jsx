@@ -5680,6 +5680,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
   const[selProjeId,setSelProjeId]=useState(null);
   const[butceModal,setButceModal]=useState(null);
   const[filtre,setFiltre]=useState("hepsi");
+  const[kalemAra,setKalemAra]=useState("");
   const[pickerOpen,setPickerOpen]=useState(false);
   const[omurgaPickerOpen,setOmurgaPickerOpen]=useState(false);
   const[siralama,setSiralama]=useState({alan:"mlzKodu",yon:"asc"});
@@ -5707,6 +5708,8 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
   // Filtrelenmiş + sıralanmış kalem listesi
   const filtrelenmis=useMemo(()=>{
     const list=kalemListesi.filter(k=>{
+      // Arama filtresi
+      if(kalemAra){const q=kalemAra.toLowerCase();const ms=(k.mlzKodu||"").toLowerCase().includes(q)||(k.mlzAd||"").toLowerCase().includes(q)||(k.mlzGrupAd||"").toLowerCase().includes(q);if(!ms)return false;}
       if(filtre.startsWith("blok_")){const blokAd=filtre.replace("blok_","");return(k.bloklar||[]).includes(blokAd);}
       if(filtre==="ortak")return(k.bloklar||[]).length>1;
       if(filtre==="atanmamis")return(k.bloklar||[]).length===0;
@@ -5725,7 +5728,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
       return String(va).localeCompare(String(vb),"tr")*carp;
     });
     return list;
-  },[kalemListesi,filtre,siralama]);
+  },[kalemListesi,filtre,siralama,kalemAra]);
 
   // Gerçekleşen
   const gerceklesen=useMemo(()=>{
@@ -5956,6 +5959,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
 
         {/* FİLTRE + BUTONLAR */}
         <div style={{display:"flex",gap:"8px",marginBottom:"16px",alignItems:"center",flexWrap:"wrap"}}>
+          <input style={{...iS,maxWidth:"220px",fontSize:"14px"}} value={kalemAra} onChange={e=>setKalemAra(e.target.value)} placeholder="Kod, ad veya grup ara..." onFocus={foc} onBlur={blr}/>
           <button onClick={()=>setFiltre("hepsi")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="hepsi"?"#384248":T.border}`,background:filtre==="hepsi"?"#384248":"#fff",color:filtre==="hepsi"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Tümü ({kalemListesi.length})</button>
           {(selProje?.bloklar||[]).length>0&&<>
             {(selProje.bloklar||[]).map(bl=><button key={bl.id} onClick={()=>setFiltre(`blok_${bl.ad}`)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre===`blok_${bl.ad}`?"#1677ff":T.border}`,background:filtre===`blok_${bl.ad}`?"#1677ff":"#fff",color:filtre===`blok_${bl.ad}`?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>{bl.ad} Blok</button>)}
