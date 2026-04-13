@@ -5710,6 +5710,8 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
       if(filtre.startsWith("blok_")){const blokAd=filtre.replace("blok_","");return(k.bloklar||[]).includes(blokAd);}
       if(filtre==="ortak")return(k.bloklar||[]).length>1;
       if(filtre==="atanmamis")return(k.bloklar||[]).length===0;
+      if(filtre==="planli")return parseFloat(k.planlananToplam||0)>0;
+      if(filtre==="plansiz")return!parseFloat(k.planlananToplam||0);
       return true;
     });
     const{alan,yon}=siralama;
@@ -5960,6 +5962,9 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
             <button onClick={()=>setFiltre("ortak")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="ortak"?"#d48806":T.border}`,background:filtre==="ortak"?"#d48806":"#fff",color:filtre==="ortak"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Ortak</button>
           </>}
           <div style={{flex:1}}></div>
+          <button onClick={()=>setFiltre("planli")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="planli"?"#52c41a":T.border}`,background:filtre==="planli"?"#f6ffed":"#fff",color:filtre==="planli"?"#52c41a":T.t2,fontSize:"14px",cursor:"pointer"}}>Planlı</button>
+          <button onClick={()=>setFiltre("plansiz")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="plansiz"?"#ff4d4f":T.border}`,background:filtre==="plansiz"?"#fff1f0":"#fff",color:filtre==="plansiz"?"#ff4d4f":T.t2,fontSize:"14px",cursor:"pointer"}}>Plansız</button>
+          <button onClick={()=>setFiltre("hepsi")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="hepsi"?"#384248":T.border}`,background:filtre==="hepsi"?"#384248":"#fff",color:filtre==="hepsi"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Hepsi</button>
           <button onClick={omurgaOlustur} style={{height:"36px",padding:"0 16px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"14px",cursor:"pointer",display:"flex",alignItems:"center",gap:"6px"}}><Layers size={16}/> Omurga Oluştur</button>
         </div>
 
