@@ -2395,6 +2395,7 @@ const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,fi
   const[form,setForm]=useState({...initForm});
   const[firmaPickerOpen,setFirmaPickerOpen]=useState(false);
   const[mlzPickerKalemId,setMlzPickerKalemId]=useState(null);
+  const[saved,setSaved]=useState(false);
   const uf=(f,v)=>setForm(p=>({...p,[f]:v}));
 
   // Firma seçilince kişiler ve adresler
@@ -2455,7 +2456,10 @@ const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,fi
     if(onSave){onSave(teklif);}else{
       if(form.id){setTeklifler(p=>p.map(t=>t.id===form.id?teklif:t));}else{setTeklifler(p=>[...p,teklif]);}
     }
-    setForm({...initForm,teklifNo:nextNo});setView("list");
+    // Formda kal, sadece id/durum güncelle (ikinci kaydette update çalışsın)
+    setForm(p=>({...p,id:teklif.id,durum:teklif.durum}));
+    setSaved(true);
+    setTimeout(()=>setSaved(false),2000);
   };
 
   const edit=(t)=>{setForm({...t,firmaId:String(t.firmaId),projeId:t.projeId?String(t.projeId):"",kalemler:t.kalemler.map(k=>({...k,malzemeId:String(k.malzemeId)}))});setView("form");};
@@ -2505,7 +2509,7 @@ const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,fi
         <div style={{flex:1,textAlign:"center"}}>
           <span style={{fontSize:"20px",fontWeight:600,color:"#8799a3",letterSpacing:"0.3px"}}>{form.teklifNo}{headerFirmaAd?` - ${headerFirmaAd}`:form.id?"":" - Yeni Teklif"}</span>
         </div>
-        <button onClick={save} title="Kaydet" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><Save size={32}/></button>
+        <button onClick={save} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={32}/></button>
         {form.id&&<button onClick={()=>sil(form.id)} title="Teklifi Sil" style={{padding:"0",border:"none",background:"transparent",color:"#ff6b6b",cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={32}/></button>}
       </div>
 
