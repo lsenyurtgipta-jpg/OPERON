@@ -5734,6 +5734,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
   const[kalemAra,setKalemAra]=useState("");
   const[pickerOpen,setPickerOpen]=useState(false);
   const[omurgaPickerOpen,setOmurgaPickerOpen]=useState(false);
+  const[aktifSekme,setAktifSekme]=useState("dashboard");
   const[siralama,setSiralama]=useState({alan:"mlzKodu",yon:"asc"});
   const siraToggle=(alan)=>setSiralama(p=>p.alan===alan?{alan,yon:p.yon==="asc"?"desc":"asc"}:{alan,yon:"asc"});
   const selProje=projeler.find(p=>p.id===selProjeId);
@@ -5805,31 +5806,71 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
 
   // Özet
   const ozet=useMemo(()=>{
-    const planlananTop=butceKalemleri.reduce((s,k)=>s+parseFloat(k.planlananToplam||0),0);
-    const gerceklesenTop=gerceklesen.reduce((s,k)=>s+(parseFloat(k.netFiyat||0)*parseFloat(k.miktar||0)),0);
-    const taahhutTop=taahhut.reduce((s,k)=>s+(parseFloat(k.netFiyat||0)*parseFloat(k.miktar||0)),0);
+    // Kalem bazlı KDV hariç/dahil yardımcısı (Maliyet Kalemleri portalındaki mantıkla aynı)
+    const kalemKdvTutar=(k)=>{
+      const plan=k.planlananSatirlari||[];
+      let kdvHaric=0,kdv=0;
+      if(plan.length>0){
+        plan.forEach(s=>{
+          const m=parseFloat(s.miktar||0);
+          const bf=parseFloat(s.birimFiyat||0);
+          const kh=m*bf;
+          kdvHaric+=kh;
+          kdv+=kh*(parseInt(s.kdvOrani||0)/100);
+        });
+      }else{
+        kdvHaric=parseFloat(k.planlananToplam||0);
+        const mlz=malzemeler.find(m=>m.id===k.malzemeId);
+        kdv=kdvHaric*(parseInt(mlz?.kdvOrani||"20")/100);
+      }
+      return{kdvHaric,kdvDahil:kdvHaric+kdv};
+    };
+    // Sipariş/fatura kalemi için KDV hesabı
+    const hareketKdvTutar=(k)=>{
+      const tutarHaric=parseFloat(k.netFiyat||0)*parseFloat(k.miktar||0);
+      let kdvOran=parseInt(k.kdvOrani);
+      if(isNaN(kdvOran)){
+        const mlz=malzemeler.find(m=>m.id===k.malzemeId);
+        kdvOran=parseInt(mlz?.kdvOrani||"20");
+      }
+      return{kdvHaric:tutarHaric,kdvDahil:tutarHaric*(1+kdvOran/100)};
+    };
+
+    // Kalem bazlı önbellek
+    const kalemTutar={};
+    butceKalemleri.forEach(k=>{kalemTutar[k.id]=kalemKdvTutar(k);});
+
+    const planlananTop=butceKalemleri.reduce((s,k)=>s+kalemTutar[k.id].kdvHaric,0);
+    const planlananTopKdvDahil=butceKalemleri.reduce((s,k)=>s+kalemTutar[k.id].kdvDahil,0);
+    const gerceklesenTop=gerceklesen.reduce((s,k)=>s+hareketKdvTutar(k).kdvHaric,0);
+    const gerceklesenTopKdvDahil=gerceklesen.reduce((s,k)=>s+hareketKdvTutar(k).kdvDahil,0);
+    const taahhutTop=taahhut.reduce((s,k)=>s+hareketKdvTutar(k).kdvHaric,0);
+    const taahhutTopKdvDahil=taahhut.reduce((s,k)=>s+hareketKdvTutar(k).kdvDahil,0);
     const brutM2=selProje?(selProje.bolumler||[]).reduce((s,b)=>s+parseFloat(b.brutM2||0),0):0;
     const ortakM2=(selProje?.bloklar||[]).reduce((s,b)=>s+parseFloat(b.ortakAlanM2||0),0);
     const toplamM2=brutM2+ortakM2;
 
-    // Blok bazlı maliyet hesabı
+    // Blok bazlı maliyet hesabı (hem KDV hariç hem dahil)
     const blokMaliyet={};
-    (selProje?.bloklar||[]).forEach(bl=>{blokMaliyet[bl.ad]=0;});
-    let ortakToplam=0;
+    const blokMaliyetKdvDahil={};
+    (selProje?.bloklar||[]).forEach(bl=>{blokMaliyet[bl.ad]=0;blokMaliyetKdvDahil[bl.ad]=0;});
+    let ortakToplam=0,ortakToplamKdvDahil=0;
     // Hangi bloklara kalem girilmiş?
     const aktifBloklar=new Set();
     butceKalemleri.forEach(k=>{
-      const tutar=parseFloat(k.planlananToplam||0);
+      const tutar=kalemTutar[k.id].kdvHaric;
+      const tutarDahil=kalemTutar[k.id].kdvDahil;
       const bloklar=k.bloklar||[];
       if(bloklar.length===0){/* atanmamış */}
       else if(bloklar.length===1){
-        if(blokMaliyet[bloklar[0]]!==undefined)blokMaliyet[bloklar[0]]+=tutar;
+        if(blokMaliyet[bloklar[0]]!==undefined){blokMaliyet[bloklar[0]]+=tutar;blokMaliyetKdvDahil[bloklar[0]]+=tutarDahil;}
         aktifBloklar.add(bloklar[0]);
       }
       else{
         const topBlokM2=bloklar.reduce((s,b)=>s+(blokM2Harita[b]||0),0);
-        if(topBlokM2>0){bloklar.forEach(b=>{const oran=(blokM2Harita[b]||0)/topBlokM2;if(blokMaliyet[b]!==undefined)blokMaliyet[b]+=tutar*oran;aktifBloklar.add(b);});}
+        if(topBlokM2>0){bloklar.forEach(b=>{const oran=(blokM2Harita[b]||0)/topBlokM2;if(blokMaliyet[b]!==undefined){blokMaliyet[b]+=tutar*oran;blokMaliyetKdvDahil[b]+=tutarDahil*oran;}aktifBloklar.add(b);});}
         ortakToplam+=tutar;
+        ortakToplamKdvDahil+=tutarDahil;
       }
     });
 
@@ -5846,13 +5887,15 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
     const muteahhitOran=parseFloat(selProje?.muteahhitPay||0)/100;
     const muteahhitM2=muteahhitOran>0?brutM2Toplam*muteahhitOran:0;
     const m2Maliyet=brutM2Toplam>0?planlananTop/brutM2Toplam:0;
+    const m2MaliyetKdvDahil=brutM2Toplam>0?planlananTopKdvDahil/brutM2Toplam:0;
     const m2MaliyetNet=muteahhitM2>0?planlananTop/muteahhitM2:0;
+    const m2MaliyetNetKdvDahil=muteahhitM2>0?planlananTopKdvDahil/muteahhitM2:0;
 
     // Kategori dağılımı
     const kategoriDagilim={};
     const blokKategoriDagilim={};
     butceKalemleri.forEach(k=>{
-      const tutar=parseFloat(k.planlananToplam||0);
+      const tutar=kalemTutar[k.id].kdvHaric;
       const mlz=malzemeler.find(m=>m.id===k.malzemeId);
       const katAd=mlz?.grupAd||"Diğer";
       if(!kategoriDagilim[katAd])kategoriDagilim[katAd]={tutar:0};
@@ -5869,8 +5912,8 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
     Object.keys(kategoriDagilim).forEach(k=>{kategoriDagilim[k].yuzde=planlananTop>0?(kategoriDagilim[k].tutar/planlananTop*100):0;});
     Object.keys(blokKategoriDagilim).forEach(b=>{const blokTop=Object.values(blokKategoriDagilim[b]).reduce((s,v)=>s+v.tutar,0);Object.keys(blokKategoriDagilim[b]).forEach(k=>{blokKategoriDagilim[b][k].yuzde=blokTop>0?(blokKategoriDagilim[b][k].tutar/blokTop*100):0;});});
 
-    return{planlananTop,gerceklesenTop,taahhutTop,kalanButce:planlananTop-taahhutTop-gerceklesenTop,brutM2,ortakM2,toplamM2,m2Maliyet,m2MaliyetNet,muteahhitM2,muteahhitOran,blokMaliyet,ortakToplam,blokEfektifM2,kategoriDagilim,blokKategoriDagilim};
-  },[butceKalemleri,gerceklesen,taahhut,selProje,blokM2Harita]);
+    return{planlananTop,planlananTopKdvDahil,gerceklesenTop,gerceklesenTopKdvDahil,taahhutTop,taahhutTopKdvDahil,kalanButce:planlananTop-taahhutTop-gerceklesenTop,kalanButceKdvDahil:planlananTopKdvDahil-taahhutTopKdvDahil-gerceklesenTopKdvDahil,brutM2,ortakM2,toplamM2,m2Maliyet,m2MaliyetKdvDahil,m2MaliyetNet,m2MaliyetNetKdvDahil,muteahhitM2,muteahhitOran,blokMaliyet,blokMaliyetKdvDahil,ortakToplam,ortakToplamKdvDahil,blokEfektifM2,kategoriDagilim,blokKategoriDagilim};
+  },[butceKalemleri,gerceklesen,taahhut,selProje,blokM2Harita,malzemeler]);
 
   // Kaydet — immutable update
   const saveButceKalemi=(kalem)=>{
@@ -5935,79 +5978,137 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
         {omurgaPickerOpen&&<OmurgaPickerModal malzemeler={malzemeler} projeTuru={selProje.tur} mevcutIds={new Set((selProje.butceKalemleri||[]).map(k=>k.malzemeId))} onEkle={omurgaKalemEkle} onClose={()=>setOmurgaPickerOpen(false)}/>}
         {butceModal&&<ButceKalemModal kalem={butceModal} onSave={saveButceKalemi} onDel={delButceKalemi} onClose={()=>setButceModal(null)} malzemeler={malzemeler} projeBloklar={selProje?.bloklar||[]} projeBolumler={selProje?.bolumler||[]} ortakAlanM2={String((selProje?.bloklar||[]).reduce((s,b)=>s+parseFloat(b.ortakAlanM2||0),0))}/>}
 
-        {/* ÖZET KARTLAR */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr) 1.3fr",gap:"12px",marginBottom:"16px"}}>
-          {[
-            {label:"Planlanan Bütçe",value:ozet.planlananTop,color:"#384248"},
-            {label:"Taahhüt (Sipariş)",value:ozet.taahhutTop,color:"#fa8c16"},
-            {label:"Gerçekleşen",value:ozet.gerceklesenTop,color:"#1677ff"},
-            {label:"Kalan Bütçe",value:ozet.kalanButce,color:ozet.kalanButce>=0?"#52c41a":"#ff4d4f"},
-          ].map((c,i)=><div key={i} style={{padding:"16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff"}}>
-            <div style={{fontSize:"12px",color:T.t3,marginBottom:"6px",textTransform:"uppercase"}}>{c.label}</div>
-            <div style={{fontSize:"20px",fontWeight:700,color:c.color}}>{c.value?c.value.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺":"—"}</div>
-          </div>)}
-          {/* m² MALİYET KARTI */}
-          <div style={{padding:"16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff"}}>
-            <div style={{fontSize:"12px",color:T.t3,marginBottom:"6px",textTransform:"uppercase"}}>BRÜT m² MALİYET</div>
-            <div style={{fontSize:"20px",fontWeight:700,color:"#722ed1"}}>{ozet.m2Maliyet>0?ozet.m2Maliyet.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺/m²":"—"}</div>
-            <div style={{fontSize:"11px",color:T.t3,marginTop:"4px"}}>Brüt: {ozet.brutM2.toLocaleString("tr-TR",{minimumFractionDigits:2})} m²</div>
-            {ozet.muteahhitOran>0&&<>
-              <div style={{borderTop:`1px solid ${T.border}`,marginTop:"8px",paddingTop:"8px"}}>
-                <div style={{fontSize:"11px",color:T.t3,textTransform:"uppercase",marginBottom:"4px"}}>NET m² MALİYET (Arsa payı düşülmüş)</div>
-                <div style={{fontSize:"18px",fontWeight:700,color:"#ff4d4f"}}>{ozet.m2MaliyetNet>0?ozet.m2MaliyetNet.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺/m²":"—"}</div>
-                <div style={{fontSize:"11px",color:T.t3,marginTop:"2px"}}>Müteahhit: {ozet.muteahhitM2.toLocaleString("tr-TR",{minimumFractionDigits:2})} m² (%{(ozet.muteahhitOran*100).toFixed(0)})</div>
-              </div>
-            </>}
-          </div>
+        {/* SEKME BARI */}
+        <div style={{display:"flex",gap:"2px",marginBottom:"16px",borderBottom:`2px solid ${T.border}`}}>
+          {[{id:"dashboard",label:"Dashboard"},{id:"kategoriler",label:"Kategoriler"},{id:"kalemler",label:"Maliyet Kalemleri"}].map(s=><button key={s.id} onClick={()=>setAktifSekme(s.id)} style={{padding:"10px 20px",border:"none",background:aktifSekme===s.id?"#fff":"transparent",borderBottom:aktifSekme===s.id?`2px solid #1677ff`:"2px solid transparent",marginBottom:"-2px",fontSize:"14px",fontWeight:aktifSekme===s.id?600:400,color:aktifSekme===s.id?"#1677ff":T.t2,cursor:"pointer"}}>{s.label}</button>)}
         </div>
 
-        {/* BLOK BAZLI ÖZET */}
-        {(selProje?.bloklar||[]).length>0&&<div style={{display:"grid",gridTemplateColumns:`repeat(${(selProje.bloklar||[]).length+(ozet.ortakToplam>0?1:0)},1fr)`,gap:"12px",marginBottom:"16px"}}>
-          {(selProje.bloklar||[]).map(bl=>{
-            const blBrutM2=blokM2Harita[bl.ad]||0;
-            const blMaliyet=ozet.blokMaliyet[bl.ad]||0;
-            const blM2Maliyet=blBrutM2>0?blMaliyet/blBrutM2:0;
-            const blMutM2=ozet.muteahhitOran>0?blBrutM2*ozet.muteahhitOran:0;
-            const blM2MaliyetNet=blMutM2>0?blMaliyet/blMutM2:0;
-            return <div key={bl.id} style={{padding:"12px 16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff"}}>
-              <div style={{fontSize:"13px",color:T.t3,marginBottom:"6px",fontWeight:600}}>{bl.ad} BLOK</div>
-              <div style={{fontSize:"18px",fontWeight:700,color:"#1677ff",marginBottom:"6px"}}>{blMaliyet>0?blMaliyet.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺":"—"}</div>
-              <div style={{fontSize:"12px",color:T.t2}}>Brüt m²: <strong>{blBrutM2>0?blBrutM2.toLocaleString("tr-TR",{minimumFractionDigits:2}):0} m²</strong></div>
-              <div style={{fontSize:"12px",color:"#722ed1"}}>Brüt m² Maliyet: <strong>{blM2Maliyet>0?blM2Maliyet.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺/m²":"—"}</strong></div>
-              {ozet.muteahhitOran>0&&<div style={{fontSize:"12px",color:"#ff4d4f"}}>Net m² Maliyet: <strong>{blM2MaliyetNet>0?blM2MaliyetNet.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺/m²":"—"}</strong></div>}
-              {ozet.blokKategoriDagilim?.[bl.ad]&&<div style={{marginTop:"6px",borderTop:`1px solid ${T.border}`,paddingTop:"4px"}}>
-                {Object.entries(ozet.blokKategoriDagilim[bl.ad]).sort((a,b)=>b[1].tutar-a[1].tutar).slice(0,3).map(([kat,v])=><div key={kat} style={{display:"flex",justifyContent:"space-between",fontSize:"11px",color:T.t3,lineHeight:"1.6"}}>
-                  <span>{kat}</span><span style={{fontWeight:600,color:T.primary}}>{v.yuzde.toFixed(1)}%</span>
-                </div>)}
-              </div>}
-            </div>;
-          })}
-          {ozet.ortakToplam>0&&<div style={{padding:"12px 16px",borderRadius:"8px",border:`1px solid #ffe58f`,background:"#fffbe6"}}>
-            <div style={{fontSize:"12px",color:"#d48806",marginBottom:"4px",fontWeight:600}}>ORTAK GİDER</div>
-            <div style={{fontSize:"16px",fontWeight:700,color:"#d48806"}}>{ozet.ortakToplam.toLocaleString("tr-TR",{minimumFractionDigits:2})} ₺</div>
-            <div style={{fontSize:"11px",color:"#d48806",marginTop:"2px"}}>Bloklara m² oranında dağıtılmış</div>
-          </div>}
-        </div>}
-
-        {/* KATEGORİ DAĞILIMI */}
-        {Object.keys(ozet.kategoriDagilim||{}).length>0&&<div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden",marginBottom:"16px"}}>
-          <div style={{padding:"8px 16px",background:"#384248"}}><span style={{fontSize:"14px",fontWeight:600,color:"#fff"}}>Kategori Dağılımı</span></div>
-          <div style={{padding:"4px 0"}}>
-            {Object.entries(ozet.kategoriDagilim).sort((a,b)=>b[1].tutar-a[1].tutar).map(([kat,v],i)=><div key={kat} style={{display:"grid",gridTemplateColumns:"200px 120px 60px 1fr",gap:"12px",padding:"6px 16px",alignItems:"center",background:i%2===0?"#fff":"#fafafa"}}>
-              <div style={{fontSize:"13px",fontWeight:500,color:T.text}}>{kat}</div>
-              <div style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right"}}>{v.tutar.toLocaleString("tr-TR",{minimumFractionDigits:2})} ₺</div>
-              <div style={{fontSize:"13px",fontWeight:600,color:T.primary,textAlign:"right"}}>{v.yuzde.toFixed(1)}%</div>
-              <div style={{height:"8px",background:"#e5e7eb",borderRadius:"4px",overflow:"hidden"}}><div style={{height:"100%",width:`${v.yuzde}%`,background:T.primary,borderRadius:"4px",transition:"width .3s"}}></div></div>
+        {aktifSekme==="dashboard"&&<div>
+          {/* ÖZET KARTLAR */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr) 1.3fr",gap:"12px",marginBottom:"16px"}}>
+            {[
+              {label:"Planlanan Bütçe",value:ozet.planlananTop,valueDahil:ozet.planlananTopKdvDahil,color:"#384248"},
+              {label:"Taahhüt (Sipariş)",value:ozet.taahhutTop,valueDahil:ozet.taahhutTopKdvDahil,color:"#fa8c16"},
+              {label:"Gerçekleşen",value:ozet.gerceklesenTop,valueDahil:ozet.gerceklesenTopKdvDahil,color:"#1677ff"},
+              {label:"Kalan Bütçe",value:ozet.kalanButce,valueDahil:ozet.kalanButceKdvDahil,color:ozet.kalanButce>=0?"#52c41a":"#ff4d4f"},
+            ].map((c,i)=><div key={i} style={{padding:"16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff"}}>
+              <div style={{fontSize:"12px",color:T.t3,marginBottom:"8px",textTransform:"uppercase"}}>{c.label}</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:"8px",marginBottom:"4px"}}>
+                <span style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",minWidth:"36px",fontWeight:600}}>Dahil</span>
+                <span style={{fontSize:"18px",fontWeight:700,color:c.color}}>{c.valueDahil?c.valueDahil.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺":"—"}</span>
+              </div>
+              <div style={{display:"flex",alignItems:"baseline",gap:"8px"}}>
+                <span style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",minWidth:"36px",fontWeight:600}}>Hariç</span>
+                <span style={{fontSize:"14px",fontWeight:600,color:c.color,opacity:0.7}}>{c.value?c.value.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺":"—"}</span>
+              </div>
             </div>)}
-            <div style={{display:"grid",gridTemplateColumns:"200px 120px 60px 1fr",gap:"12px",padding:"6px 16px",alignItems:"center",borderTop:`1px solid ${T.border}`,background:"#fafafa"}}>
-              <div style={{fontSize:"13px",fontWeight:700,color:T.text}}>TOPLAM</div>
-              <div style={{fontSize:"13px",fontWeight:700,color:T.text,textAlign:"right"}}>{ozet.planlananTop.toLocaleString("tr-TR",{minimumFractionDigits:2})} ₺</div>
-              <div style={{fontSize:"13px",fontWeight:700,color:T.primary,textAlign:"right"}}>100%</div>
-              <div></div>
+            {/* m² MALİYET KARTI */}
+            <div style={{padding:"16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff"}}>
+              <div style={{fontSize:"12px",color:T.t3,marginBottom:"8px",textTransform:"uppercase"}}>BRÜT m² MALİYET</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:"8px",marginBottom:"4px"}}>
+                <span style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",minWidth:"36px",fontWeight:600}}>Dahil</span>
+                <span style={{fontSize:"18px",fontWeight:700,color:"#722ed1"}}>{ozet.m2MaliyetKdvDahil>0?ozet.m2MaliyetKdvDahil.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺/m²":"—"}</span>
+              </div>
+              <div style={{display:"flex",alignItems:"baseline",gap:"8px"}}>
+                <span style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",minWidth:"36px",fontWeight:600}}>Hariç</span>
+                <span style={{fontSize:"14px",fontWeight:600,color:"#722ed1",opacity:0.7}}>{ozet.m2Maliyet>0?ozet.m2Maliyet.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺/m²":"—"}</span>
+              </div>
+              <div style={{fontSize:"11px",color:T.t3,marginTop:"4px"}}>Brüt: {ozet.brutM2.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})} m²</div>
+              {ozet.muteahhitOran>0&&<>
+                <div style={{borderTop:`1px solid ${T.border}`,marginTop:"8px",paddingTop:"8px"}}>
+                  <div style={{fontSize:"11px",color:T.t3,textTransform:"uppercase",marginBottom:"4px"}}>NET m² MALİYET (Arsa payı düşülmüş)</div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:"8px",marginBottom:"4px"}}>
+                    <span style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",minWidth:"36px",fontWeight:600}}>Dahil</span>
+                    <span style={{fontSize:"16px",fontWeight:700,color:"#ff4d4f"}}>{ozet.m2MaliyetNetKdvDahil>0?ozet.m2MaliyetNetKdvDahil.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺/m²":"—"}</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:"8px"}}>
+                    <span style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",minWidth:"36px",fontWeight:600}}>Hariç</span>
+                    <span style={{fontSize:"13px",fontWeight:600,color:"#ff4d4f",opacity:0.7}}>{ozet.m2MaliyetNet>0?ozet.m2MaliyetNet.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺/m²":"—"}</span>
+                  </div>
+                  <div style={{fontSize:"11px",color:T.t3,marginTop:"2px"}}>Müteahhit: {ozet.muteahhitM2.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})} m² (%{(ozet.muteahhitOran*100).toFixed(0)})</div>
+                </div>
+              </>}
             </div>
           </div>
-        </div>}
 
+          {/* BLOK BAZLI ÖZET */}
+          {(selProje?.bloklar||[]).length>0&&<div style={{display:"grid",gridTemplateColumns:`repeat(${(selProje.bloklar||[]).length+(ozet.ortakToplam>0?1:0)},1fr)`,gap:"12px",marginBottom:"16px"}}>
+            {(selProje.bloklar||[]).map(bl=>{
+              const blBrutM2=blokM2Harita[bl.ad]||0;
+              const blMaliyet=ozet.blokMaliyet[bl.ad]||0;
+              const blMaliyetDahil=ozet.blokMaliyetKdvDahil[bl.ad]||0;
+              const blM2Maliyet=blBrutM2>0?blMaliyet/blBrutM2:0;
+              const blM2MaliyetDahil=blBrutM2>0?blMaliyetDahil/blBrutM2:0;
+              const blMutM2=ozet.muteahhitOran>0?blBrutM2*ozet.muteahhitOran:0;
+              const blM2MaliyetNet=blMutM2>0?blMaliyet/blMutM2:0;
+              const blM2MaliyetNetDahil=blMutM2>0?blMaliyetDahil/blMutM2:0;
+              return <div key={bl.id} style={{padding:"12px 16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff"}}>
+                <div style={{fontSize:"13px",color:T.t3,marginBottom:"6px",fontWeight:600}}>{bl.ad} BLOK</div>
+                <div style={{display:"flex",alignItems:"baseline",gap:"8px",marginBottom:"2px"}}>
+                  <span style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",minWidth:"36px",fontWeight:600}}>Dahil</span>
+                  <span style={{fontSize:"16px",fontWeight:700,color:"#1677ff"}}>{blMaliyetDahil>0?blMaliyetDahil.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺":"—"}</span>
+                </div>
+                <div style={{display:"flex",alignItems:"baseline",gap:"8px",marginBottom:"6px"}}>
+                  <span style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",minWidth:"36px",fontWeight:600}}>Hariç</span>
+                  <span style={{fontSize:"13px",fontWeight:600,color:"#1677ff",opacity:0.7}}>{blMaliyet>0?blMaliyet.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺":"—"}</span>
+                </div>
+                <div style={{fontSize:"12px",color:T.t2}}>Brüt m²: <strong>{blBrutM2>0?blBrutM2.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2}):0} m²</strong></div>
+                <div style={{fontSize:"11px",color:"#722ed1",marginTop:"4px",fontWeight:600}}>Brüt m² Maliyet</div>
+                <div style={{display:"flex",alignItems:"baseline",gap:"8px"}}>
+                  <span style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",minWidth:"36px",fontWeight:600}}>Dahil</span>
+                  <span style={{fontSize:"13px",fontWeight:700,color:"#722ed1"}}>{blM2MaliyetDahil>0?blM2MaliyetDahil.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺/m²":"—"}</span>
+                </div>
+                <div style={{display:"flex",alignItems:"baseline",gap:"8px",marginBottom:"4px"}}>
+                  <span style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",minWidth:"36px",fontWeight:600}}>Hariç</span>
+                  <span style={{fontSize:"11px",fontWeight:600,color:"#722ed1",opacity:0.7}}>{blM2Maliyet>0?blM2Maliyet.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺/m²":"—"}</span>
+                </div>
+                {ozet.muteahhitOran>0&&<>
+                  <div style={{fontSize:"11px",color:"#ff4d4f",marginTop:"2px",fontWeight:600}}>Net m² Maliyet</div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:"8px"}}>
+                    <span style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",minWidth:"36px",fontWeight:600}}>Dahil</span>
+                    <span style={{fontSize:"13px",fontWeight:700,color:"#ff4d4f"}}>{blM2MaliyetNetDahil>0?blM2MaliyetNetDahil.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺/m²":"—"}</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:"8px"}}>
+                    <span style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",minWidth:"36px",fontWeight:600}}>Hariç</span>
+                    <span style={{fontSize:"11px",fontWeight:600,color:"#ff4d4f",opacity:0.7}}>{blM2MaliyetNet>0?blM2MaliyetNet.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺/m²":"—"}</span>
+                  </div>
+                </>}
+              </div>;
+            })}
+            {ozet.ortakToplam>0&&<div style={{padding:"12px 16px",borderRadius:"8px",border:`1px solid #ffe58f`,background:"#fffbe6"}}>
+              <div style={{fontSize:"12px",color:"#d48806",marginBottom:"6px",fontWeight:600}}>ORTAK GİDER</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:"8px",marginBottom:"2px"}}>
+                <span style={{fontSize:"10px",color:"#d48806",textTransform:"uppercase",minWidth:"36px",fontWeight:600}}>Dahil</span>
+                <span style={{fontSize:"16px",fontWeight:700,color:"#d48806"}}>{ozet.ortakToplamKdvDahil.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})} ₺</span>
+              </div>
+              <div style={{display:"flex",alignItems:"baseline",gap:"8px"}}>
+                <span style={{fontSize:"10px",color:"#d48806",textTransform:"uppercase",minWidth:"36px",fontWeight:600}}>Hariç</span>
+                <span style={{fontSize:"13px",fontWeight:600,color:"#d48806",opacity:0.7}}>{ozet.ortakToplam.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})} ₺</span>
+              </div>
+              <div style={{fontSize:"11px",color:"#d48806",marginTop:"4px"}}>Bloklara m² oranında dağıtılmış</div>
+            </div>}
+          </div>}
+        </div>}
+        {aktifSekme==="kategoriler"&&<div>
+          {Object.keys(ozet.kategoriDagilim||{}).length>0&&<div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden",marginBottom:"16px"}}>
+            <div style={{padding:"8px 16px",background:"#384248"}}><span style={{fontSize:"14px",fontWeight:600,color:"#fff"}}>Kategori Dağılımı</span></div>
+            <div style={{padding:"4px 0"}}>
+              {Object.entries(ozet.kategoriDagilim).sort((a,b)=>b[1].tutar-a[1].tutar).map(([kat,v],i)=><div key={kat} style={{display:"grid",gridTemplateColumns:"200px 120px 60px 1fr",gap:"12px",padding:"6px 16px",alignItems:"center",background:i%2===0?"#fff":"#fafafa"}}>
+                <div style={{fontSize:"13px",fontWeight:500,color:T.text}}>{kat}</div>
+                <div style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right"}}>{v.tutar.toLocaleString("tr-TR",{minimumFractionDigits:2})} ₺</div>
+                <div style={{fontSize:"13px",fontWeight:600,color:T.primary,textAlign:"right"}}>{v.yuzde.toFixed(1)}%</div>
+                <div style={{height:"8px",background:"#e5e7eb",borderRadius:"4px",overflow:"hidden"}}><div style={{height:"100%",width:`${v.yuzde}%`,background:T.primary,borderRadius:"4px",transition:"width .3s"}}></div></div>
+              </div>)}
+              <div style={{display:"grid",gridTemplateColumns:"200px 120px 60px 1fr",gap:"12px",padding:"6px 16px",alignItems:"center",borderTop:`1px solid ${T.border}`,background:"#fafafa"}}>
+                <div style={{fontSize:"13px",fontWeight:700,color:T.text}}>TOPLAM</div>
+                <div style={{fontSize:"13px",fontWeight:700,color:T.text,textAlign:"right"}}>{ozet.planlananTop.toLocaleString("tr-TR",{minimumFractionDigits:2})} ₺</div>
+                <div style={{fontSize:"13px",fontWeight:700,color:T.primary,textAlign:"right"}}>100%</div>
+                <div></div>
+              </div>
+            </div>
+          </div>}
+        </div>}
+        {aktifSekme==="kalemler"&&<div>
         {/* FİLTRE + BUTONLAR */}
         <div style={{display:"flex",gap:"8px",marginBottom:"16px",alignItems:"center",flexWrap:"wrap"}}>
           <input style={{...iS,maxWidth:"220px",fontSize:"14px"}} value={kalemAra} onChange={e=>setKalemAra(e.target.value)} placeholder="Kod, ad veya grup ara..." onFocus={foc} onBlur={blr}/>
@@ -6113,6 +6214,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})
             </>
           }
         </div>
+        </div>}
       </div>
     }
   </div>;
