@@ -2400,7 +2400,7 @@ const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,fi
     if(form.gecerlilikGun&&tar){const yeniTar=addIsGunu(tar,parseInt(form.gecerlilikGun));uf("gecerlilikTarihi",yeniTar);}
   };
 
-  const kalemEkle=()=>setForm(p=>({...p,kalemler:[...p.kalemler,{id:Date.now(),malzemeId:"",malzemeAd:"",malzemeKodu:"",birim:"",miktar:1,fiyatTipi:"net",listeFiyati:0,iskonto1:0,iskonto2:0,netFiyat:0,kdvOrani:"20",maliyetEsas:"net",teminTarihi:"",not:""}]}));
+  const kalemEkle=()=>setForm(p=>({...p,kalemler:[...p.kalemler,{id:Date.now(),malzemeId:"",malzemeAd:"",malzemeKodu:"",birim:"",miktar:1,fiyatTipi:"net",listeFiyati:0,iskonto1:0,iskonto2:0,netFiyat:0,kdvOrani:"20",maliyetEsas:"net",teminTarihi:""}]}));
   const kalemSil=(kid)=>setForm(p=>({...p,kalemler:p.kalemler.filter(k=>k.id!==kid)}));
   const kalemGuncelle=(kid,field,val)=>{
     setForm(p=>({...p,kalemler:p.kalemler.map(k=>{
@@ -2609,13 +2609,26 @@ const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,fi
       {mlzPickerKalemId&&<MalzemeSeciciModal malzemeler={malzemeler} onSelect={m=>{kalemGuncelle(mlzPickerKalemId,"malzemeId",String(m.id));}} onClose={()=>setMlzPickerKalemId(null)}/>}
       {/* BÖLÜM 3: Kalemler */}
       <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,overflow:"hidden",marginBottom:"16px"}}>
-        <div style={{padding:"12px 20px",borderBottom:`1px solid ${T.border}`,background:"#fafafa",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{fontWeight:600,fontSize:"14px",color:T.text}}>📦 Kalemler <span style={{color:T.t3,fontWeight:400,fontSize:"12px"}}>({form.kalemler.length} adet)</span></div>
-          <button onClick={kalemEkle} style={{padding:"5px 14px",borderRadius:"6px",border:`1px solid ${T.primary}`,background:T.pBg,color:T.primary,fontSize:"13px",cursor:"pointer",fontWeight:500}}>+ Kalem Ekle</button>
+        <div style={{padding:"10px 16px",background:"#8799a3",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+            <span style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>Teklif Kalemleri</span>
+            <span style={{fontSize:"13px",color:"rgba(255,255,255,0.75)"}}>{form.kalemler.length} adet</span>
+          </div>
+          <button onClick={kalemEkle} title="Kalem Ekle" style={{padding:"0",border:"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={32} color="#fff"/></button>
         </div>
         {/* Tablo başlığı */}
-        {form.kalemler.length>0&&<div style={{display:"grid",gridTemplateColumns:"28px 60px 1.8fr 70px 70px 1fr 80px 90px 100px 28px",gap:"6px",padding:"6px 14px",background:"#f7f8fa",borderBottom:`1px solid ${T.border}`,fontSize:"10px",fontWeight:700,color:T.t3,alignItems:"center"}}>
-          <div>#</div><div>KOD</div><div>MALZEME</div><div style={{textAlign:"right"}}>MİKTAR</div><div>BİRİM</div><div>BİRİM FİYAT <span style={{fontWeight:400,color:T.t3}}>/ İSKONTO</span></div><div style={{textAlign:"center"}}>KDV</div><div style={{textAlign:"right"}}>TUTAR</div><div style={{textAlign:"right"}}>TOPLAM</div><div/>
+        {form.kalemler.length>0&&<div style={{display:"grid",gridTemplateColumns:"40px 60px 1.5fr 110px 65px 55px 1.7fr 60px 90px 100px 28px",gap:"6px",padding:"6px 14px",background:"#f7f8fa",borderBottom:`1px solid ${T.border}`,fontSize:"10px",fontWeight:700,color:T.t3,alignItems:"center"}}>
+          <div style={{textAlign:"center"}}>SIRA NO</div>
+          <div>KOD</div>
+          <div>MALZEME</div>
+          <div>TERMİN</div>
+          <div style={{textAlign:"right"}}>MİKTAR</div>
+          <div>BİRİM</div>
+          <div>BİRİM FİYAT / İSKONTO</div>
+          <div style={{textAlign:"center"}}>KDV</div>
+          <div style={{textAlign:"right"}}>TUTAR</div>
+          <div style={{textAlign:"right"}}>TOPLAM</div>
+          <div/>
         </div>}
         {form.kalemler.length===0&&<div style={{padding:"32px",textAlign:"center",color:T.t3,fontSize:"13px"}}>Henüz kalem eklenmedi. "Kalem Ekle" butonuna tıklayın.</div>}
         {form.kalemler.map((k,idx)=>{
@@ -2631,72 +2644,36 @@ const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,fi
           const sonadisk1=lf*(1-i1/100);
           const netHes=Math.round(sonadisk1*(1-i2/100)*100)/100;
           return <div key={k.id} style={{borderBottom:`1px solid ${T.border}`,background:idx%2===0?"#fff":"#fcfcfd"}}>
-            {/* Satır 1: malzeme + miktar + birim + FİYAT BLOĞU + kdv + toplam + sil */}
-            <div style={{display:"grid",gridTemplateColumns:"28px 60px 1.8fr 70px 70px 1fr 80px 90px 100px 28px",gap:"6px",padding:"8px 14px",alignItems:"start"}}>
-              <div style={{fontWeight:600,color:T.t3,fontSize:"11px",textAlign:"center",paddingTop:"8px"}}>{idx+1}</div>
-              <div style={{fontSize:"10px",color:T.t3,fontFamily:"monospace",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingTop:"8px"}} title={k.malzemeKodu}>{k.malzemeKodu||"—"}</div>
+            <div style={{display:"grid",gridTemplateColumns:"40px 60px 1.5fr 110px 65px 55px 1.7fr 60px 90px 100px 28px",gap:"6px",padding:"8px 14px",alignItems:"center"}}>
+              <div style={{fontWeight:600,color:T.t3,fontSize:"12px",textAlign:"center"}}>{idx+1}</div>
+              <div style={{fontSize:"10px",color:T.t3,fontFamily:"monospace",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={k.malzemeKodu}>{k.malzemeKodu||"—"}</div>
               <div>
                 <button onClick={()=>setMlzPickerKalemId(k.id)} style={{...iS,fontSize:"12px",padding:"5px 8px",textAlign:"left",cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:mlz?T.text:T.t3}}>{mlz?mlz.ad:"— Malzeme seç —"}</button>
               </div>
+              <div><input style={{...iS,fontSize:"11px",padding:"5px 6px"}} type="date" value={k.teminTarihi||""} onChange={e=>kalemGuncelle(k.id,"teminTarihi",e.target.value)} onFocus={foc} onBlur={blr}/></div>
               <div><input style={{...iS,fontSize:"12px",padding:"5px 8px",textAlign:"right"}} type="number" min="0" value={k.miktar} onChange={e=>kalemGuncelle(k.id,"miktar",e.target.value)} onFocus={foc} onBlur={blr}/></div>
               <div><input style={{...iS,fontSize:"12px",padding:"5px 8px",background:"#f5f5f5"}} value={k.birim||mlz?.birim||""} onChange={e=>kalemGuncelle(k.id,"birim",e.target.value)} onFocus={foc} onBlur={blr}/></div>
 
-              {/* ── FİYAT BLOĞU ── */}
-              <div style={{border:`1px solid ${isListe?"#722ed133":T.bDark}`,borderRadius:T.r,background:isListe?"#fdf5ff":"#fff",overflow:"hidden"}}>
-                {/* Toggle */}
-                <div style={{display:"flex",borderBottom:`1px solid ${isListe?"#722ed122":T.border}`}}>
-                  <button onClick={()=>kalemGuncelle(k.id,"fiyatTipi","net")} style={{flex:1,padding:"3px 0",border:"none",borderRight:`1px solid ${T.border}`,background:!isListe?"#1677ff":"transparent",color:!isListe?"#fff":T.t3,fontSize:"11px",fontWeight:!isListe?700:400,cursor:"pointer",transition:"all .15s"}}>NET</button>
-                  <button onClick={()=>kalemGuncelle(k.id,"fiyatTipi","liste")} style={{flex:1,padding:"3px 0",border:"none",background:isListe?"#722ed1":"transparent",color:isListe?"#fff":T.t3,fontSize:"11px",fontWeight:isListe?700:400,cursor:"pointer",transition:"all .15s"}}>LİSTE+İSK.</button>
-                </div>
-                {/* İçerik */}
+              {/* ── BİRİM FİYAT / İSKONTO — Dropdown + dinamik alan ── */}
+              <div style={{display:"flex",gap:"6px",alignItems:"center"}}>
+                <select style={{...iS,fontSize:"11px",padding:"5px 4px",cursor:"pointer",flex:"0 0 100px"}} value={k.fiyatTipi} onChange={e=>kalemGuncelle(k.id,"fiyatTipi",e.target.value)} onFocus={foc} onBlur={blr}>
+                  <option value="net">NET</option>
+                  <option value="liste">LİSTE + İSK.</option>
+                </select>
                 {!isListe
-                  ?<div style={{padding:"4px 6px"}}>
-                    <input style={{...iS,fontSize:"12px",padding:"4px 6px",textAlign:"right",border:"none",background:"transparent",fontWeight:600}} type="number" value={k.netFiyat} onChange={e=>kalemGuncelle(k.id,"netFiyat",e.target.value)} placeholder="Net fiyat" onFocus={e=>e.target.style.background="#f0f5ff"} onBlur={e=>e.target.style.background="transparent"}/>
-                  </div>
-                  :<div style={{padding:"4px 6px",display:"flex",flexDirection:"column",gap:"3px"}}>
-                    {/* Liste fiyatı */}
-                    <div style={{display:"flex",alignItems:"center",gap:"4px"}}>
-                      <span style={{fontSize:"9px",color:"#722ed1",fontWeight:600,whiteSpace:"nowrap",minWidth:"28px"}}>LİSTE</span>
-                      <input style={{...iS,fontSize:"11px",padding:"2px 5px",textAlign:"right",border:`1px solid #722ed133`,background:"#fff",flex:1}} type="number" value={k.listeFiyati} onChange={e=>kalemGuncelle(k.id,"listeFiyati",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/>
-                    </div>
-                    {/* İskonto 1 */}
-                    <div style={{display:"flex",alignItems:"center",gap:"4px"}}>
-                      <span style={{fontSize:"9px",color:"#fa8c16",fontWeight:600,whiteSpace:"nowrap",minWidth:"28px"}}>İSK.1</span>
-                      <div style={{display:"flex",alignItems:"center",flex:1,border:`1px solid #fa8c1633`,borderRadius:T.r,background:"#fff",overflow:"hidden"}}>
-                        <input style={{...iS,fontSize:"11px",padding:"2px 5px",textAlign:"right",border:"none",background:"transparent",flex:1}} type="number" min="0" max="100" value={k.iskonto1} onChange={e=>kalemGuncelle(k.id,"iskonto1",e.target.value)} placeholder="0" onFocus={e=>e.target.style.background="#fff7e6"} onBlur={e=>e.target.style.background="transparent"}/>
-                        <span style={{padding:"0 5px",fontSize:"10px",color:"#fa8c16",fontWeight:600,background:"#fff7e6",borderLeft:"1px solid #fa8c1633",height:"100%",display:"flex",alignItems:"center"}}>%</span>
-                      </div>
-                      {i1>0&&lf>0&&<span style={{fontSize:"9px",color:T.t3,whiteSpace:"nowrap"}}>→ {(lf*(1-i1/100)).toLocaleString("tr-TR",{maximumFractionDigits:2})}</span>}
-                    </div>
-                    {/* İskonto 2 */}
-                    <div style={{display:"flex",alignItems:"center",gap:"4px"}}>
-                      <span style={{fontSize:"9px",color:"#fa8c16",fontWeight:600,whiteSpace:"nowrap",minWidth:"28px"}}>İSK.2</span>
-                      <div style={{display:"flex",alignItems:"center",flex:1,border:`1px solid #fa8c1633`,borderRadius:T.r,background:"#fff",overflow:"hidden"}}>
-                        <input style={{...iS,fontSize:"11px",padding:"2px 5px",textAlign:"right",border:"none",background:"transparent",flex:1}} type="number" min="0" max="100" value={k.iskonto2} onChange={e=>kalemGuncelle(k.id,"iskonto2",e.target.value)} placeholder="0" onFocus={e=>e.target.style.background="#fff7e6"} onBlur={e=>e.target.style.background="transparent"}/>
-                        <span style={{padding:"0 5px",fontSize:"10px",color:"#fa8c16",fontWeight:600,background:"#fff7e6",borderLeft:"1px solid #fa8c1633",height:"100%",display:"flex",alignItems:"center"}}>%</span>
-                      </div>
-                    </div>
-                    {/* Net sonuç */}
-                    <div style={{display:"flex",alignItems:"center",gap:"4px",paddingTop:"2px",borderTop:`1px dashed #722ed133`}}>
-                      <span style={{fontSize:"9px",color:"#722ed1",fontWeight:700,whiteSpace:"nowrap",minWidth:"28px"}}>NET</span>
-                      <div style={{flex:1,textAlign:"right",fontWeight:700,fontSize:"12px",color:"#722ed1",fontFamily:"monospace"}}>{para?.symbol}{netHes.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div>
-                    </div>
+                  ?<input style={{...iS,fontSize:"12px",padding:"5px 8px",textAlign:"right",flex:1,fontWeight:600}} type="number" value={k.netFiyat} onChange={e=>kalemGuncelle(k.id,"netFiyat",e.target.value)} placeholder="Net fiyat" onFocus={foc} onBlur={blr}/>
+                  :<div style={{display:"flex",gap:"4px",flex:1}}>
+                    <input style={{...iS,fontSize:"11px",padding:"5px 6px",textAlign:"right",flex:1,border:`1px solid #722ed133`}} type="number" value={k.listeFiyati} onChange={e=>kalemGuncelle(k.id,"listeFiyati",e.target.value)} placeholder="Liste" onFocus={foc} onBlur={blr}/>
+                    <input style={{...iS,fontSize:"11px",padding:"5px 4px",textAlign:"right",width:"50px",border:`1px solid #fa8c1633`}} type="number" min="0" max="100" value={k.iskonto1} onChange={e=>kalemGuncelle(k.id,"iskonto1",e.target.value)} placeholder="%1" title="İskonto 1 (%)" onFocus={foc} onBlur={blr}/>
+                    <input style={{...iS,fontSize:"11px",padding:"5px 4px",textAlign:"right",width:"50px",border:`1px solid #fa8c1633`}} type="number" min="0" max="100" value={k.iskonto2} onChange={e=>kalemGuncelle(k.id,"iskonto2",e.target.value)} placeholder="%2" title="İskonto 2 (%)" onFocus={foc} onBlur={blr}/>
                   </div>
                 }
               </div>
 
-              <div><select style={{...iS,fontSize:"12px",padding:"5px 8px"}} value={k.kdvOrani} onChange={e=>kalemGuncelle(k.id,"kdvOrani",e.target.value)} onFocus={foc} onBlur={blr}>{KDV_ORANLARI.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
-              <div style={{textAlign:"right",fontWeight:600,fontSize:"12px",color:T.text,paddingTop:"8px"}}>{para?.symbol}{tutar.toLocaleString("tr-TR",{minimumFractionDigits:2})}<div style={{fontSize:"10px",color:T.t3,fontWeight:400}}>KDV: {para?.symbol}{kdvTut.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div></div>
-              <div style={{textAlign:"right",fontWeight:700,fontSize:"13px",color:T.primary,paddingTop:"8px"}}>{para?.symbol}{topTut.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div>
-              <button onClick={()=>kalemSil(k.id)} style={{background:"none",border:"none",color:T.err,cursor:"pointer",fontSize:"16px",padding:"2px",textAlign:"center",paddingTop:"8px"}}>×</button>
-            </div>
-            {/* Satır 2: not + temin tarihi */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"8px",padding:"0 14px 8px 88px",alignItems:"center"}}>
-              <input style={{...iS,fontSize:"11px",padding:"3px 8px",background:"#f9f9f9"}} value={k.not||""} onChange={e=>kalemGuncelle(k.id,"not",e.target.value)} placeholder="Kalem notu..." onFocus={foc} onBlur={blr}/>
-              <div style={{display:"flex",alignItems:"center",gap:"6px",flexShrink:0}}>
-                <span style={{fontSize:"10px",color:T.t3,whiteSpace:"nowrap"}}>Temin:</span>
-                <input style={{...iS,fontSize:"11px",padding:"3px 6px",width:"120px"}} type="date" value={k.teminTarihi||""} onChange={e=>kalemGuncelle(k.id,"teminTarihi",e.target.value)} onFocus={foc} onBlur={blr}/>
-              </div>
+              <div><select style={{...iS,fontSize:"12px",padding:"5px 4px"}} value={k.kdvOrani} onChange={e=>kalemGuncelle(k.id,"kdvOrani",e.target.value)} onFocus={foc} onBlur={blr}>{KDV_ORANLARI.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
+              <div style={{textAlign:"right",fontWeight:600,fontSize:"12px",color:T.text}}>{para?.symbol}{tutar.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div>
+              <div style={{textAlign:"right",fontWeight:700,fontSize:"13px",color:T.primary}}>{para?.symbol}{topTut.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div>
+              <button onClick={()=>kalemSil(k.id)} style={{background:"none",border:"none",color:T.err,cursor:"pointer",padding:"2px",display:"flex",alignItems:"center",justifyContent:"center"}}><Trash2 size={14}/></button>
             </div>
           </div>;
         })}
