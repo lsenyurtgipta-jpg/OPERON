@@ -3825,6 +3825,39 @@ const projeToDb = (p) => ({
   proje_durumlari: p.projedurumlari||[]
 });
 
+// Bütçe kalemi dönüşümleri (Maliyet için)
+const butceKalemiToLocal = (b) => ({
+  id: b.id,
+  projeId: b.proje_id,
+  malzemeId: b.malzeme_id,
+  malzemeKodu: b.malzeme_kodu||"",
+  malzemeAd: b.malzeme_ad||"",
+  birim: b.birim||"",
+  bloklar: b.bloklar||[],
+  planlananMiktar: b.planlanan_miktar!=null?String(b.planlanan_miktar):"",
+  planlananBirimFiyat: b.planlanan_birim_fiyat!=null?String(b.planlanan_birim_fiyat):"",
+  planlananToplam: b.planlanan_toplam!=null?Number(b.planlanan_toplam):0,
+  planlananSatirlari: b.planlanan_satirlari||[],
+  aciklama: b.aciklama||"",
+  tamamlandi: b.tamamlandi||false,
+  siraNo: b.sira_no||0
+});
+const butceKalemiToDb = (k, projeId) => ({
+  proje_id: projeId||k.projeId,
+  malzeme_id: k.malzemeId||null,
+  malzeme_kodu: k.malzemeKodu||"",
+  malzeme_ad: k.malzemeAd||"",
+  birim: k.birim||"",
+  bloklar: k.bloklar||[],
+  planlanan_miktar: k.planlananMiktar!==""&&k.planlananMiktar!=null?Number(k.planlananMiktar):null,
+  planlanan_birim_fiyat: k.planlananBirimFiyat!==""&&k.planlananBirimFiyat!=null?Number(k.planlananBirimFiyat):null,
+  planlanan_toplam: Number(k.planlananToplam)||0,
+  planlanan_satirlari: k.planlananSatirlari||[],
+  aciklama: k.aciklama||"",
+  tamamlandi: k.tamamlandi===true,
+  sira_no: k.siraNo||0
+});
+
 const teklifToLocal = (t, kalemler=[]) => ({
   id: t.id, teklifNo: t.teklif_no||"", firmaId: t.firma_id, firmaAd: t.firma_ad||"",
   teklifTarihi: t.teklif_tarihi||"", gecerlilikTarihi: t.gecerlilik_tarihi||"",
@@ -7010,6 +7043,8 @@ export default function App(){
   const siparisSavingRef=useRef(false);
   const faturaSavingRef=useRef(false);
   const projeSavingRef=useRef(false);
+  const butceKalemiSavingRef=useRef(false);
+  const[butceKalemleri,setButceKalemleri]=useState([]);
   const[firmalar,setFirmalar]=useState([]);
   const[malzemeler,setMalzemeler]=useState([]);
   const[teklifler,setTeklifler]=useState([]);
@@ -7024,7 +7059,7 @@ export default function App(){
   const loadAll = useCallback(async (ilkYukleme=false) => {
     if(ilkYukleme) setLoading(true);
     try {
-      const [fDb, kDb, nDb, mDb, katDb, agDb, tDb, tkDb, sbDb, bkDb, ilDb, adDb, pDb, spDb, spkDb, afDb, afkDb] = await Promise.all([
+      const [fDb, kDb, nDb, mDb, katDb, agDb, tDb, tkDb, sbDb, bkDb, ilDb, adDb, pDb, spDb, spkDb, afDb, afkDb, bkalDb] = await Promise.all([
         sbGet('firmalar','order=id.asc'),
         sbGet('kisiler','order=id.asc'),
         sbGet('notlar','order=id.asc'),
@@ -7042,6 +7077,7 @@ export default function App(){
         sbGet('satinalma_siparis_kalemleri','order=id.asc'),
         sbGet('alis_faturalari','order=id.asc'),
         sbGet('alis_fatura_kalemleri','order=id.asc'),
+        sbGet('butce_kalemleri','order=proje_id.asc,sira_no.asc'),
       ]);
       const firmaList = fDb.map(f => {
         const loc = firmaToLocal(f);
@@ -7066,6 +7102,7 @@ export default function App(){
       setSiparisler(spDb.map(s=>{const kalemler=spkDb.filter(k=>k.siparis_id===s.id).map(siparisKalemToLocal);return siparisToLocal(s,kalemler);}));
       setFaturalar(afDb.map(f=>{const kalemler=afkDb.filter(k=>k.fatura_id===f.id).map(faturaKalemToLocal);return faturaToLocal(f,kalemler);}));
       setProjeler(pDb.map(projeToLocal));
+      setButceKalemleri((bkalDb||[]).map(butceKalemiToLocal));
     } catch(e) {
       // Supabase bağlantısı yoksa sessizce devam et — local state ile çalışır
       console.warn("Supabase bağlantısı yok, local modda çalışılıyor:", e.message);
