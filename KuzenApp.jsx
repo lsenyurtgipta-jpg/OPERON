@@ -5817,6 +5817,29 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
       if(filtre==="atanmamis")return(k.bloklar||[]).length===0;
       if(filtre==="planli")return parseFloat(k.planlananToplam||0)>0;
       if(filtre==="plansiz")return!parseFloat(k.planlananToplam||0);
+      if(filtre==="tamamlandi")return k.tamamlandi===true;
+      // Durum bazlı filtreler (chip mantığı ile aynı)
+      if(["siparisyok","siparisacik","tamam","sapma"].includes(filtre)){
+        const pt=parseFloat(k.planlananToplam||0);
+        if(pt<=0)return false;
+        if(k.tamamlandi===true)return false;
+        // Taahhüt ve gerçekleşen tutarları hesapla
+        let bkT=0,bkG=0;
+        siparisler.forEach(s=>{
+          if(s.projeId===selProjeId&&s.durum!=="iptal"&&s.durum!=="tamamlandi"){
+            (s.kalemler||[]).forEach(kl=>{if(kl.butceKalemiId===k.id)bkT+=(parseFloat(kl.netFiyat||0)*parseFloat(kl.miktar||0));});
+          }
+        });
+        faturalar.forEach(f=>{
+          if(f.projeId===selProjeId&&f.durum!=="iptal"){
+            (f.kalemler||[]).forEach(kl=>{if(kl.butceKalemiId===k.id)bkG+=(parseFloat(kl.netFiyat||0)*parseFloat(kl.miktar||0));});
+          }
+        });
+        if(filtre==="siparisyok")return bkT===0&&bkG===0;
+        if(filtre==="sapma")return bkG>pt*1.05;
+        if(filtre==="tamam")return bkG>0&&Math.abs(bkG-pt)<=pt*0.05;
+        if(filtre==="siparisacik")return(bkT>0||bkG>0)&&!(bkG>pt*1.05)&&!(bkG>0&&Math.abs(bkG-pt)<=pt*0.05);
+      }
       return true;
     });
     const{alan,yon}=siralama;
@@ -5830,7 +5853,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
       return String(va).localeCompare(String(vb),"tr")*carp;
     });
     return list;
-  },[kalemListesi,filtre,siralama,kalemAra]);
+  },[kalemListesi,filtre,siralama,kalemAra,siparisler,faturalar,selProjeId]);
 
   // Gerçekleşen
   const gerceklesen=useMemo(()=>{
@@ -6172,6 +6195,11 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
             <button onClick={()=>setFiltre("ortak")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="ortak"?"#d48806":T.border}`,background:filtre==="ortak"?"#d48806":"#fff",color:filtre==="ortak"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Ortak</button>
           </>}
           <div style={{flex:1}}></div>
+          <button onClick={()=>setFiltre("siparisyok")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="siparisyok"?"#ff4d4f":T.border}`,background:filtre==="siparisyok"?"#fff1f0":"#fff",color:filtre==="siparisyok"?"#ff4d4f":T.t2,fontSize:"14px",cursor:"pointer"}}>Sipariş Yok</button>
+          <button onClick={()=>setFiltre("siparisacik")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="siparisacik"?"#fa8c16":T.border}`,background:filtre==="siparisacik"?"#fff7e6":"#fff",color:filtre==="siparisacik"?"#fa8c16":T.t2,fontSize:"14px",cursor:"pointer"}}>Sipariş Açık</button>
+          <button onClick={()=>setFiltre("tamam")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="tamam"?"#1677ff":T.border}`,background:filtre==="tamam"?"#e6f4ff":"#fff",color:filtre==="tamam"?"#1677ff":T.t2,fontSize:"14px",cursor:"pointer"}}>Tamam</button>
+          <button onClick={()=>setFiltre("sapma")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="sapma"?"#722ed1":T.border}`,background:filtre==="sapma"?"#f9f0ff":"#fff",color:filtre==="sapma"?"#722ed1":T.t2,fontSize:"14px",cursor:"pointer"}}>Sapma</button>
+          <button onClick={()=>setFiltre("tamamlandi")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="tamamlandi"?"#52c41a":T.border}`,background:filtre==="tamamlandi"?"#f6ffed":"#fff",color:filtre==="tamamlandi"?"#52c41a":T.t2,fontSize:"14px",cursor:"pointer"}}>Tamamlandı</button>
           <button onClick={()=>setFiltre("planli")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="planli"?"#52c41a":T.border}`,background:filtre==="planli"?"#f6ffed":"#fff",color:filtre==="planli"?"#52c41a":T.t2,fontSize:"14px",cursor:"pointer"}}>Planlı</button>
           <button onClick={()=>setFiltre("plansiz")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="plansiz"?"#ff4d4f":T.border}`,background:filtre==="plansiz"?"#fff1f0":"#fff",color:filtre==="plansiz"?"#ff4d4f":T.t2,fontSize:"14px",cursor:"pointer"}}>Plansız</button>
           <button onClick={()=>setFiltre("hepsi")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="hepsi"?"#384248":T.border}`,background:filtre==="hepsi"?"#384248":"#fff",color:filtre==="hepsi"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Hepsi</button>
@@ -6199,9 +6227,9 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
           {filtrelenmis.length===0
             ?<div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{kalemListesi.length===0?"Henüz kalem eklenmemiş. \"Kalem Ekle\" veya \"Omurga Oluştur\" butonunu kullanın.":"Filtreye uygun kalem yok."}</div>
             :<>
-              <div style={{flex:"0 0 auto",display:"grid",gridTemplateColumns:"30px 120px 1fr 80px 60px 70px 80px 100px 80px 100px 90px 90px 90px 35px 25px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
+              <div style={{flex:"0 0 auto",display:"grid",gridTemplateColumns:"30px 120px 0.7fr 100px 80px 60px 70px 80px 100px 80px 100px 90px 90px 90px 35px 25px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
                 <div style={{fontSize:"11px",fontWeight:600,color:T.t2,textAlign:"center"}}>✓</div>
-                {[{label:"Kod",alan:"mlzKodu",right:false},{label:"Malzeme/Hizmet",alan:"mlzAd",right:false},{label:"Blok",alan:"blok",right:false},{label:"Birim",alan:null,right:false},{label:"Miktar",alan:null,right:true},{label:"B.Fiyat",alan:null,right:true},{label:"KDV Hariç",alan:null,right:true},{label:"KDV Tut.",alan:null,right:true},{label:"KDV Dahil",alan:null,right:true},{label:"Taahhüt",alan:null,right:true},{label:"Gerçekleşen",alan:null,right:true},{label:"Kalan",alan:null,right:true},{label:"%",alan:"yuzde",right:true},{label:"",alan:null,right:false}].map((h,i)=><div key={i} onClick={h.alan?()=>siraToggle(h.alan):undefined} style={{fontSize:"11px",fontWeight:600,color:siralama.alan===h.alan?"#1677ff":T.t2,textTransform:"uppercase",cursor:h.alan?"pointer":"default",userSelect:"none",display:"flex",alignItems:"center",gap:"4px",justifyContent:h.right?"flex-end":"flex-start"}}>{h.label}{h.alan&&siralama.alan===h.alan&&<span style={{fontSize:"10px"}}>{siralama.yon==="asc"?"▲":"▼"}</span>}</div>)}
+                {[{label:"Kod",alan:"mlzKodu",right:false},{label:"Malzeme/Hizmet",alan:"mlzAd",right:false},{label:"Durum",alan:null,right:false,center:true},{label:"Blok",alan:"blok",right:false},{label:"Birim",alan:null,right:false},{label:"Miktar",alan:null,right:true},{label:"B.Fiyat",alan:null,right:true},{label:"KDV Hariç",alan:null,right:true},{label:"KDV Tut.",alan:null,right:true},{label:"KDV Dahil",alan:null,right:true},{label:"Taahhüt",alan:null,right:true},{label:"Gerçekleşen",alan:null,right:true},{label:"Kalan",alan:null,right:true},{label:"%",alan:"yuzde",right:true},{label:"",alan:null,right:false}].map((h,i)=><div key={i} onClick={h.alan?()=>siraToggle(h.alan):undefined} style={{fontSize:"11px",fontWeight:600,color:siralama.alan===h.alan?"#1677ff":T.t2,textTransform:"uppercase",cursor:h.alan?"pointer":"default",userSelect:"none",display:"flex",alignItems:"center",gap:"4px",justifyContent:h.center?"center":(h.right?"flex-end":"flex-start")}}>{h.label}{h.alan&&siralama.alan===h.alan&&<span style={{fontSize:"10px"}}>{siralama.yon==="asc"?"▲":"▼"}</span>}</div>)}
               </div>
               {(()=>{
                 let topMiktar=0,topKdvHaric=0,topKdv=0,topKdvDahil=0;
@@ -6221,7 +6249,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
                   topMiktar+=satMiktar;topKdvHaric+=satKdvHaric;topKdv+=satKdv;topKdvDahil+=satKdvDahil;
                   const tamamlandi=k.tamamlandi===true;
                   const rowBg=tamamlandi?"#f6ffed":(idx%2===0?"#fff":"#fafafa");
-                  return <div key={k.id} onClick={()=>satirTikla(k)} style={{display:"grid",gridTemplateColumns:"30px 120px 1fr 80px 60px 70px 80px 100px 80px 100px 90px 90px 90px 35px 25px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtrelenmis.length-1?`1px solid ${T.border}`:"none",background:rowBg,cursor:"pointer",height:"44px"}}
+                  return <div key={k.id} onClick={()=>satirTikla(k)} style={{display:"grid",gridTemplateColumns:"30px 120px 0.7fr 100px 80px 60px 70px 80px 100px 80px 100px 90px 90px 90px 35px 25px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtrelenmis.length-1?`1px solid ${T.border}`:"none",background:rowBg,cursor:"pointer",height:"44px"}}
                     onMouseEnter={e=>e.currentTarget.style.background=tamamlandi?"#d9f7be":T.pBg}
                     onMouseLeave={e=>e.currentTarget.style.background=rowBg}>
                     <div onClick={async e=>{
@@ -6240,6 +6268,20 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
                     </div>
                     <div style={{fontSize:"13px",color:tamamlandi?"#52c41a":T.t3}}>{k.mlzKodu||"—"}</div>
                     <div style={{fontSize:"14px",fontWeight:500,color:tamamlandi?"#52c41a":T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{k.mlzAd}</div>
+                    {(()=>{
+                      const _bkT=taahhut.filter(t=>t.butceKalemiId===k.id).reduce((s,t)=>s+(parseFloat(t.netFiyat||0)*parseFloat(t.miktar||0)),0);
+                      const _bkG=gerceklesen.filter(g=>g.butceKalemiId===k.id).reduce((s,g)=>s+(parseFloat(g.netFiyat||0)*parseFloat(g.miktar||0)),0);
+                      let dLabel,dClr,dBg;
+                      if(tamamlandi){dLabel="Tamamlandı";dClr="#52c41a";dBg="#f6ffed";}
+                      else if(!satKdvHaric||satKdvHaric===0){dLabel="Plansız";dClr="#8c8c8c";dBg="#f5f5f5";}
+                      else if(_bkT===0&&_bkG===0){dLabel="Sipariş Yok";dClr="#ff4d4f";dBg="#fff1f0";}
+                      else if(_bkG>satKdvHaric*1.05){dLabel="Sapma";dClr="#722ed1";dBg="#f9f0ff";}
+                      else if(_bkG>0&&Math.abs(_bkG-satKdvHaric)<=satKdvHaric*0.05){dLabel="Tamam";dClr="#1677ff";dBg="#e6f4ff";}
+                      else{dLabel="Sipariş Açık";dClr="#fa8c16";dBg="#fff7e6";}
+                      return <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        <span style={{fontSize:"10px",fontWeight:700,color:dClr,background:dBg,border:`1px solid ${dClr}40`,borderRadius:"10px",padding:"2px 8px",whiteSpace:"nowrap"}}>{dLabel}</span>
+                      </div>;
+                    })()}
                     <div style={{fontSize:"13px",fontWeight:600,color:bloklar.length>1?"#d48806":"#1677ff"}}>{blokStr}</div>
                     <div style={{fontSize:"13px",color:T.t2}}>{k.mlzBirim||"—"}</div>
                     <div style={{fontSize:"13px",color:satMiktar?T.text:T.t3,textAlign:"right"}}>{satMiktar?satMiktar.toLocaleString("tr-TR"):"—"}</div>
@@ -6265,8 +6307,8 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
                     {rows}
                   </div>
                   {/* ALT TOPLAMLAR — SABİT */}
-                  <div style={{flex:"0 0 auto",display:"grid",gridTemplateColumns:"30px 120px 1fr 80px 60px 70px 80px 100px 80px 100px 90px 90px 90px 35px 25px",padding:"9px 12px",gap:"8px",alignItems:"center",background:"#384248",borderTop:`2px solid ${T.border}`}}>
-                    <div></div><div></div><div></div><div></div>
+                  <div style={{flex:"0 0 auto",display:"grid",gridTemplateColumns:"30px 120px 0.7fr 100px 80px 60px 70px 80px 100px 80px 100px 90px 90px 90px 35px 25px",padding:"9px 12px",gap:"8px",alignItems:"center",background:"#384248",borderTop:`2px solid ${T.border}`}}>
+                    <div></div><div></div><div></div><div></div><div></div>
                     <div></div>
                     <div></div>
                     <div></div>
