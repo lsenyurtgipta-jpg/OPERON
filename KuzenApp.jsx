@@ -5411,15 +5411,24 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
           // Satır ekleme (her iki listeye senkron)
           const addSatir=()=>{
             const yeniId=Date.now();
-            uf("planlananSatirlari",[...satirlar,{id:yeniId,siraNo:String(satirlar.length+1),aciklama:"",miktar:"",birimFiyat:"",kdvOrani:varsayilanKdv}]);
+            uf("planlananSatirlari",[...satirlar,{id:yeniId,siraNo:String(satirlar.length+1),aciklama:"",miktar:"",birimFiyat:"",kdvOrani:varsayilanKdv,tamamlandi:false}]);
             uf("firmaSatirlari",[...firmaSatirlari,{id:yeniId,birimFiyat:"",kdvOrani:varsayilanKdv}]);
           };
           const delSatir=(idx)=>{
-            uf("planlananSatirlari",satirlar.filter((_,i)=>i!==idx));
+            const yeniSatirlar=satirlar.filter((_,i)=>i!==idx);
+            const yeniTamamlandi=yeniSatirlar.length>0&&yeniSatirlar.every(s=>s.tamamlandi===true);
+            setFm(p=>({...p,planlananSatirlari:yeniSatirlar,tamamlandi:yeniTamamlandi}));
             uf("firmaSatirlari",firmaSatirlari.filter((_,i)=>i!==idx));
           };
           const upPlan=(idx,field,val)=>{const arr=[...satirlar];arr[idx]={...arr[idx],[field]:val};uf("planlananSatirlari",arr);};
           const upFirma=(idx,field,val)=>{const arr=[...firmaSatirlari];if(!arr[idx])arr[idx]={id:satirlar[idx]?.id||Date.now()};arr[idx]={...arr[idx],[field]:val};uf("firmaSatirlari",arr);};
+          // Alt satır tamamlandı toggle — ana kalem auto-compute
+          const toggleAltTamamlandi=(idx)=>{
+            const arr=[...satirlar];
+            arr[idx]={...arr[idx],tamamlandi:!arr[idx].tamamlandi};
+            const yeniTamamlandi=arr.length>0&&arr.every(s=>s.tamamlandi===true);
+            setFm(p=>({...p,planlananSatirlari:arr,tamamlandi:yeniTamamlandi}));
+          };
 
           // Toplamlar
           let fMikTop=0,fKdvHTop=0,fKdvTop=0,pMikTop=0,pKdvHTop=0,pKdvTop=0;
@@ -5433,7 +5442,7 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
             const pH=m*pBf;pMikTop+=m;pKdvHTop+=pH;pKdvTop+=pH*pKdvO;
           });
 
-          const gridCols="40px 1fr 70px 55px 80px 80px 50px 70px 80px 4px 80px 80px 50px 70px 80px 24px";
+          const gridCols="30px 40px 1fr 70px 55px 80px 80px 50px 70px 80px 4px 80px 80px 50px 70px 80px 24px";
 
           return <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
             {/* HESAPLA BUTONU */}
@@ -5448,15 +5457,15 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
             </div>}
             {/* ÜST GRUP BAŞLIK */}
             <div style={{display:"grid",gridTemplateColumns:gridCols,gap:"4px",padding:"4px 8px",background:"#384248"}}>
-              <div></div><div></div><div></div><div></div>
-              <div style={{gridColumn:"5 / 10",textAlign:"center",fontSize:"11px",fontWeight:700,color:"#1677ff",letterSpacing:"1px"}}>FİRMA FİYATI</div>
+              <div></div><div></div><div></div><div></div><div></div>
+              <div style={{gridColumn:"6 / 11",textAlign:"center",fontSize:"11px",fontWeight:700,color:"#1677ff",letterSpacing:"1px"}}>FİRMA FİYATI</div>
               <div></div>
-              <div style={{gridColumn:"11 / 16",textAlign:"center",fontSize:"11px",fontWeight:700,color:"#52c41a",letterSpacing:"1px"}}>PLANLANAN FİYAT</div>
+              <div style={{gridColumn:"12 / 17",textAlign:"center",fontSize:"11px",fontWeight:700,color:"#52c41a",letterSpacing:"1px"}}>PLANLANAN FİYAT</div>
               <div></div>
             </div>
             {/* TABLO HEADER */}
             <div style={{display:"grid",gridTemplateColumns:gridCols,gap:"4px",padding:"4px 8px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
-              {["S.No","Açıklama","Miktar","Birim","B.Fiyat","KDV Hariç","KDV%","KDV Tut.","Toplam","","B.Fiyat","KDV Hariç","KDV%","KDV Tut.","Toplam",""].map((h,i)=><div key={i} style={{fontSize:"10px",fontWeight:600,color:i>=4&&i<=8?"#1677ff":(i>=10&&i<=14?"#52c41a":T.t3),textTransform:"uppercase",textAlign:i>=2?"right":"left"}}>{h}</div>)}
+              {["✓","S.No","Açıklama","Miktar","Birim","B.Fiyat","KDV Hariç","KDV%","KDV Tut.","Toplam","","B.Fiyat","KDV Hariç","KDV%","KDV Tut.","Toplam",""].map((h,i)=><div key={i} style={{fontSize:"10px",fontWeight:600,color:i>=5&&i<=9?"#1677ff":(i>=11&&i<=15?"#52c41a":T.t3),textTransform:"uppercase",textAlign:i===0?"center":(i>=3?"right":"left")}}>{h}</div>)}
             </div>
             {/* SATIRLAR */}
             <div style={{maxHeight:"400px",overflow:"auto"}}>
@@ -5468,8 +5477,16 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
                   const fH=m*fBf;const fKdvT=fH*(fKdvO/100);const fTop=fH+fKdvT;
                   const pBf=parseFloat(s.birimFiyat||0);const pKdvO=parseInt(s.kdvOrani||varsayilanKdv);
                   const pH=m*pBf;const pKdvT=pH*(pKdvO/100);const pTop=pH+pKdvT;
-                  return <div key={s.id} style={{display:"grid",gridTemplateColumns:gridCols,gap:"4px",padding:"3px 8px",alignItems:"center",borderBottom:idx<satirlar.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa"}}>
-                    <input style={{...iS,fontSize:"12px",padding:"4px 4px",textAlign:"center"}} value={s.siraNo||String(idx+1)} onChange={e=>upPlan(idx,"siraNo",e.target.value)} onFocus={foc} onBlur={blr}/>
+                  const altTamam=s.tamamlandi===true;
+                  const rowBg=altTamam?"#f6ffed":(idx%2===0?"#fff":"#fafafa");
+                  const altTxtClr=altTamam?"#52c41a":null;
+                  return <div key={s.id} style={{display:"grid",gridTemplateColumns:gridCols,gap:"4px",padding:"3px 8px",alignItems:"center",borderBottom:idx<satirlar.length-1?`1px solid ${T.border}`:"none",background:rowBg}}>
+                    <div onClick={()=>toggleAltTamamlandi(idx)} title={altTamam?"Tamamlandı işaretini kaldır":"Tamamlandı olarak işaretle"} style={{display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                      <div style={{width:"16px",height:"16px",borderRadius:"3px",border:`2px solid ${altTamam?"#52c41a":T.bDark}`,background:altTamam?"#52c41a":"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
+                        {altTamam&&<span style={{color:"#fff",fontSize:"11px",fontWeight:700,lineHeight:1}}>✓</span>}
+                      </div>
+                    </div>
+                    <input style={{...iS,fontSize:"12px",padding:"4px 4px",textAlign:"center",color:altTxtClr||T.text}} value={s.siraNo||String(idx+1)} onChange={e=>upPlan(idx,"siraNo",e.target.value)} onFocus={foc} onBlur={blr}/>
                     <input style={{...iS,fontSize:"12px",padding:"4px 6px"}} value={s.aciklama||""} onChange={e=>upPlan(idx,"aciklama",e.target.value)} placeholder="Açıklama..." onFocus={foc} onBlur={blr}/>
                     <input style={{...iS,fontSize:"14px",padding:"4px 4px",textAlign:"right",fontWeight:600}} value={s._miktarEdit?s.miktar||"":(parseFloat(s.miktar||0)>0?parseFloat(s.miktar).toLocaleString("tr-TR"):"")} onChange={e=>{const raw=e.target.value.replace(/[^0-9.,]/g,"").replace(/,/g,".");const pts=raw.split(".");const v=pts.length>2?pts[0]+"."+pts.slice(1).join(""):raw;upPlan(idx,"miktar",v);}} placeholder="0" onFocus={e=>{upPlan(idx,"_miktarEdit",true);foc(e);}} onBlur={e=>{upPlan(idx,"_miktarEdit",false);blr(e);}}/>
                     <div style={{fontSize:"11px",color:T.t2,textAlign:"right"}}>{birim}</div>
@@ -5498,6 +5515,7 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
             </div>
             {/* TOPLAMLAR */}
             {satirlar.length>0&&<div style={{display:"grid",gridTemplateColumns:gridCols,gap:"4px",padding:"6px 8px",background:"#f0f5ff",borderTop:`2px solid ${T.primary}`}}>
+              <div></div>
               <div></div>
               <div style={{fontSize:"11px",fontWeight:700,color:T.text,textAlign:"right"}}>TOPLAM</div>
               <div style={{fontSize:"11px",fontWeight:700,color:T.text,textAlign:"right"}}>{pMikTop>0?pMikTop.toLocaleString("tr-TR"):""}</div>
@@ -6181,7 +6199,8 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
           {filtrelenmis.length===0
             ?<div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{kalemListesi.length===0?"Henüz kalem eklenmemiş. \"Kalem Ekle\" veya \"Omurga Oluştur\" butonunu kullanın.":"Filtreye uygun kalem yok."}</div>
             :<>
-              <div style={{flex:"0 0 auto",display:"grid",gridTemplateColumns:"120px 1fr 80px 60px 70px 80px 100px 80px 100px 90px 90px 90px 35px 25px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
+              <div style={{flex:"0 0 auto",display:"grid",gridTemplateColumns:"30px 120px 1fr 80px 60px 70px 80px 100px 80px 100px 90px 90px 90px 35px 25px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
+                <div style={{fontSize:"11px",fontWeight:600,color:T.t2,textAlign:"center"}}>✓</div>
                 {[{label:"Kod",alan:"mlzKodu",right:false},{label:"Malzeme/Hizmet",alan:"mlzAd",right:false},{label:"Blok",alan:"blok",right:false},{label:"Birim",alan:null,right:false},{label:"Miktar",alan:null,right:true},{label:"B.Fiyat",alan:null,right:true},{label:"KDV Hariç",alan:null,right:true},{label:"KDV Tut.",alan:null,right:true},{label:"KDV Dahil",alan:null,right:true},{label:"Taahhüt",alan:null,right:true},{label:"Gerçekleşen",alan:null,right:true},{label:"Kalan",alan:null,right:true},{label:"%",alan:"yuzde",right:true},{label:"",alan:null,right:false}].map((h,i)=><div key={i} onClick={h.alan?()=>siraToggle(h.alan):undefined} style={{fontSize:"11px",fontWeight:600,color:siralama.alan===h.alan?"#1677ff":T.t2,textTransform:"uppercase",cursor:h.alan?"pointer":"default",userSelect:"none",display:"flex",alignItems:"center",gap:"4px",justifyContent:h.right?"flex-end":"flex-start"}}>{h.label}{h.alan&&siralama.alan===h.alan&&<span style={{fontSize:"10px"}}>{siralama.yon==="asc"?"▲":"▼"}</span>}</div>)}
               </div>
               {(()=>{
@@ -6200,11 +6219,27 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
                   const satKdvDahil=satKdvHaric+satKdv;
                   const bFiyat=satMiktar>0?satKdvHaric/satMiktar:0;
                   topMiktar+=satMiktar;topKdvHaric+=satKdvHaric;topKdv+=satKdv;topKdvDahil+=satKdvDahil;
-                  return <div key={k.id} onClick={()=>satirTikla(k)} style={{display:"grid",gridTemplateColumns:"120px 1fr 80px 60px 70px 80px 100px 80px 100px 90px 90px 90px 35px 25px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtrelenmis.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
-                    onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
-                    onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
-                    <div style={{fontSize:"13px",color:T.t3}}>{k.mlzKodu||"—"}</div>
-                    <div style={{fontSize:"14px",fontWeight:500,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{k.mlzAd}</div>
+                  const tamamlandi=k.tamamlandi===true;
+                  const rowBg=tamamlandi?"#f6ffed":(idx%2===0?"#fff":"#fafafa");
+                  return <div key={k.id} onClick={()=>satirTikla(k)} style={{display:"grid",gridTemplateColumns:"30px 120px 1fr 80px 60px 70px 80px 100px 80px 100px 90px 90px 90px 35px 25px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtrelenmis.length-1?`1px solid ${T.border}`:"none",background:rowBg,cursor:"pointer",height:"44px"}}
+                    onMouseEnter={e=>e.currentTarget.style.background=tamamlandi?"#d9f7be":T.pBg}
+                    onMouseLeave={e=>e.currentTarget.style.background=rowBg}>
+                    <div onClick={async e=>{
+                      e.stopPropagation();
+                      const yeniTamamlandi=!tamamlandi;
+                      const yeniKalem={...k,tamamlandi:yeniTamamlandi};
+                      // Kapanma: alt satırları da kapat. Açılma: alt satırlar olduğu gibi kalır (B seçeneği)
+                      if(yeniTamamlandi&&(k.planlananSatirlari||[]).length>0){
+                        yeniKalem.planlananSatirlari=k.planlananSatirlari.map(s=>({...s,tamamlandi:true}));
+                      }
+                      await saveBKProp(yeniKalem,selProjeId);
+                    }} title={tamamlandi?"Tamamlandı işaretini kaldır":"Tamamlandı olarak işaretle"} style={{display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                      <div style={{width:"16px",height:"16px",borderRadius:"3px",border:`2px solid ${tamamlandi?"#52c41a":T.bDark}`,background:tamamlandi?"#52c41a":"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
+                        {tamamlandi&&<span style={{color:"#fff",fontSize:"11px",fontWeight:700,lineHeight:1}}>✓</span>}
+                      </div>
+                    </div>
+                    <div style={{fontSize:"13px",color:tamamlandi?"#52c41a":T.t3}}>{k.mlzKodu||"—"}</div>
+                    <div style={{fontSize:"14px",fontWeight:500,color:tamamlandi?"#52c41a":T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{k.mlzAd}</div>
                     <div style={{fontSize:"13px",fontWeight:600,color:bloklar.length>1?"#d48806":"#1677ff"}}>{blokStr}</div>
                     <div style={{fontSize:"13px",color:T.t2}}>{k.mlzBirim||"—"}</div>
                     <div style={{fontSize:"13px",color:satMiktar?T.text:T.t3,textAlign:"right"}}>{satMiktar?satMiktar.toLocaleString("tr-TR"):"—"}</div>
@@ -6230,8 +6265,8 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
                     {rows}
                   </div>
                   {/* ALT TOPLAMLAR — SABİT */}
-                  <div style={{flex:"0 0 auto",display:"grid",gridTemplateColumns:"120px 1fr 80px 60px 70px 80px 100px 80px 100px 90px 90px 90px 35px 25px",padding:"9px 12px",gap:"8px",alignItems:"center",background:"#384248",borderTop:`2px solid ${T.border}`}}>
-                    <div></div><div></div><div></div>
+                  <div style={{flex:"0 0 auto",display:"grid",gridTemplateColumns:"30px 120px 1fr 80px 60px 70px 80px 100px 80px 100px 90px 90px 90px 35px 25px",padding:"9px 12px",gap:"8px",alignItems:"center",background:"#384248",borderTop:`2px solid ${T.border}`}}>
+                    <div></div><div></div><div></div><div></div>
                     <div></div>
                     <div></div>
                     <div></div>
