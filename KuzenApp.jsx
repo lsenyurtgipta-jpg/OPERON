@@ -7003,6 +7003,13 @@ export default function App(){
   const[sbOpen,setSbOpen]=useState(true);
   const[loading,setLoading]=useState(true);
   const firmaSavingRef=useRef(false);
+  const malzemeSavingRef=useRef(false);
+  const katSavingRef=useRef(false);
+  const altGrpSavingRef=useRef(false);
+  const teklifSavingRef=useRef(false);
+  const siparisSavingRef=useRef(false);
+  const faturaSavingRef=useRef(false);
+  const projeSavingRef=useRef(false);
   const[firmalar,setFirmalar]=useState([]);
   const[malzemeler,setMalzemeler]=useState([]);
   const[teklifler,setTeklifler]=useState([]);
@@ -7167,6 +7174,8 @@ export default function App(){
 
   /* ---- MALZEME KAYDET ---- */
   const saveMalzeme = async (form) => {
+    if(malzemeSavingRef.current){console.warn("Malzeme kayıt işlemi devam ediyor, çift çağrı engellendi");return;}
+    malzemeSavingRef.current = true;
     try {
       const dbData = malzemeToDb(form);
       if(!form.id || form._isNew) {
@@ -7178,12 +7187,14 @@ export default function App(){
       }
     } catch(e) {
       console.warn("Malzeme kaydetme hatası:", e.message);
+    } finally {
+      setMalzemeler(prev => {
+        const exists = prev.find(m=>m.id===form.id);
+        if(exists) return prev.map(m=>m.id===form.id?form:m);
+        return [...prev, {...form, id:form.id||Date.now()}];
+      });
+      malzemeSavingRef.current = false;
     }
-    setMalzemeler(prev => {
-      const exists = prev.find(m=>m.id===form.id);
-      if(exists) return prev.map(m=>m.id===form.id?form:m);
-      return [...prev, {...form, id:form.id||Date.now()}];
-    });
   };
 
   const delMalzeme = async (id) => {
@@ -7194,11 +7205,15 @@ export default function App(){
 
   /* ---- KATEGORİ KAYDET ---- */
   const saveKat = async (kat) => {
+    if(katSavingRef.current){console.warn("Kategori kayıt işlemi devam ediyor, çift çağrı engellendi");return;}
+    katSavingRef.current = true;
     try {
       const [saved] = await sbPost('kategoriler', {kod:kat.kod, ad:kat.ad});
       setAltKategoriler(prev=>[...prev, {id:saved.id, kod:kat.kod, ad:kat.ad}]);
     } catch(e) {
       setAltKategoriler(prev=>[...prev, {id:Date.now(), kod:kat.kod, ad:kat.ad}]);
+    } finally {
+      katSavingRef.current = false;
     }
   };
   const delKat = async (id) => {
@@ -7209,11 +7224,15 @@ export default function App(){
 
   /* ---- ALT GRUP KAYDET ---- */
   const saveAltGrp = async (grp) => {
+    if(altGrpSavingRef.current){console.warn("Alt grup kayıt işlemi devam ediyor, çift çağrı engellendi");return;}
+    altGrpSavingRef.current = true;
     try {
       const [saved] = await sbPost('alt_gruplar', {grup_kod:grp.grupKod, grup_ad:grp.grupAd, kod:grp.kod, ad:grp.ad});
       setAltGruplar(prev=>[...prev, {id:saved.id, grupKod:grp.grupKod, grupAd:grp.grupAd, kod:grp.kod, ad:grp.ad}]);
     } catch(e) {
       setAltGruplar(prev=>[...prev, {id:Date.now(), grupKod:grp.grupKod, grupAd:grp.grupAd, kod:grp.kod, ad:grp.ad}]);
+    } finally {
+      altGrpSavingRef.current = false;
     }
   };
   const delAltGrp = async (id) => {
@@ -7224,6 +7243,8 @@ export default function App(){
 
   /* ---- TEKLİF KAYDET ---- */
   const saveTeklif = async (form) => {
+    if(teklifSavingRef.current){console.warn("Teklif kayıt işlemi devam ediyor, çift çağrı engellendi");return null;}
+    teklifSavingRef.current = true;
     try {
       const tDb = {
         teklif_no: form.teklifNo,
@@ -7275,6 +7296,8 @@ export default function App(){
         return [...prev, {...form, id:form.id||Date.now()}];
       });
       return null;
+    } finally {
+      teklifSavingRef.current = false;
     }
   };
 
@@ -7286,6 +7309,8 @@ export default function App(){
 
   // Sipariş kaydet/sil
   const saveSiparis = async (form) => {
+    if(siparisSavingRef.current){console.warn("Sipariş kayıt işlemi devam ediyor, çift çağrı engellendi");return;}
+    siparisSavingRef.current = true;
     try {
       const dbData = siparisToDb(form);
       let siparisId;
@@ -7305,12 +7330,14 @@ export default function App(){
       }
     } catch(e) {
       console.warn("Sipariş kaydetme hatası:", e.message);
+    } finally {
+      setSiparisler(prev => {
+        const exists = prev.find(s=>s.id===form.id);
+        if(exists) return prev.map(s=>s.id===form.id?form:s);
+        return [...prev, {...form, id:form.id||Date.now()}];
+      });
+      siparisSavingRef.current = false;
     }
-    setSiparisler(prev => {
-      const exists = prev.find(s=>s.id===form.id);
-      if(exists) return prev.map(s=>s.id===form.id?form:s);
-      return [...prev, {...form, id:form.id||Date.now()}];
-    });
   };
   const delSiparis = async (id) => {
     if(!confirm("Bu siparişi silmek istediğinize emin misiniz?")) return;
@@ -7321,6 +7348,8 @@ export default function App(){
 
   // Fatura kaydet/sil
   const saveFatura = async (form) => {
+    if(faturaSavingRef.current){console.warn("Fatura kayıt işlemi devam ediyor, çift çağrı engellendi");return;}
+    faturaSavingRef.current = true;
     try {
       const dbData = faturaToDb(form);
       let faturaId;
@@ -7340,12 +7369,14 @@ export default function App(){
       }
     } catch(e) {
       console.warn("Fatura kaydetme hatası:", e.message);
+    } finally {
+      setFaturalar(prev => {
+        const exists = prev.find(f=>f.id===form.id);
+        if(exists) return prev.map(f=>f.id===form.id?form:f);
+        return [...prev, {...form, id:form.id||Date.now()}];
+      });
+      faturaSavingRef.current = false;
     }
-    setFaturalar(prev => {
-      const exists = prev.find(f=>f.id===form.id);
-      if(exists) return prev.map(f=>f.id===form.id?form:f);
-      return [...prev, {...form, id:form.id||Date.now()}];
-    });
   };
   const delFatura = async (id) => {
     if(!confirm("Bu faturayı silmek istediğinize emin misiniz?")) return;
@@ -7368,6 +7399,8 @@ export default function App(){
 
   /* ---- PROJE KAYDET (local state) ---- */
   const saveProje = async (form) => {
+    if(projeSavingRef.current){console.warn("Proje kayıt işlemi devam ediyor, çift çağrı engellendi");return;}
+    projeSavingRef.current = true;
     try {
       const dbData = projeToDb(form);
       if(!form.id || form._isNew) {
@@ -7379,12 +7412,14 @@ export default function App(){
       }
     } catch(e) {
       console.warn("Proje kaydetme hatası, local state'e yazılıyor:", e.message);
+    } finally {
+      setProjeler(prev => {
+        const exists = prev.find(p=>p.id===form.id);
+        if(exists) return prev.map(p=>p.id===form.id?form:p);
+        return [...prev, {...form, id:form.id||Date.now()}];
+      });
+      projeSavingRef.current = false;
     }
-    setProjeler(prev => {
-      const exists = prev.find(p=>p.id===form.id);
-      if(exists) return prev.map(p=>p.id===form.id?form:p);
-      return [...prev, {...form, id:form.id||Date.now()}];
-    });
   };
   const delProje = async (id) => {
     if(!confirm("Bu projeyi silmek istediğinize emin misiniz?")) return;
