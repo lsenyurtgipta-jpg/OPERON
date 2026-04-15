@@ -5777,15 +5777,8 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
   const[siralama,setSiralama]=useState({alan:"mlzKodu",yon:"asc"});
   const siraToggle=(alan)=>setSiralama(p=>p.alan===alan?{alan,yon:p.yon==="asc"?"desc":"asc"}:{alan,yon:"asc"});
   const selProje=projeler.find(p=>p.id===selProjeId);
-  const butceKalemleri=selProje?.butceKalemleri||[];
-
-  // Projeyi immutable güncelle + Supabase'e yaz
-  const guncelleProje=async(guncKalemler)=>{
-    if(!selProje)return;
-    const guncProje={...selProje,butceKalemleri:guncKalemler};
-    setProjeler(prev=>prev.map(p=>p.id===guncProje.id?guncProje:p));
-    try{await sbPatch('projeler',selProje.id,{butce_kalemleri:guncKalemler});}catch(e){console.warn("Maliyet Supabase kayıt hatası:",e.message);}
-  };
+  // Yeni yapı: butceKalemleri ayrı tablodan global state'ten gelir, proje bazında filtrelenir
+  const butceKalemleri=useMemo(()=>selProjeId?butceKalemleriGlobal.filter(b=>b.projeId===selProjeId):[],[butceKalemleriGlobal,selProjeId]);
 
   // Kalem listesi — sadece eklenen kalemleri göster
   const kalemListesi=useMemo(()=>{
@@ -5954,32 +5947,34 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
     return{planlananTop,planlananTopKdvDahil,gerceklesenTop,gerceklesenTopKdvDahil,taahhutTop,taahhutTopKdvDahil,kalanButce:planlananTop-taahhutTop-gerceklesenTop,kalanButceKdvDahil:planlananTopKdvDahil-taahhutTopKdvDahil-gerceklesenTopKdvDahil,brutM2,ortakM2,toplamM2,m2Maliyet,m2MaliyetKdvDahil,m2MaliyetNet,m2MaliyetNetKdvDahil,muteahhitM2,muteahhitOran,blokMaliyet,blokMaliyetKdvDahil,ortakToplam,ortakToplamKdvDahil,blokEfektifM2,kategoriDagilim,blokKategoriDagilim};
   },[butceKalemleri,gerceklesen,taahhut,selProje,blokM2Harita,malzemeler]);
 
-  // Kaydet — immutable update
-  const saveButceKalemi=(kalem)=>{
+  // Kaydet — satır bazlı POST/PATCH (yeni tablo)
+  const saveButceKalemi=async(kalem)=>{
     if(!selProje)return;
-    // Hesaplamalı kartlarda planlananToplam direkt gelir, normal kartlarda miktar×fiyat
     const mlzRef=malzemeler?.find(m=>m.id===kalem.malzemeId);
     const hesaplamaVarMi=mlzRef?.hesaplamaSablonu&&HESAPLAMA_SABLONLARI[mlzRef.hesaplamaSablonu];
     const toplam=hesaplamaVarMi?parseFloat(kalem.planlananToplam||0):parseFloat(kalem.planlananMiktar||0)*parseFloat(kalem.planlananBirimFiyat||0);
-    const kayit={...kalem,planlananToplam:toplam,_isNew:undefined};
-    const mevcutKalemler=[...(selProje.butceKalemleri||[])];
-    const exists=mevcutKalemler.find(k=>k.id===kayit.id);
-    const yeniKalemler=exists?mevcutKalemler.map(k=>k.id===kayit.id?kayit:k):[...mevcutKalemler,kayit];
-    guncelleProje(yeniKalemler);
-    setButceModal({...kayit});
+    const mevcut=butceKalemleri.find(b=>b.id===kalem.id);
+    const kayit={...kalem,planlananToplam:toplam,projeId:selProjeId,_isNew:!mevcut};
+    const savedId=await saveBKProp(kayit,selProjeId);
+    if(savedId){
+      setButceModal({...kayit,id:savedId,_isNew:undefined});
+    }
   };
 
-  const delButceKalemi=(id)=>{
+  const delButceKalemi=async(id)=>{
     if(!selProje||!confirm("Bu bütçe kalemini silmek istiyor musunuz?"))return;
-    guncelleProje((selProje.butceKalemleri||[]).filter(k=>k.id!==id));
+    await delBKProp(id);
     setButceModal(null);
   };
 
-  // Kalem ekle — malzeme picker'dan seçim
-  const kalemEkle=(mlz)=>{
-    const yeniKalem={id:Date.now(),malzemeId:mlz.id,malzemeAd:mlz.ad,malzemeKodu:mlz.malzemeKodu,birim:mlz.birim,bloklar:[],planlananMiktar:"",planlananBirimFiyat:"",planlananToplam:0,aciklama:""};
-    guncelleProje([...(selProje.butceKalemleri||[]),yeniKalem]);
-    setButceModal(yeniKalem);
+  // Kalem ekle — malzeme picker'dan seçim (yeni tabloya POST)
+  const kalemEkle=async(mlz)=>{
+    if(!selProje)return;
+    const yeniKalem={malzemeId:mlz.id,malzemeAd:mlz.ad,malzemeKodu:mlz.malzemeKodu,birim:mlz.birim,bloklar:[],planlananMiktar:"",planlananBirimFiyat:"",planlananToplam:0,planlananSatirlari:[],aciklama:"",tamamlandi:false,siraNo:butceKalemleri.length,projeId:selProjeId,_isNew:true};
+    const savedId=await saveBKProp(yeniKalem,selProjeId);
+    if(savedId){
+      setButceModal({...yeniKalem,id:savedId,_isNew:undefined});
+    }
   };
 
   // Omurga oluştur — modal açar
@@ -5992,10 +5987,12 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
     setOmurgaPickerOpen(true);
   };
 
-  // Omurga picker'dan seçilenleri ekle
-  const omurgaKalemEkle=(secilenler)=>{
-    const yeniKalemler=secilenler.map((mlz,idx)=>({id:Date.now()+idx,malzemeId:mlz.id,malzemeAd:mlz.ad,malzemeKodu:mlz.malzemeKodu,birim:mlz.birim,bloklar:[],planlananMiktar:"",planlananBirimFiyat:"",planlananToplam:0,aciklama:""}));
-    guncelleProje([...(selProje.butceKalemleri||[]),...yeniKalemler]);
+  // Omurga picker'dan seçilenleri ekle (toplu POST)
+  const omurgaKalemEkle=async(secilenler)=>{
+    if(!selProje)return;
+    const baseSiraNo=butceKalemleri.length;
+    const yeniKalemler=secilenler.map((mlz,idx)=>({malzemeId:mlz.id,malzemeAd:mlz.ad,malzemeKodu:mlz.malzemeKodu,birim:mlz.birim,bloklar:[],planlananMiktar:"",planlananBirimFiyat:"",planlananToplam:0,planlananSatirlari:[],aciklama:"",tamamlandi:false,siraNo:baseSiraNo+idx,projeId:selProjeId}));
+    await bulkSaveBKProp(yeniKalemler,selProjeId);
   };
 
   // Satıra tıkla — direkt düzenle
@@ -6014,7 +6011,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
       ?<div style={{padding:"80px",textAlign:"center",color:T.t3,fontSize:"16px",border:`1px dashed ${T.border}`,borderRadius:T.r}}>Maliyet takibi için bir proje seçiniz.</div>
       :<div>
         {pickerOpen&&<MalzemePickerModal malzemeler={malzemeler} onSelect={kalemEkle} onClose={()=>setPickerOpen(false)}/>}
-        {omurgaPickerOpen&&<OmurgaPickerModal malzemeler={malzemeler} projeTuru={selProje.tur} mevcutIds={new Set((selProje.butceKalemleri||[]).map(k=>k.malzemeId))} onEkle={omurgaKalemEkle} onClose={()=>setOmurgaPickerOpen(false)}/>}
+        {omurgaPickerOpen&&<OmurgaPickerModal malzemeler={malzemeler} projeTuru={selProje.tur} mevcutIds={new Set(butceKalemleri.map(k=>k.malzemeId))} onEkle={omurgaKalemEkle} onClose={()=>setOmurgaPickerOpen(false)}/>}
         {butceModal&&<ButceKalemModal kalem={butceModal} onSave={saveButceKalemi} onDel={delButceKalemi} onClose={()=>setButceModal(null)} malzemeler={malzemeler} projeBloklar={selProje?.bloklar||[]} projeBolumler={selProje?.bolumler||[]} ortakAlanM2={String((selProje?.bloklar||[]).reduce((s,b)=>s+parseFloat(b.ortakAlanM2||0),0))}/>}
 
         {/* SEKME BARI */}
