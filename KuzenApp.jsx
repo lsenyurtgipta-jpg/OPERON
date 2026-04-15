@@ -5766,7 +5766,7 @@ const MalzemePickerModal=({malzemeler,onSelect,onClose})=>{
 };
 
 /* ========== MALİYET YÖNETİMİ ========== */
-const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[]})=>{
+const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],butceKalemleri:butceKalemleriGlobal=[],saveButceKalemi:saveBKProp,delButceKalemi:delBKProp,bulkSaveButceKalemleri:bulkSaveBKProp})=>{
   const[selProjeId,setSelProjeId]=useState(null);
   const[butceModal,setButceModal]=useState(null);
   const[filtre,setFiltre]=useState("hepsi");
@@ -7469,6 +7469,56 @@ export default function App(){
     }
   };
 
+  /* ---- BÜTÇE KALEMİ KAYDET/SİL/TOPLU KAYDET ---- */
+  const saveButceKalemi = async (kalem, projeId) => {
+    if(butceKalemiSavingRef.current){console.warn("Bütçe kalemi kayıt işlemi devam ediyor, çift çağrı engellendi");return null;}
+    butceKalemiSavingRef.current = true;
+    try {
+      const dbData = butceKalemiToDb(kalem, projeId||kalem.projeId);
+      let savedId = kalem.id;
+      if(!kalem.id || kalem._isNew) {
+        const [saved] = await sbPost('butce_kalemleri', dbData);
+        savedId = saved.id;
+        setButceKalemleri(prev=>[...prev, butceKalemiToLocal(saved)]);
+      } else {
+        await sbPatch('butce_kalemleri', kalem.id, dbData);
+        setButceKalemleri(prev=>prev.map(b=>b.id===kalem.id?{...b,...butceKalemiToLocal({...dbData,id:kalem.id,proje_id:dbData.proje_id})}:b));
+      }
+      return savedId;
+    } catch(e) {
+      console.error("Bütçe kalemi kayıt hatası:", e.message);
+      return null;
+    } finally {
+      butceKalemiSavingRef.current = false;
+    }
+  };
+
+  const delButceKalemi = async (id) => {
+    try {
+      await sbDel('butce_kalemleri', id);
+      setButceKalemleri(prev=>prev.filter(b=>b.id!==id));
+    } catch(e) {
+      console.error("Bütçe kalemi silme hatası:", e.message);
+    }
+  };
+
+  const bulkSaveButceKalemleri = async (kalemler, projeId) => {
+    if(butceKalemiSavingRef.current){console.warn("Bütçe kalemi toplu kayıt işlemi devam ediyor");return [];}
+    if(!kalemler || kalemler.length===0) return [];
+    butceKalemiSavingRef.current = true;
+    try {
+      const dbRows = kalemler.map(k=>butceKalemiToDb(k, projeId||k.projeId));
+      const saved = await sbPost('butce_kalemleri', dbRows);
+      setButceKalemleri(prev=>[...prev, ...saved.map(butceKalemiToLocal)]);
+      return saved.map(butceKalemiToLocal);
+    } catch(e) {
+      console.error("Bütçe kalemi toplu kayıt hatası:", e.message);
+      return [];
+    } finally {
+      butceKalemiSavingRef.current = false;
+    }
+  };
+
   /* ---- TEKLİFTEN SP OLUŞTUR ---- */
   const spOlusturTeklifden = async (teklif) => {
     // Teklifi SP'ye dönüştürüldü olarak işaretle
@@ -7519,7 +7569,7 @@ export default function App(){
         {page==="teklif_verme"&&<div style={{padding:"80px",textAlign:"center",color:T.t3,fontSize:"16px",border:`1px dashed ${T.border}`,borderRadius:T.rl}}><div style={{fontSize:"32px",marginBottom:"12px"}}>📋</div>Teklif Verme modülü hazırlanıyor...</div>}
         {page==="satinalma"&&<SatinalmaSiparisleriPage siparisler={siparisler} setSiparisler={setSiparisler} onSave={saveSiparis} onDel={delSiparis} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler}/>}
         {page==="alis_fatura"&&<AlisFaturalariPage faturalar={faturalar} setFaturalar={setFaturalar} onSave={saveFatura} onDel={delFatura} siparisler={siparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler}/>}
-        {page==="maliyet"&&<MaliyetPage projeler={projeler} setProjeler={setProjeler} malzemeler={malzemeler} faturalar={faturalar} siparisler={siparisler}/>}
+        {page==="maliyet"&&<MaliyetPage projeler={projeler} setProjeler={setProjeler} malzemeler={malzemeler} faturalar={faturalar} siparisler={siparisler} butceKalemleri={butceKalemleri} saveButceKalemi={saveButceKalemi} delButceKalemi={delButceKalemi} bulkSaveButceKalemleri={bulkSaveButceKalemleri}/>}
         {page==="satis_sunum"&&<SatisSunumPage projeler={projeler} setProjeler={setProjeler} firmalar={firmalar} saveProje={saveProje} saveFirma={saveFirma} setPage={setPage} goToFirma={goToFirma}/>}
       </div>
     </div>
