@@ -2396,6 +2396,7 @@ const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,fi
   const[firmaPickerOpen,setFirmaPickerOpen]=useState(false);
   const[mlzPickerKalemId,setMlzPickerKalemId]=useState(null);
   const[saved,setSaved]=useState(false);
+  const savingRef=useRef(false);
   const uf=(f,v)=>setForm(p=>({...p,[f]:v}));
 
   // Firma seçilince kişiler ve adresler
@@ -2438,28 +2439,40 @@ const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,fi
     })}));
   };
 
-  const save=()=>{
+  const save=async()=>{
+    if(savingRef.current){console.warn("Teklif kayıt işlemi devam ediyor, çift çağrı engellendi");return;}
     if(!form.firmaId){alert("Firma seçiniz!");return;}
     if(form.kalemler.length===0){alert("En az bir kalem ekleyiniz!");return;}
     const bos=form.kalemler.find(k=>!k.malzemeId);
     if(bos){alert("Tüm kalemlerde malzeme seçilmelidir!");return;}
     const fiyatBos=form.kalemler.find(k=>!(parseFloat(k.netFiyat)>0));
     if(fiyatBos){alert("Tüm kalemlerde fiyat girilmelidir!");return;}
-    const frm=firmalar.find(f=>f.id===parseInt(form.firmaId));
-    const prj=projeler.find(p=>p.id===parseInt(form.projeId));
-    const today=new Date().toISOString().split("T")[0];
-    let durum=form.durum;
-    if(durum==="beklemede"&&form.gecerlilikTarihi&&form.gecerlilikTarihi<today)durum="suresi_doldu";
-    const teklif={...form,id:form.id||Date.now(),firmaId:parseInt(form.firmaId),firmaAd:frm?.ad||"",
-      projeId:form.projeId?parseInt(form.projeId):null,projeAd:prj?.ad||"",durum,
-      kalemler:form.kalemler.map(k=>({...k,malzemeId:parseInt(k.malzemeId),listeFiyati:parseFloat(k.listeFiyati)||0,iskonto1:parseFloat(k.iskonto1)||0,iskonto2:parseFloat(k.iskonto2)||0,netFiyat:parseFloat(k.netFiyat)||0,miktar:parseFloat(k.miktar)||1}))};
-    if(onSave){onSave(teklif);}else{
-      if(form.id){setTeklifler(p=>p.map(t=>t.id===form.id?teklif:t));}else{setTeklifler(p=>[...p,teklif]);}
+    savingRef.current=true;
+    try{
+      const frm=firmalar.find(f=>f.id===parseInt(form.firmaId));
+      const prj=projeler.find(p=>p.id===parseInt(form.projeId));
+      const today=new Date().toISOString().split("T")[0];
+      let durum=form.durum;
+      if(durum==="beklemede"&&form.gecerlilikTarihi&&form.gecerlilikTarihi<today)durum="suresi_doldu";
+      const isNew=!form.id;
+      const teklif={...form,id:form.id,_isNew:isNew,firmaId:parseInt(form.firmaId),firmaAd:frm?.ad||"",
+        projeId:form.projeId?parseInt(form.projeId):null,projeAd:prj?.ad||"",durum,
+        kalemler:form.kalemler.map(k=>({...k,malzemeId:parseInt(k.malzemeId),listeFiyati:parseFloat(k.listeFiyati)||0,iskonto1:parseFloat(k.iskonto1)||0,iskonto2:parseFloat(k.iskonto2)||0,netFiyat:parseFloat(k.netFiyat)||0,miktar:parseFloat(k.miktar)||1}))};
+      let yeniId=form.id;
+      if(onSave){
+        const dbId=await onSave(teklif);
+        if(dbId)yeniId=dbId;
+      }else{
+        if(form.id){setTeklifler(p=>p.map(t=>t.id===form.id?teklif:t));}
+        else{yeniId=Date.now();setTeklifler(p=>[...p,{...teklif,id:yeniId}]);}
+      }
+      // Formda kal, id/durum güncelle (ikinci kaydette update çalışsın)
+      setForm(p=>({...p,id:yeniId,durum:teklif.durum}));
+      setSaved(true);
+      setTimeout(()=>setSaved(false),2000);
+    }finally{
+      savingRef.current=false;
     }
-    // Formda kal, sadece id/durum güncelle (ikinci kaydette update çalışsın)
-    setForm(p=>({...p,id:teklif.id,durum:teklif.durum}));
-    setSaved(true);
-    setTimeout(()=>setSaved(false),2000);
   };
 
   const edit=(t)=>{setForm({...t,firmaId:String(t.firmaId),projeId:t.projeId?String(t.projeId):"",kalemler:t.kalemler.map(k=>({...k,malzemeId:String(k.malzemeId)}))});setView("form");};
@@ -7213,9 +7226,24 @@ export default function App(){
   const saveTeklif = async (form) => {
     try {
       const tDb = {
-        teklif_no: form.teklifNo, firma_id: form.firmaId, firma_ad: form.firmaAd,
-        teklif_tarihi: form.teklifTarihi, gecerlilik_tarihi: form.gecerlilikTarihi||null,
-        para_birimi: form.paraBirimi, aciklama: form.aciklama, durum: form.durum
+        teklif_no: form.teklifNo,
+        firma_id: form.firmaId, firma_ad: form.firmaAd,
+        yetkili_kisi_id: form.yetkiliKisiId || null,
+        yetkili_kisi_ad: form.yetkiliKisiAd || "",
+        yetkili_telefon: form.yetkiliTelefon || "",
+        yetkili_eposta: form.yetkiliEposta || "",
+        proje_id: form.projeId || null,
+        proje_ad: form.projeAd || "",
+        teklif_tarihi: form.teklifTarihi,
+        gecerlilik_gun: form.gecerlilikGun ? parseInt(form.gecerlilikGun) : null,
+        gecerlilik_tarihi: form.gecerlilikTarihi || null,
+        para_birimi: form.paraBirimi,
+        odeme_sekli: form.odemeSekli || "",
+        teslimat_sahip: form.teslimatSahip || "",
+        teslimat_adres_id: form.teslimatAdresId && form.teslimatAdresId !== "__serbest__" ? form.teslimatAdresId : null,
+        teslimat_adres_serbest: form.teslimatAdresSerbest || "",
+        aciklama: form.aciklama || "",
+        durum: form.durum
       };
       let teklifId;
       if(!form.id || form._isNew) {
@@ -7232,17 +7260,21 @@ export default function App(){
           malzeme_kodu: k.malzemeKodu, birim: k.birim, miktar: k.miktar,
           fiyat_tipi: k.fiyatTipi, liste_fiyati: k.listeFiyati, iskonto1: k.iskonto1,
           iskonto2: k.iskonto2, net_fiyat: k.netFiyat, kdv_orani: k.kdvOrani,
-          maliyet_esas: k.maliyetEsas, kalem_notu: k.not||""
+          maliyet_esas: k.maliyetEsas, kalem_notu: k.not||"",
+          temin_tarihi: k.teminTarihi || null
         }));
         await sbPost('teklif_kalemleri', kDb2);
       }
       await loadAll();
+      return teklifId;
     } catch(e) {
+      console.error("Teklif Supabase kayıt hatası:", e.message);
       setTeklifler(prev => {
         const exists = prev.find(t=>t.id===form.id);
         if(exists) return prev.map(t=>t.id===form.id?form:t);
         return [...prev, {...form, id:form.id||Date.now()}];
       });
+      return null;
     }
   };
 
