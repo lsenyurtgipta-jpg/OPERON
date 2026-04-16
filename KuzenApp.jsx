@@ -5357,17 +5357,12 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
   const uf=(f,v)=>setFm(p=>({...p,[f]:v}));
   const[saved,setSaved]=useState(false);
   const[hatalar,setHatalar]=useState({});
-  const[fiyatSekme,setFiyatSekme]=useState("firma");
   const[hesapModalAcik,setHesapModalAcik]=useState(false);
 
   // Malzeme referansı (erken tanımla — fiyat fonksiyonları kullanıyor)
   const _mlzRef=malzemeler?.find(m=>m.id===fm.malzemeId);
   const _hesaplamaVar=_mlzRef?.hesaplamaSablonu&&HESAPLAMA_SABLONLARI[_mlzRef.hesaplamaSablonu];
 
-  // Fiyat satır yönetimi
-  const fiyatAlanMap={firma:"firmaSatirlari",planlanan:"planlananSatirlari"};
-  const addFiyatSatir=(sekme)=>{const alan=fiyatAlanMap[sekme];const varsayilanKdv=_mlzRef?.kdvOrani||"20";uf(alan,[...(fm[alan]||[]),{id:Date.now(),aciklama:"",miktar:"",birimFiyat:"",kdvOrani:varsayilanKdv}]);};
-  const upFiyatSatir=(sekme,idx,field,val)=>{const alan=fiyatAlanMap[sekme];const arr=[...(fm[alan]||[])];arr[idx]={...arr[idx],[field]:val};uf(alan,arr);};
   const delFiyatSatir=(sekme,idx)=>{const alan=fiyatAlanMap[sekme];uf(alan,(fm[alan]||[]).filter((_,i)=>i!==idx));};
   const fiyatToplamHesapla=(satirlar)=>{
     let miktarTop=0,kdvHaricTop=0,kdvTop=0;
@@ -5441,28 +5436,22 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
           {hatalar.bloklar&&<span style={{fontSize:"11px",color:T.err,fontWeight:600}}>{hatalar.bloklar}</span>}
         </div>}
 
-        {/* FİYAT PORTALI — tek satırda firma + planlanan yan yana */}
+        {/* FİYAT PORTALI — Planlanan Fiyat */}
         {(()=>{
           const birim=_mlzRef?.birim||fm.birim||"adet";
           const varsayilanKdv=_mlzRef?.kdvOrani||"20";
           const satirlar=fm.planlananSatirlari||[];
-          const firmaSatirlari=fm.firmaSatirlari||[];
 
-          // Satır ekleme (her iki listeye senkron)
           const addSatir=()=>{
             const yeniId=Date.now();
             uf("planlananSatirlari",[...satirlar,{id:yeniId,siraNo:String(satirlar.length+1),aciklama:"",miktar:"",birimFiyat:"",kdvOrani:varsayilanKdv,tamamlandi:false}]);
-            uf("firmaSatirlari",[...firmaSatirlari,{id:yeniId,birimFiyat:"",kdvOrani:varsayilanKdv}]);
           };
           const delSatir=(idx)=>{
             const yeniSatirlar=satirlar.filter((_,i)=>i!==idx);
             const yeniTamamlandi=yeniSatirlar.length>0&&yeniSatirlar.every(s=>s.tamamlandi===true);
             setFm(p=>({...p,planlananSatirlari:yeniSatirlar,tamamlandi:yeniTamamlandi}));
-            uf("firmaSatirlari",firmaSatirlari.filter((_,i)=>i!==idx));
           };
           const upPlan=(idx,field,val)=>{const arr=[...satirlar];arr[idx]={...arr[idx],[field]:val};uf("planlananSatirlari",arr);};
-          const upFirma=(idx,field,val)=>{const arr=[...firmaSatirlari];if(!arr[idx])arr[idx]={id:satirlar[idx]?.id||Date.now()};arr[idx]={...arr[idx],[field]:val};uf("firmaSatirlari",arr);};
-          // Alt satır tamamlandı toggle — ana kalem auto-compute
           const toggleAltTamamlandi=(idx)=>{
             const arr=[...satirlar];
             arr[idx]={...arr[idx],tamamlandi:!arr[idx].tamamlandi};
@@ -5470,19 +5459,15 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
             setFm(p=>({...p,planlananSatirlari:arr,tamamlandi:yeniTamamlandi}));
           };
 
-          // Toplamlar
-          let fMikTop=0,fKdvHTop=0,fKdvTop=0,pMikTop=0,pKdvHTop=0,pKdvTop=0;
-          satirlar.forEach((s,i)=>{
+          let pMikTop=0,pKdvHTop=0,pKdvTop=0;
+          satirlar.forEach(s=>{
             const m=parseFloat(s.miktar||0);
-            const fBf=parseFloat(firmaSatirlari[i]?.birimFiyat||0);
-            const fKdvO=parseInt(firmaSatirlari[i]?.kdvOrani||s.kdvOrani||varsayilanKdv)/100;
-            const fH=m*fBf;fMikTop+=m;fKdvHTop+=fH;fKdvTop+=fH*fKdvO;
             const pBf=parseFloat(s.birimFiyat||0);
             const pKdvO=parseInt(s.kdvOrani||varsayilanKdv)/100;
             const pH=m*pBf;pMikTop+=m;pKdvHTop+=pH;pKdvTop+=pH*pKdvO;
           });
 
-          const gridCols="30px 40px 1fr 70px 55px 80px 80px 50px 70px 80px 4px 80px 80px 50px 70px 80px 24px";
+          const gridCols="30px 40px 1fr 80px 55px 90px 90px 55px 80px 90px 24px";
 
           return <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
             {/* HESAPLA BUTONU */}
@@ -5495,17 +5480,15 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
                 <RefreshCw size={12}/> Hesapla
               </button>
             </div>}
-            {/* ÜST GRUP BAŞLIK */}
-            <div style={{display:"grid",gridTemplateColumns:gridCols,gap:"4px",padding:"4px 8px",background:"#384248"}}>
+            {/* BAŞLIK */}
+            <div style={{display:"grid",gridTemplateColumns:gridCols,gap:"4px",padding:"6px 8px",background:"#384248"}}>
               <div></div><div></div><div></div><div></div><div></div>
-              <div style={{gridColumn:"6 / 11",textAlign:"center",fontSize:"11px",fontWeight:700,color:"#1677ff",letterSpacing:"1px"}}>FİRMA FİYATI</div>
-              <div></div>
-              <div style={{gridColumn:"12 / 17",textAlign:"center",fontSize:"11px",fontWeight:700,color:"#52c41a",letterSpacing:"1px"}}>PLANLANAN FİYAT</div>
+              <div style={{gridColumn:"6 / 11",textAlign:"center",fontSize:"11px",fontWeight:700,color:"#52c41a",letterSpacing:"1px"}}>PLANLANAN FİYAT</div>
               <div></div>
             </div>
             {/* TABLO HEADER */}
             <div style={{display:"grid",gridTemplateColumns:gridCols,gap:"4px",padding:"4px 8px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
-              {["✓","S.No","Açıklama","Miktar","Birim","B.Fiyat","KDV Hariç","KDV%","KDV Tut.","Toplam","","B.Fiyat","KDV Hariç","KDV%","KDV Tut.","Toplam",""].map((h,i)=><div key={i} style={{fontSize:"10px",fontWeight:600,color:i>=5&&i<=9?"#1677ff":(i>=11&&i<=15?"#52c41a":T.t3),textTransform:"uppercase",textAlign:i===0?"center":(i>=3?"right":"left")}}>{h}</div>)}
+              {["✓","S.No","Açıklama","Miktar","Birim","B.Fiyat","KDV Hariç","KDV%","KDV Tut.","Toplam",""].map((h,i)=><div key={i} style={{fontSize:"10px",fontWeight:600,color:i>=5?"#52c41a":T.t3,textTransform:"uppercase",textAlign:i===0?"center":(i>=3?"right":"left")}}>{h}</div>)}
             </div>
             {/* SATIRLAR */}
             <div style={{maxHeight:"400px",overflow:"auto"}}>
@@ -5513,8 +5496,6 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
                 ?<div style={{padding:"24px",textAlign:"center",color:T.t3,fontSize:"12px"}}>Satır eklemek için aşağıdaki butonu kullanın.</div>
                 :satirlar.map((s,idx)=>{
                   const m=parseFloat(s.miktar||0);
-                  const fBf=parseFloat(firmaSatirlari[idx]?.birimFiyat||0);const fKdvO=parseInt(firmaSatirlari[idx]?.kdvOrani||s.kdvOrani||varsayilanKdv);
-                  const fH=m*fBf;const fKdvT=fH*(fKdvO/100);const fTop=fH+fKdvT;
                   const pBf=parseFloat(s.birimFiyat||0);const pKdvO=parseInt(s.kdvOrani||varsayilanKdv);
                   const pH=m*pBf;const pKdvT=pH*(pKdvO/100);const pTop=pH+pKdvT;
                   const altTamam=s.tamamlandi===true;
@@ -5530,15 +5511,6 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
                     <input style={{...iS,fontSize:"12px",padding:"4px 6px"}} value={s.aciklama||""} onChange={e=>upPlan(idx,"aciklama",e.target.value)} placeholder="Açıklama..." onFocus={foc} onBlur={blr}/>
                     <input style={{...iS,fontSize:"14px",padding:"4px 4px",textAlign:"right",fontWeight:600}} value={s._miktarEdit?s.miktar||"":(parseFloat(s.miktar||0)>0?parseFloat(s.miktar).toLocaleString("tr-TR"):"")} onChange={e=>{const raw=e.target.value.replace(/[^0-9.,]/g,"").replace(/,/g,".");const pts=raw.split(".");const v=pts.length>2?pts[0]+"."+pts.slice(1).join(""):raw;upPlan(idx,"miktar",v);}} placeholder="0" onFocus={e=>{upPlan(idx,"_miktarEdit",true);foc(e);}} onBlur={e=>{upPlan(idx,"_miktarEdit",false);blr(e);}}/>
                     <div style={{fontSize:"11px",color:T.t2,textAlign:"right"}}>{birim}</div>
-                    {/* FIRMA */}
-                    <input style={{...iS,fontSize:"14px",padding:"4px 4px",textAlign:"right",background:"#e6f4ff",fontWeight:600}} value={firmaSatirlari[idx]?._bfEdit?firmaSatirlari[idx]?.birimFiyat||"":(parseFloat(firmaSatirlari[idx]?.birimFiyat||0)>0?parseFloat(firmaSatirlari[idx]?.birimFiyat).toLocaleString("tr-TR"):"")} onChange={e=>{const raw=e.target.value.replace(/[^0-9.,]/g,"").replace(/,/g,".");const pts=raw.split(".");const v=pts.length>2?pts[0]+"."+pts.slice(1).join(""):raw;upFirma(idx,"birimFiyat",v);}} placeholder="0" onFocus={e=>{upFirma(idx,"_bfEdit",true);foc(e);}} onBlur={e=>{upFirma(idx,"_bfEdit",false);blr(e);}}/>
-                    <div style={{fontSize:"11px",fontWeight:600,color:T.text,textAlign:"right"}}>{fH>0?fH.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                    <select style={{...iS,fontSize:"10px",padding:"2px",textAlign:"center",background:"#e6f4ff"}} value={firmaSatirlari[idx]?.kdvOrani||s.kdvOrani||varsayilanKdv} onChange={e=>upFirma(idx,"kdvOrani",e.target.value)}>{KDV_ORANLARI.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select>
-                    <div style={{fontSize:"11px",color:T.t2,textAlign:"right"}}>{fKdvT>0?fKdvT.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                    <div style={{fontSize:"11px",fontWeight:700,color:"#1677ff",textAlign:"right"}}>{fTop>0?fTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                    {/* AYIRICI */}
-                    <div style={{width:"2px",background:T.border,height:"100%",margin:"0 auto"}}></div>
-                    {/* PLANLANAN */}
                     <input style={{...iS,fontSize:"14px",padding:"4px 4px",textAlign:"right",background:"#f6ffed",fontWeight:600}} value={s._bfEdit?s.birimFiyat||"":(parseFloat(s.birimFiyat||0)>0?parseFloat(s.birimFiyat).toLocaleString("tr-TR"):"")} onChange={e=>{const raw=e.target.value.replace(/[^0-9.,]/g,"").replace(/,/g,".");const pts=raw.split(".");const v=pts.length>2?pts[0]+"."+pts.slice(1).join(""):raw;upPlan(idx,"birimFiyat",v);}} placeholder="0" onFocus={e=>{upPlan(idx,"_bfEdit",true);foc(e);}} onBlur={e=>{upPlan(idx,"_bfEdit",false);blr(e);}}/>
                     <div style={{fontSize:"11px",fontWeight:600,color:T.text,textAlign:"right"}}>{pH>0?pH.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
                     <select style={{...iS,fontSize:"10px",padding:"2px",textAlign:"center",background:"#f6ffed"}} value={s.kdvOrani||varsayilanKdv} onChange={e=>upPlan(idx,"kdvOrani",e.target.value)}>{KDV_ORANLARI.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select>
@@ -5560,12 +5532,6 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
               <div style={{fontSize:"11px",fontWeight:700,color:T.text,textAlign:"right"}}>TOPLAM</div>
               <div style={{fontSize:"11px",fontWeight:700,color:T.text,textAlign:"right"}}>{pMikTop>0?pMikTop.toLocaleString("tr-TR"):""}</div>
               <div style={{fontSize:"10px",color:T.t3,textAlign:"right"}}>{birim}</div>
-              <div></div>
-              <div style={{fontSize:"11px",fontWeight:700,color:"#1677ff",textAlign:"right"}}>{fKdvHTop>0?fKdvHTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-              <div></div>
-              <div style={{fontSize:"11px",fontWeight:700,color:"#1677ff",textAlign:"right"}}>{fKdvTop>0?fKdvTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-              <div style={{fontSize:"12px",fontWeight:700,color:"#1677ff",textAlign:"right"}}>{(fKdvHTop+fKdvTop)>0?(fKdvHTop+fKdvTop).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-              <div></div>
               <div></div>
               <div style={{fontSize:"11px",fontWeight:700,color:"#52c41a",textAlign:"right"}}>{pKdvHTop>0?pKdvHTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
               <div></div>
@@ -5639,7 +5605,7 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
             <span style={{fontSize:"22px"}}>{HESAPLAMA_SABLONLARI[sablonKey].icon}</span>
             <div style={{flex:1}}>
               <div style={{fontSize:"15px",fontWeight:600,color:"#fff"}}>{HESAPLAMA_SABLONLARI[sablonKey].ad}</div>
-              <div style={{fontSize:"11px",color:"#8799a3"}}>Yardımcı hesap — sonucu "{fiyatSekme==="piyasa"?"Piyasa Fiyatı":fiyatSekme==="firma"?"Firma Fiyatı":"Planlanan Fiyat"}" sekmesine aktarabilirsiniz</div>
+              <div style={{fontSize:"11px",color:"#8799a3"}}>Yardımcı hesap — sonucu "Planlanan Fiyat" sekmesine aktarabilirsiniz</div>
             </div>
             <button onClick={()=>setHesapModalAcik(false)} style={{padding:"6px 14px",borderRadius:"6px",border:"1px solid #8799a3",background:"transparent",color:"#8799a3",fontSize:"12px",cursor:"pointer",fontWeight:600}}>Kapat</button>
           </div>
@@ -5661,8 +5627,7 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
                 const birimFiyat=anaSatir&&anaSatir.deger>0?(tutar/anaSatir.deger):tutar;
                 const aciklama=`Hesaplama: ${HESAPLAMA_SABLONLARI[sablonKey].ad}`;
                 const yeniSatir={id:Date.now(),aciklama,miktar:String(miktar),birimFiyat:String(Math.round(birimFiyat*100)/100),kdvOrani:_mlzRef.kdvOrani||"20"};
-                const alan=fiyatAlanMap[fiyatSekme];
-                uf(alan,[...(fm[alan]||[]),yeniSatir]);
+                uf("planlananSatirlari",[...(fm.planlananSatirlari||[]),yeniSatir]);
                 setHesapModalAcik(false);
                 setHatalar(p=>({...p,planlanan:undefined}));
               }}
