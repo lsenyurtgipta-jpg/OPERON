@@ -7786,7 +7786,6 @@ export default function App(){
     butceKalemiSavingRef.current = true;
     try {
       const dbData = butceKalemiToDb(kalem, projeId||kalem.projeId);
-      console.log("BK KAYDET →", "firmaSatirlari:", JSON.stringify(kalem.firmaSatirlari?.length), "planlananSatirlari:", JSON.stringify(kalem.planlananSatirlari?.length), "dbData.firma_satirlari:", JSON.stringify(dbData.firma_satirlari?.length));
       let savedId = kalem.id;
       if(!kalem.id || kalem._isNew) {
         const [saved] = await sbPost('butce_kalemleri', dbData);
