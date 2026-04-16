@@ -3873,6 +3873,7 @@ const butceKalemiToLocal = (b) => ({
   planlananBirimFiyat: b.planlanan_birim_fiyat!=null?String(b.planlanan_birim_fiyat):"",
   planlananToplam: b.planlanan_toplam!=null?Number(b.planlanan_toplam):0,
   planlananSatirlari: b.planlanan_satirlari||[],
+  firmaSatirlari: b.firma_satirlari||[],
   aciklama: b.aciklama||"",
   tamamlandi: b.tamamlandi||false,
   siraNo: b.sira_no||0
@@ -3888,6 +3889,7 @@ const butceKalemiToDb = (k, projeId) => ({
   planlanan_birim_fiyat: k.planlananBirimFiyat!==""&&k.planlananBirimFiyat!=null?Number(k.planlananBirimFiyat):null,
   planlanan_toplam: Number(k.planlananToplam)||0,
   planlanan_satirlari: k.planlananSatirlari||[],
+  firma_satirlari: k.firmaSatirlari||[],
   aciklama: k.aciklama||"",
   tamamlandi: k.tamamlandi===true,
   sira_no: k.siraNo||0
@@ -7784,6 +7786,7 @@ export default function App(){
     butceKalemiSavingRef.current = true;
     try {
       const dbData = butceKalemiToDb(kalem, projeId||kalem.projeId);
+      console.log("BK KAYDET →", "firmaSatirlari:", JSON.stringify(kalem.firmaSatirlari?.length), "planlananSatirlari:", JSON.stringify(kalem.planlananSatirlari?.length), "dbData.firma_satirlari:", JSON.stringify(dbData.firma_satirlari?.length));
       let savedId = kalem.id;
       if(!kalem.id || kalem._isNew) {
         const [saved] = await sbPost('butce_kalemleri', dbData);
