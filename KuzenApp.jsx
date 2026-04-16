@@ -2905,9 +2905,9 @@ const SP_DURUMLARI=[
 ];
 const TESLIM_KOSULLARI=["Şantiye Teslim","Fabrika Teslim","Ex-Works","CIF","FOB","Diğer"];
 
-const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler,firmalar,projeler,malzemeler})=>{
+const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler,firmalar,projeler,malzemeler,butceKalemleri=[]})=>{
   const[view,setView]=useState("list");
-  const[aktifSp,setAktifSp]=useState(null);
+  const[saved,setSaved]=useState(false);
   const[search,setSearch]=useState("");
   const[fDurum,setFDurum]=useState("all");
 
@@ -2923,6 +2923,9 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler
     teslimatAdresi:"",teslimKosulu:"Şantiye Teslim",odemeVadesi:"",
     paraBirimi:"TL",aciklama:"",durum:"taslak",kalemler:[]};
   const[form,setForm]=useState({...emptyForm});
+  const[bkPickerKalemId,setBkPickerKalemId]=useState(null);
+  const[bkMultiOpen,setBkMultiOpen]=useState(false);
+  const[mlzPickerKalemId,setMlzPickerKalemId]=useState(null);
   const uf=(f,v)=>setForm(p=>({...p,[f]:v}));
 
   const teklifdenDoldur=(teklifId)=>{
@@ -2937,7 +2940,7 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler
     }));
   };
 
-  const kalemEkle=()=>setForm(p=>({...p,kalemler:[...p.kalemler,{id:Date.now(),malzemeId:"",malzemeAd:"",malzemeKodu:"",birim:"",miktar:1,netFiyat:0,kdvOrani:"20",teslimMiktar:0,aciklama:"",butceKalemiId:null}]}));
+  const kalemEkle=()=>setForm(p=>({...p,kalemler:[...p.kalemler,{id:Date.now(),malzemeId:"",malzemeAd:"",malzemeKodu:"",birim:"",miktar:1,netFiyat:0,kdvOrani:"20",teslimMiktar:0,aciklama:"",butceKalemiId:null,butceKalemiSatirId:null}]}));
   const kalemSil=(kid)=>setForm(p=>({...p,kalemler:p.kalemler.filter(k=>k.id!==kid)}));
   const kalemUp=(kid,f,v)=>setForm(p=>({...p,kalemler:p.kalemler.map(k=>{
     if(k.id!==kid)return k;
@@ -2960,9 +2963,10 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler
     const isNew=!form.id;
     const sp={...form,id:form.id||Date.now(),_isNew:isNew,firmaId:parseInt(form.firmaId),firmaAd:frm?.ad||form.firmaAd,
       projeId:form.projeId?parseInt(form.projeId):null,projeAd:prj?.ad||form.projeAd,
-      kalemler:form.kalemler.map(k=>({...k,malzemeId:k.malzemeId?parseInt(k.malzemeId):null,miktar:parseFloat(k.miktar)||0,netFiyat:parseFloat(k.netFiyat)||0,teslimMiktar:parseFloat(k.teslimMiktar)||0,butceKalemiId:k.butceKalemiId?parseInt(k.butceKalemiId):null}))};
+      kalemler:form.kalemler.map(k=>({...k,malzemeId:k.malzemeId?parseInt(k.malzemeId):null,miktar:parseFloat(k.miktar)||0,netFiyat:parseFloat(k.netFiyat)||0,teslimMiktar:parseFloat(k.teslimMiktar)||0,butceKalemiId:k.butceKalemiId?parseInt(k.butceKalemiId):null,butceKalemiSatirId:k.butceKalemiSatirId||null}))};
     if(onSave){await onSave(sp);}else{setSiparisler(prev=>{const ex=prev.find(x=>x.id===sp.id);return ex?prev.map(x=>x.id===sp.id?sp:x):[...prev,sp];});}
-    setView("list");setForm({...emptyForm,spNo:nextNo});
+    if(isNew)setForm(p=>({...p,id:sp.id}));
+    setSaved(true);setTimeout(()=>setSaved(false),2000);
   };
 
   const sil=(id)=>{if(onDel){onDel(id);}else{if(!confirm("Bu siparişi silmek istediğinize emin misiniz?"))return;setSiparisler(prev=>prev.filter(s=>s.id!==id));}};
@@ -2980,12 +2984,16 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler
   if(view==="form"){
     const para=PARA_BIRIMLERI.find(p=>p.id===form.paraBirimi);
     const{kdvHaric,kdvDahil}=toplamHesapla(form.kalemler);
+    const headerFirmaAd=form.firmaId?firmalar.find(f=>f.id===parseInt(form.firmaId))?.ad||"":"";
     return <div>
-      <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"20px",flexWrap:"wrap"}}>
-        <button onClick={()=>setView("list")} style={{padding:"7px 14px",borderRadius:"6px",border:`1px solid ${T.bDark}`,background:"#fff",color:T.t2,cursor:"pointer",fontSize:"14px"}}>← Siparişler</button>
-        <h2 style={{margin:0,fontSize:"18px",fontWeight:600,color:T.text,flex:1}}>{form.id?"SP Düzenle":"Yeni Satınalma Siparişi"}</h2>
-        <span style={{fontFamily:"monospace",fontSize:"14px",color:"#52c41a",background:"#f6ffed",padding:"4px 12px",borderRadius:"6px",fontWeight:700}}>{form.spNo}</span>
-        <button onClick={kaydet} style={{padding:"8px 24px",borderRadius:"6px",border:"none",background:T.primary,color:"#fff",cursor:"pointer",fontWeight:600,fontSize:"14px"}}>💾 Kaydet</button>
+      {/* HEADER — dark bar */}
+      <div style={{display:"flex",alignItems:"center",gap:"16px",marginBottom:"20px",padding:"12px 20px",background:"#384248",borderRadius:"8px"}}>
+        <button onClick={()=>{setView("list");setForm({...emptyForm,spNo:nextNo});}} title="Geri" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={32}/></button>
+        <div style={{flex:1,textAlign:"center"}}>
+          <span style={{fontSize:"20px",fontWeight:600,color:"#8799a3",letterSpacing:"0.3px"}}>{form.spNo}{headerFirmaAd?` - ${headerFirmaAd}`:form.id?"":" - Yeni Sipariş"}</span>
+        </div>
+        <button onClick={kaydet} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={32}/></button>
+        {form.id&&<button onClick={()=>sil(form.id)} title="Siparişi Sil" style={{padding:"0",border:"none",background:"transparent",color:"#ff6b6b",cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={32}/></button>}
       </div>
 
       {/* Tekliften Doldur */}
@@ -3043,31 +3051,72 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler
       <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,overflow:"hidden"}}>
         <div style={{padding:"12px 20px",borderBottom:`1px solid ${T.border}`,background:"#fafafa",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{fontWeight:600,fontSize:"14px",color:T.text}}>🛒 Sipariş Kalemleri</div>
-          <button onClick={kalemEkle} style={{padding:"5px 14px",borderRadius:"6px",border:`1px solid ${T.primary}`,background:T.pBg,color:T.primary,fontSize:"13px",cursor:"pointer",fontWeight:500}}>+ Kalem Ekle</button>
+          <div style={{display:"flex",gap:"8px"}}>
+            {form.projeId&&<button onClick={()=>setBkMultiOpen(true)} style={{padding:"5px 14px",borderRadius:"6px",border:"1px solid #52c41a",background:"#f6ffed",color:"#52c41a",fontSize:"13px",cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:"4px"}}><Layers size={14}/>Bütçeden Ekle</button>}
+            <button onClick={kalemEkle} style={{padding:"5px 14px",borderRadius:"6px",border:`1px solid ${T.primary}`,background:T.pBg,color:T.primary,fontSize:"13px",cursor:"pointer",fontWeight:500}}>+ Kalem Ekle</button>
+          </div>
         </div>
-        {form.kalemler.length===0&&<div style={{padding:"32px",textAlign:"center",color:T.t3,fontSize:"13px"}}>Kalem yok. Tekliften doldur veya manuel ekle.</div>}
+        {form.kalemler.length===0&&<div style={{padding:"32px",textAlign:"center",color:T.t3,fontSize:"13px"}}>Kalem yok. Bütçeden ekle veya manuel kalem ekle.</div>}
         {form.kalemler.map((k,idx)=>{
           return <div key={k.id} style={{padding:"12px 20px",borderBottom:`1px solid ${T.border}`,background:idx%2===0?"#fff":"#fafafa"}}>
             <div style={{display:"grid",gridTemplateColumns:"28px 2fr 80px 80px 100px 80px 32px",gap:"8px",alignItems:"center"}}>
               <div style={{fontSize:"12px",fontWeight:600,color:T.t3}}>{idx+1}</div>
-              <select style={{...iS,fontSize:"13px"}} value={k.malzemeId} onChange={e=>kalemUp(k.id,"malzemeId",e.target.value)} onFocus={foc} onBlur={blr}>
-                <option value="">— Malzeme seçiniz —</option>
-                {malzemeler.map(m=><option key={m.id} value={m.id}>{m.ad} ({m.malzemeKodu})</option>)}
-              </select>
+              {(()=>{
+                const seciliMlz=k.malzemeId?malzemeler.find(m=>m.id===parseInt(k.malzemeId)):null;
+                return <button onClick={()=>setMlzPickerKalemId(k.id)} style={{...iS,fontSize:"13px",padding:"7px 10px",cursor:"pointer",textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:seciliMlz?T.text:T.t3}}>
+                  {seciliMlz?`${seciliMlz.ad} (${seciliMlz.malzemeKodu})`:"— Malzeme seçiniz —"}
+                </button>;
+              })()}
               <input style={{...iS,fontSize:"13px",textAlign:"right"}} type="number" value={k.miktar} onChange={e=>kalemUp(k.id,"miktar",e.target.value)} placeholder="Miktar" onFocus={foc} onBlur={blr}/>
               <input style={{...iS,fontSize:"13px",background:"#f5f5f5"}} value={k.birim||""} onChange={e=>kalemUp(k.id,"birim",e.target.value)} placeholder="Birim" onFocus={foc} onBlur={blr}/>
               <input style={{...iS,fontSize:"13px",textAlign:"right"}} type="number" value={k.netFiyat} onChange={e=>kalemUp(k.id,"netFiyat",e.target.value)} placeholder="Birim fiyat" onFocus={foc} onBlur={blr}/>
               <select style={{...iS,fontSize:"12px"}} value={k.kdvOrani} onChange={e=>kalemUp(k.id,"kdvOrani",e.target.value)} onFocus={foc} onBlur={blr}>
                 {KDV_ORANLARI.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}
               </select>
-              <button onClick={()=>kalemSil(k.id)} style={{background:"none",border:"none",color:T.err,cursor:"pointer",fontSize:"18px",padding:"2px"}}>×</button>
+              <button onClick={()=>kalemSil(k.id)} style={{background:"none",border:"none",color:T.err,cursor:"pointer",padding:"2px",display:"flex",alignItems:"center"}}><Trash2 size={16}/></button>
             </div>
             <div style={{marginTop:"6px",paddingLeft:"36px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}}>
               <input style={{...iS,fontSize:"12px",background:"#f9f9f9"}} value={k.aciklama||""} onChange={e=>kalemUp(k.id,"aciklama",e.target.value)} placeholder="Kalem notu..." onFocus={foc} onBlur={blr}/>
-              {form.projeId&&(()=>{const prj=projeler.find(p=>p.id===parseInt(form.projeId));const bkList=prj?.butceKalemleri||[];return bkList.length>0?<select style={{...iS,fontSize:"12px",background:k.butceKalemiId?"#f6ffed":"#fff7e6",borderColor:k.butceKalemiId?"#b7eb8f":"#ffe58f"}} value={k.butceKalemiId||""} onChange={e=>kalemUp(k.id,"butceKalemiId",e.target.value?parseInt(e.target.value):null)}><option value="">— Bütçe Kalemi Eşleştir —</option>{bkList.map(bk=>{const pt=parseFloat(bk.planlananToplam||0);return <option key={bk.id} value={bk.id}>[{bk.malzemeKodu||"?"}] {bk.malzemeAd||"?"}{pt>0?` (${pt.toLocaleString("tr-TR")} ₺)`:""}</option>;})}</select>:null;})()}
+              {form.projeId&&(()=>{
+                const bkList=butceKalemleri.filter(b=>b.projeId===parseInt(form.projeId));
+                if(bkList.length===0)return null;
+                const seciliBk=k.butceKalemiId?bkList.find(b=>b.id===k.butceKalemiId):null;
+                const seciliSatir=seciliBk&&k.butceKalemiSatirId?(seciliBk.planlananSatirlari||[]).find(s=>s.id===k.butceKalemiSatirId):null;
+                return <button onClick={()=>setBkPickerKalemId(k.id)} style={{...iS,fontSize:"12px",padding:"5px 8px",cursor:"pointer",textAlign:"left",background:k.butceKalemiId?"#f6ffed":"#fff7e6",borderColor:k.butceKalemiId?"#b7eb8f":"#ffe58f",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {seciliBk
+                    ?<span>✓ [{seciliBk.malzemeKodu||"?"}] {seciliBk.malzemeAd||"?"}{seciliSatir&&<span style={{color:"#1677ff",marginLeft:"4px"}}>↳ {seciliSatir.aciklama||`#${seciliSatir.siraNo||""}`}</span>}</span>
+                    :<span style={{color:T.t3}}>— Bütçe Kalemi Eşleştir —</span>
+                  }
+                </button>;
+              })()}
             </div>
           </div>;
         })}
+        {/* Malzeme Seçici Modal */}
+        {mlzPickerKalemId&&<MalzemeSeciciModal malzemeler={malzemeler} onSelect={m=>{kalemUp(mlzPickerKalemId,"malzemeId",String(m.id));setMlzPickerKalemId(null);}} onClose={()=>setMlzPickerKalemId(null)}/>}
+        {/* Bütçe Kalemi Seçici Modal — tekil eşleştirme (satır içi buton) */}
+        {bkPickerKalemId&&form.projeId&&<ButceKalemiSeciciModal mode="single" butceKalemleri={butceKalemleri.filter(b=>b.projeId===parseInt(form.projeId))} onSelect={(bk,satirId)=>{
+          setForm(p=>({...p,kalemler:p.kalemler.map(k=>k.id===bkPickerKalemId?{...k,butceKalemiId:bk.id,butceKalemiSatirId:satirId||null}:k)}));
+          setBkPickerKalemId(null);
+        }} onClose={()=>setBkPickerKalemId(null)}/>}
+        {/* Bütçeden Toplu Kalem Ekle Modal — çoklu seçim */}
+        {bkMultiOpen&&form.projeId&&<ButceKalemiSeciciModal mode="multi" butceKalemleri={butceKalemleri.filter(b=>b.projeId===parseInt(form.projeId))} onConfirm={(secimler)=>{
+          const yeniKalemler=secimler.map(({bk,satirId})=>{
+            const satirlar=bk.planlananSatirlari||[];
+            const satir=satirId?satirlar.find(s=>s.id===satirId):null;
+            return{
+              id:Date.now()+Math.random(),
+              malzemeId:bk.malzemeId||"",malzemeAd:bk.malzemeAd||"",malzemeKodu:bk.malzemeKodu||"",birim:bk.birim||"",
+              miktar:satir?parseFloat(satir.miktar||0):parseFloat(bk.planlananMiktar||0),
+              netFiyat:satir?parseFloat(satir.birimFiyat||0):parseFloat(bk.planlananBirimFiyat||0),
+              kdvOrani:satir?.kdvOrani||"20",teslimMiktar:0,
+              aciklama:satir?.aciklama||"",
+              butceKalemiId:bk.id,butceKalemiSatirId:satirId||null
+            };
+          });
+          setForm(p=>({...p,kalemler:[...p.kalemler,...yeniKalemler]}));
+          setBkMultiOpen(false);
+        }} onClose={()=>setBkMultiOpen(false)}/>}
         {form.kalemler.length>0&&<div style={{padding:"14px 20px",background:"#f0f5ff",display:"flex",justifyContent:"flex-end",gap:"32px"}}>
           <div style={{textAlign:"right"}}><div style={{fontSize:"11px",color:T.t2,fontWeight:600}}>KDV HARİÇ</div><div style={{fontSize:"16px",fontWeight:700}}>{PARA_BIRIMLERI.find(p=>p.id===form.paraBirimi)?.symbol}{kdvHaric.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div></div>
           <div style={{textAlign:"right"}}><div style={{fontSize:"11px",color:"#52c41a",fontWeight:600}}>GENEL TOPLAM</div><div style={{fontSize:"20px",fontWeight:700,color:"#52c41a"}}>{PARA_BIRIMLERI.find(p=>p.id===form.paraBirimi)?.symbol}{kdvDahil.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div></div>
@@ -3077,67 +3126,6 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler
   }
 
   /* DETAY */
-  if(view==="detail"&&aktifSp){
-    const s=aktifSp;
-    const para=PARA_BIRIMLERI.find(p=>p.id===s.paraBirimi);
-    const{kdvHaric,kdvToplam,kdvDahil}=toplamHesapla(s.kalemler||[]);
-    const durumObj=SP_DURUMLARI.find(d=>d.id===s.durum)||SP_DURUMLARI[0];
-    return <div>
-      <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"20px",flexWrap:"wrap"}}>
-        <button onClick={()=>setView("list")} style={{padding:"7px 14px",borderRadius:"6px",border:`1px solid ${T.bDark}`,background:"#fff",color:T.t2,cursor:"pointer",fontSize:"14px"}}>← Siparişler</button>
-        <span style={{fontFamily:"monospace",fontSize:"15px",color:"#52c41a",background:"#f6ffed",padding:"4px 12px",borderRadius:"6px",fontWeight:700}}>{s.spNo}</span>
-        <span style={{padding:"3px 10px",borderRadius:"4px",fontSize:"12px",fontWeight:600,color:durumObj.color,background:durumObj.bg,border:`1px solid ${durumObj.color}33`}}>{durumObj.icon} {durumObj.label}</span>
-        {s.teklifNo&&<span style={{fontSize:"12px",color:T.t2,background:"#f0f0f0",padding:"3px 10px",borderRadius:"4px"}}>🔗 {s.teklifNo}</span>}
-        <div style={{flex:1}}/>
-        <button onClick={()=>edit(s)} style={{padding:"7px 16px",borderRadius:"6px",border:`1px solid ${T.bDark}`,background:"#fff",color:T.t2,cursor:"pointer",fontSize:"13px"}}>✏️ Düzenle</button>
-      </div>
-      {/* Durum güncelle */}
-      <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,padding:"14px 20px",marginBottom:"16px"}}>
-        <div style={{fontSize:"11px",color:T.t2,fontWeight:600,marginBottom:"8px"}}>DURUM GÜNCELLE</div>
-        <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
-          {SP_DURUMLARI.map(d=><button key={d.id} onClick={()=>{durumGuncelle(s,d.id);setAktifSp(p=>({...p,durum:d.id}));}} style={{padding:"5px 12px",borderRadius:"6px",border:`1px solid ${s.durum===d.id?d.color:T.bDark}`,background:s.durum===d.id?d.bg:"#fff",color:s.durum===d.id?d.color:T.t2,fontSize:"12px",cursor:"pointer",fontWeight:s.durum===d.id?600:400}}>{d.icon} {d.label}</button>)}
-        </div>
-      </div>
-      {/* Bilgiler */}
-      <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,padding:"20px",marginBottom:"16px"}}>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:"16px",marginBottom:"12px"}}>
-          <div><div style={{fontSize:"10px",color:T.t3,fontWeight:600,marginBottom:"4px"}}>FİRMA</div><div style={{fontSize:"14px",fontWeight:600}}>{s.firmaAd}</div></div>
-          {s.projeAd&&<div><div style={{fontSize:"10px",color:T.t3,fontWeight:600,marginBottom:"4px"}}>PROJE</div><div style={{fontSize:"14px",fontWeight:500}}>{s.projeAd}</div></div>}
-          <div><div style={{fontSize:"10px",color:T.t3,fontWeight:600,marginBottom:"4px"}}>SİPARİŞ TARİHİ</div><div style={{fontSize:"14px",fontWeight:500}}>{fmtDate(s.siparisTarihi)}</div></div>
-          <div><div style={{fontSize:"10px",color:T.t3,fontWeight:600,marginBottom:"4px"}}>TERMİN</div><div style={{fontSize:"14px",fontWeight:500,color:s.terminTarihi&&s.terminTarihi<new Date().toISOString().split("T")[0]?T.err:T.text}}>{fmtDate(s.terminTarihi)||"—"}</div></div>
-          <div><div style={{fontSize:"10px",color:T.t3,fontWeight:600,marginBottom:"4px"}}>ÖDEME VADESİ</div><div style={{fontSize:"14px",fontWeight:500}}>{s.odemeVadesi||"—"}</div></div>
-          <div><div style={{fontSize:"10px",color:T.t3,fontWeight:600,marginBottom:"4px"}}>TESLİM KOŞULU</div><div style={{fontSize:"14px",fontWeight:500}}>{s.teslimKosulu||"—"}</div></div>
-        </div>
-        {s.teslimatAdresi&&<div style={{padding:"8px 12px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`,fontSize:"13px",color:T.t2}}>📍 {s.teslimatAdresi}</div>}
-        {s.aciklama&&<div style={{marginTop:"8px",padding:"8px 12px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`,fontSize:"13px",color:T.t2}}>💬 {s.aciklama}</div>}
-      </div>
-      {/* Kalemler */}
-      <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,overflow:"hidden"}}>
-        <div style={{padding:"12px 20px",borderBottom:`1px solid ${T.border}`,background:"#fafafa",fontWeight:600,fontSize:"14px"}}>🛒 Sipariş Kalemleri ({(s.kalemler||[]).length})</div>
-        <div style={{display:"grid",gridTemplateColumns:"28px 1fr 80px 80px 100px 80px 110px",padding:"8px 20px",borderBottom:`1px solid ${T.border}`,background:"#fafafa",fontSize:"10px",fontWeight:600,color:T.t3,gap:"8px"}}>
-          <div>#</div><div>MALZEME</div><div style={{textAlign:"right"}}>MİKTAR</div><div>BİRİM</div><div style={{textAlign:"right"}}>BİRİM FİYAT</div><div style={{textAlign:"center"}}>KDV</div><div style={{textAlign:"right"}}>TOPLAM</div>
-        </div>
-        {(s.kalemler||[]).map((k,idx)=>{
-          const top=(parseFloat(k.miktar)||0)*(parseFloat(k.netFiyat)||0);
-          return <div key={k.id} style={{display:"grid",gridTemplateColumns:"28px 1fr 80px 80px 100px 80px 110px",padding:"11px 20px",borderBottom:`1px solid ${T.border}`,alignItems:"center",fontSize:"13px",gap:"8px",background:idx%2===0?"#fff":"#fafafa"}}>
-            <div style={{fontWeight:600,color:T.t3}}>{idx+1}</div>
-            <div><div style={{fontWeight:500}}>{k.malzemeAd}</div><div style={{fontSize:"11px",color:T.t3,fontFamily:"monospace"}}>{k.malzemeKodu}</div></div>
-            <div style={{textAlign:"right",fontWeight:600}}>{k.miktar}</div>
-            <div style={{color:T.t2}}>{k.birim}</div>
-            <div style={{textAlign:"right",fontWeight:600}}>{para?.symbol}{(parseFloat(k.netFiyat)||0).toLocaleString("tr-TR",{minimumFractionDigits:2})}</div>
-            <div style={{textAlign:"center",color:T.t2}}>%{k.kdvOrani}</div>
-            <div style={{textAlign:"right",fontWeight:700,color:"#52c41a"}}>{para?.symbol}{top.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div>
-          </div>;
-        })}
-        <div style={{padding:"14px 20px",background:"#f0fff4",display:"flex",justifyContent:"flex-end",gap:"32px"}}>
-          <div style={{textAlign:"right"}}><div style={{fontSize:"11px",color:T.t2,fontWeight:600}}>KDV HARİÇ</div><div style={{fontSize:"16px",fontWeight:700}}>{para?.symbol}{kdvHaric.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div></div>
-          <div style={{textAlign:"right"}}><div style={{fontSize:"11px",color:T.t3,fontWeight:600}}>KDV</div><div style={{fontSize:"14px",fontWeight:600,color:T.t2}}>{para?.symbol}{kdvToplam.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div></div>
-          <div style={{textAlign:"right"}}><div style={{fontSize:"11px",color:"#52c41a",fontWeight:600}}>GENEL TOPLAM</div><div style={{fontSize:"20px",fontWeight:700,color:"#52c41a"}}>{para?.symbol}{kdvDahil.toLocaleString("tr-TR",{minimumFractionDigits:2})}</div></div>
-        </div>
-      </div>
-    </div>;
-  }
-
   /* LİSTE */
   return <div>
     {/* FİLTRE BAR */}
@@ -3177,7 +3165,7 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler
             const para=PARA_BIRIMLERI.find(p=>p.id===s.paraBirimi);
             const{kdvHaric}=toplamHesapla(s.kalemler||[]);
             const durumObj=SP_DURUMLARI.find(d=>d.id===s.durum)||SP_DURUMLARI[0];
-            return <div key={s.id} onClick={()=>{setAktifSp(s);setView("detail");}} style={{display:"grid",gridTemplateColumns:"110px 1fr 90px 90px 100px 60px 120px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtered.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
+            return <div key={s.id} onClick={()=>edit(s)} style={{display:"grid",gridTemplateColumns:"110px 1fr 90px 90px 100px 60px 120px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtered.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"44px"}}
               onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
               onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
               <div style={{fontSize:"13px",color:"#52c41a",fontWeight:600,fontFamily:"monospace"}}>{s.spNo}</div>
@@ -3203,7 +3191,7 @@ const AF_DURUMLARI=[
   {id:"iptal",label:"İptal",color:"#ff4d4f",bg:"#fff1f0",icon:"❌"},
 ];
 
-const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklifler,firmalar,projeler,malzemeler})=>{
+const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklifler,firmalar,projeler,malzemeler,butceKalemleri=[]})=>{
   const[view,setView]=useState("list");
   const[aktifFatura,setAktifFatura]=useState(null);
   const[search,setSearch]=useState("");
@@ -3235,7 +3223,7 @@ const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklif
     }));
   };
 
-  const kalemEkle=()=>setForm(p=>({...p,kalemler:[...p.kalemler,{id:Date.now(),malzemeId:"",malzemeAd:"",malzemeKodu:"",birim:"",miktar:1,netFiyat:0,kdvOrani:"20",aciklama:"",butceKalemiId:null}]}));
+  const kalemEkle=()=>setForm(p=>({...p,kalemler:[...p.kalemler,{id:Date.now(),malzemeId:"",malzemeAd:"",malzemeKodu:"",birim:"",miktar:1,netFiyat:0,kdvOrani:"20",aciklama:"",butceKalemiId:null,butceKalemiSatirId:null}]}));
   const kalemSil=(kid)=>setForm(p=>({...p,kalemler:p.kalemler.filter(k=>k.id!==kid)}));
   const kalemUp=(kid,f,v)=>setForm(p=>({...p,kalemler:p.kalemler.map(k=>{
     if(k.id!==kid)return k;
@@ -3351,11 +3339,11 @@ const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklif
               <select style={{...iS,fontSize:"12px"}} value={k.kdvOrani} onChange={e=>kalemUp(k.id,"kdvOrani",e.target.value)} onFocus={foc} onBlur={blr}>
                 {KDV_ORANLARI.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}
               </select>
-              <button onClick={()=>kalemSil(k.id)} style={{background:"none",border:"none",color:T.err,cursor:"pointer",fontSize:"18px",padding:"2px"}}>×</button>
+              <button onClick={()=>kalemSil(k.id)} style={{background:"none",border:"none",color:T.err,cursor:"pointer",padding:"2px",display:"flex",alignItems:"center"}}><Trash2 size={16}/></button>
             </div>
             <div style={{marginTop:"6px",paddingLeft:"36px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}}>
               <input style={{...iS,fontSize:"12px",background:"#f9f9f9"}} value={k.aciklama||""} onChange={e=>kalemUp(k.id,"aciklama",e.target.value)} placeholder="Kalem notu..." onFocus={foc} onBlur={blr}/>
-              {form.projeId&&(()=>{const prj=projeler.find(p=>p.id===parseInt(form.projeId));const bkList=prj?.butceKalemleri||[];return bkList.length>0?<select style={{...iS,fontSize:"12px",background:k.butceKalemiId?"#f6ffed":"#fff7e6",borderColor:k.butceKalemiId?"#b7eb8f":"#ffe58f"}} value={k.butceKalemiId||""} onChange={e=>kalemUp(k.id,"butceKalemiId",e.target.value?parseInt(e.target.value):null)}><option value="">— Bütçe Kalemi Eşleştir —</option>{bkList.map(bk=>{const pt=parseFloat(bk.planlananToplam||0);return <option key={bk.id} value={bk.id}>[{bk.malzemeKodu||"?"}] {bk.malzemeAd||"?"}{pt>0?` (${pt.toLocaleString("tr-TR")} ₺)`:""}</option>;})}</select>:null;})()}
+              {form.projeId&&(()=>{const bkList=butceKalemleri.filter(b=>b.projeId===parseInt(form.projeId));return bkList.length>0?<select style={{...iS,fontSize:"12px",background:k.butceKalemiId?"#f6ffed":"#fff7e6",borderColor:k.butceKalemiId?"#b7eb8f":"#ffe58f"}} value={k.butceKalemiId||""} onChange={e=>kalemUp(k.id,"butceKalemiId",e.target.value?parseInt(e.target.value):null)}><option value="">— Bütçe Kalemi Eşleştir —</option>{bkList.map(bk=>{const pt=parseFloat(bk.planlananToplam||0);return <option key={bk.id} value={bk.id}>[{bk.malzemeKodu||"?"}] {bk.malzemeAd||"?"}{pt>0?` (${pt.toLocaleString("tr-TR")} ₺)`:""}</option>;})}</select>:null;})()}
             </div>
           </div>;
         })}
@@ -3887,7 +3875,7 @@ const siparisKalemToLocal = (k) => ({
   malzemeKodu:k.malzeme_kodu||"", birim:k.birim||"", miktar:parseFloat(k.miktar)||0,
   netFiyat:parseFloat(k.net_fiyat)||0, kdvOrani:k.kdv_orani||"20",
   teslimMiktar:parseFloat(k.teslim_miktar)||0, aciklama:k.aciklama||"",
-  butceKalemiId:k.butce_kalemi_id||null
+  butceKalemiId:k.butce_kalemi_id||null, butceKalemiSatirId:k.butce_kalemi_satir_id||null
 });
 const siparisToDb = (s) => ({
   sp_no:s.spNo||"", teklif_id:s.teklifId||null, teklif_no:s.teklifNo||"",
@@ -3901,7 +3889,8 @@ const siparisKalemToDb = (k, siparisId) => ({
   siparis_id:siparisId, malzeme_id:k.malzemeId||null, malzeme_ad:k.malzemeAd||"",
   malzeme_kodu:k.malzemeKodu||"", birim:k.birim||"", miktar:k.miktar||0,
   net_fiyat:k.netFiyat||0, kdv_orani:k.kdvOrani||"20", teslim_miktar:k.teslimMiktar||0,
-  aciklama:k.aciklama||"", butce_kalemi_id:k.butceKalemiId||null
+  aciklama:k.aciklama||"", butce_kalemi_id:k.butceKalemiId||null,
+  butce_kalemi_satir_id:k.butceKalemiSatirId||null
 });
 
 // Fatura dönüşüm fonksiyonları
@@ -3916,7 +3905,8 @@ const faturaKalemToLocal = (k) => ({
   id:k.id, faturaId:k.fatura_id, malzemeId:k.malzeme_id, malzemeAd:k.malzeme_ad||"",
   malzemeKodu:k.malzeme_kodu||"", birim:k.birim||"", miktar:parseFloat(k.miktar)||0,
   netFiyat:parseFloat(k.net_fiyat)||0, kdvOrani:k.kdv_orani||"20",
-  aciklama:k.aciklama||"", butceKalemiId:k.butce_kalemi_id||null
+  aciklama:k.aciklama||"", butceKalemiId:k.butce_kalemi_id||null,
+  butceKalemiSatirId:k.butce_kalemi_satir_id||null
 });
 const faturaToDb = (f) => ({
   af_no:f.afNo||"", siparis_id:f.spId||null, sp_no:f.spNo||"",
@@ -3929,7 +3919,8 @@ const faturaKalemToDb = (k, faturaId) => ({
   fatura_id:faturaId, malzeme_id:k.malzemeId||null, malzeme_ad:k.malzemeAd||"",
   malzeme_kodu:k.malzemeKodu||"", birim:k.birim||"", miktar:k.miktar||0,
   net_fiyat:k.netFiyat||0, kdv_orani:k.kdvOrani||"20",
-  aciklama:k.aciklama||"", butce_kalemi_id:k.butceKalemiId||null
+  aciklama:k.aciklama||"", butce_kalemi_id:k.butceKalemiId||null,
+  butce_kalemi_satir_id:k.butceKalemiSatirId||null
 });
 
 /* ========== PROJELER MODÜLÜ ========== */
@@ -5779,6 +5770,160 @@ const MalzemePickerModal=({malzemeler,onSelect,onClose})=>{
           <div style={{fontSize:"12px",color:T.t2}}>{m.birim}</div>
         </div>)}
       </div>
+    </div>
+  </div>;
+};
+
+// Bütçe Kalemi Seçici Modal — mode="single" (tekil eşleştirme) | "multi" (çoklu seçim → toplu kalem ekleme)
+const ButceKalemiSeciciModal=({butceKalemleri=[],mode="single",onSelect,onConfirm,onClose})=>{
+  const[src,setSrc]=useState("");
+  const[expanded,setExpanded]=useState({});
+  const[secili,setSecili]=useState({}); // multi mod: {"bkId:satirId": {bk, satirId}}
+  const q=src.toLowerCase();
+  const filtered=butceKalemleri.filter(b=>{
+    if(!q)return true;
+    if((b.malzemeKodu||"").toLowerCase().includes(q))return true;
+    if((b.malzemeAd||"").toLowerCase().includes(q))return true;
+    if((b.aciklama||"").toLowerCase().includes(q))return true;
+    if((b.bloklar||[]).join(" ").toLowerCase().includes(q))return true;
+    return(b.planlananSatirlari||[]).some(s=>(s.aciklama||"").toLowerCase().includes(q));
+  });
+  const autoExpanded={...expanded};
+  if(q){filtered.forEach(b=>{if((b.planlananSatirlari||[]).some(s=>(s.aciklama||"").toLowerCase().includes(q)))autoExpanded[b.id]=true;});}
+  const toggleExpand=(id)=>setExpanded(p=>({...p,[id]:!p[id]}));
+  // Multi mode helpers
+  const secKey=(bkId,satirId)=>`${bkId}:${satirId||"null"}`;
+  const isChecked=(bkId,satirId)=>!!secili[secKey(bkId,satirId)];
+  const toggleItem=(bk,satirId)=>{
+    const k=secKey(bk.id,satirId);
+    setSecili(p=>{const n={...p};if(n[k])delete n[k];else n[k]={bk,satirId};return n;});
+  };
+  const toggleAnaKalem=(bk)=>{
+    const satirlar=bk.planlananSatirlari||[];
+    if(satirlar.length===0){toggleItem(bk,null);return;}
+    // Alt satırı var: tümünü toggle
+    const tumSecili=satirlar.every(s=>isChecked(bk.id,s.id));
+    setSecili(p=>{
+      const n={...p};
+      satirlar.forEach(s=>{const k=secKey(bk.id,s.id);if(tumSecili)delete n[k];else n[k]={bk,satirId:s.id};});
+      return n;
+    });
+    if(!autoExpanded[bk.id])setExpanded(p=>({...p,[bk.id]:true}));
+  };
+  const anaKalemState=(bk)=>{
+    const satirlar=bk.planlananSatirlari||[];
+    if(satirlar.length===0)return isChecked(bk.id,null)?"checked":"unchecked";
+    const cnt=satirlar.filter(s=>isChecked(bk.id,s.id)).length;
+    if(cnt===0)return"unchecked";if(cnt===satirlar.length)return"checked";return"indeterminate";
+  };
+  const seciliCount=Object.keys(secili).length;
+  const handleConfirm=()=>{if(seciliCount>0&&onConfirm){onConfirm(Object.values(secili));onClose();}};
+  // Checkbox stil
+  const cbxS=(checked,indet)=>({width:"16px",height:"16px",borderRadius:"3px",border:`2px solid ${checked||indet?"#1677ff":T.t3}`,background:checked?"#1677ff":indet?"#e6f4ff":"#fff",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,transition:"all .15s"});
+  const isMulti=mode==="multi";
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+    <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"880px",maxHeight:"82vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      <div style={{padding:"12px 20px",background:"#384248",display:"flex",alignItems:"center",gap:"16px",borderRadius:`${T.rl} ${T.rl} 0 0`}}>
+        <button onClick={onClose} style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={24}/></button>
+        <span style={{fontSize:"15px",fontWeight:600,color:"#8799a3",flex:1,textAlign:"center"}}>{isMulti?"BÜTÇEDEN KALEM EKLE":"BÜTÇE KALEMİ SEÇ"} ({filtered.length})</span>
+      </div>
+      <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`}}>
+        <input style={{...iS,fontSize:"14px"}} value={src} onChange={e=>setSrc(e.target.value)} placeholder="Ara: kod, malzeme adı, alt satır açıklaması, blok..." onFocus={foc} onBlur={blr} autoFocus/>
+      </div>
+      {/* Tablo başlığı */}
+      <div style={{display:"grid",gridTemplateColumns:isMulti?"24px 24px 110px 1fr 100px 70px 70px":"24px 110px 1fr 100px 70px 70px",gap:"8px",padding:"8px 16px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,fontSize:"10px",fontWeight:700,color:T.t2,textTransform:"uppercase"}}>
+        {isMulti&&<div></div>}
+        <div></div>
+        <div>KOD</div>
+        <div>MALZEME / AÇIKLAMA</div>
+        <div style={{textAlign:"right"}}>PLAN. TUTAR</div>
+        <div>BLOK</div>
+        <div style={{textAlign:"center"}}>DURUM</div>
+      </div>
+      <div style={{flex:1,overflow:"auto"}}>
+        {filtered.length===0?<div style={{padding:"40px",textAlign:"center",color:T.t3,fontSize:"13px"}}>Sonuç bulunamadı</div>:
+        filtered.map((b,idx)=>{
+          const tamam=b.tamamlandi===true;
+          const pt=parseFloat(b.planlananToplam||0);
+          const blokStr=(b.bloklar||[]).join("+")||"—";
+          const satirlar=b.planlananSatirlari||[];
+          const altVar=satirlar.length>0;
+          const isOpen=autoExpanded[b.id]===true;
+          const anaBg=tamam?"#f6ffed":(idx%2===0?"#fff":"#fafafa");
+          const anaState=isMulti?anaKalemState(b):null;
+          const gridCols=isMulti?"24px 24px 110px 1fr 100px 70px 70px":"24px 110px 1fr 100px 70px 70px";
+          return <div key={b.id}>
+            {/* ANA KALEM */}
+            <div onClick={()=>{
+              if(!isMulti){if(altVar)toggleExpand(b.id);else{onSelect(b,null);onClose();}}
+              else{if(altVar)toggleExpand(b.id);else toggleItem(b,null);}
+            }} style={{display:"grid",gridTemplateColumns:gridCols,gap:"8px",padding:"10px 16px",borderBottom:`1px solid ${T.border}`,cursor:"pointer",alignItems:"center",background:anaBg}}
+              onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
+              onMouseLeave={e=>e.currentTarget.style.background=anaBg}>
+              {isMulti&&<div onClick={e=>{e.stopPropagation();toggleAnaKalem(b);}} style={cbxS(anaState==="checked",anaState==="indeterminate")}>
+                {anaState==="checked"&&<Check size={12} color="#fff"/>}
+                {anaState==="indeterminate"&&<div style={{width:"8px",height:"2px",background:"#1677ff",borderRadius:"1px"}}/>}
+              </div>}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+                {altVar?(isOpen?<ChevronDown size={16} style={{color:T.t2}}/>:<ChevronRight size={16} style={{color:T.t2}}/>):null}
+              </div>
+              <div style={{fontSize:"12px",color:tamam?"#52c41a":T.t3,fontFamily:"monospace"}}>{b.malzemeKodu||"—"}</div>
+              <div style={{fontSize:"13px",fontWeight:600,color:tamam?"#52c41a":T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                {b.malzemeAd||"—"}
+                {altVar&&<span style={{marginLeft:"8px",fontSize:"10px",fontWeight:600,color:T.t3,background:"#f0f0f0",padding:"1px 6px",borderRadius:"8px"}}>{satirlar.length} alt</span>}
+              </div>
+              <div style={{fontSize:"13px",fontWeight:600,color:pt>0?T.text:T.t3,textAlign:"right"}}>{pt>0?pt.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺":"—"}</div>
+              <div style={{fontSize:"11px",fontWeight:600,color:(b.bloklar||[]).length>1?"#d48806":"#1677ff"}}>{blokStr}</div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+                {tamam?<span style={{fontSize:"9px",fontWeight:700,color:"#52c41a",background:"#f6ffed",border:"1px solid #b7eb8f",borderRadius:"10px",padding:"2px 6px"}}>Tamam</span>
+                :pt<=0?<span style={{fontSize:"9px",fontWeight:700,color:"#8c8c8c",background:"#f5f5f5",border:"1px solid #d9d9d9",borderRadius:"10px",padding:"2px 6px"}}>Plansız</span>
+                :<span style={{fontSize:"9px",fontWeight:700,color:"#1677ff",background:"#e6f4ff",border:"1px solid #91caff",borderRadius:"10px",padding:"2px 6px"}}>Açık</span>}
+              </div>
+            </div>
+            {/* ALT SATIRLAR */}
+            {altVar&&isOpen&&satirlar.map((s,si)=>{
+              const sBf=parseFloat(s.birimFiyat||0);
+              const sMik=parseFloat(s.miktar||0);
+              const sTop=sBf*sMik;
+              const sTamam=s.tamamlandi===true;
+              const sSecili=isMulti&&isChecked(b.id,s.id);
+              const sBg=sSecili?"#e6f4ff":sTamam?"#f6ffed":"#fafcff";
+              return <div key={s.id||si} onClick={e=>{
+                e.stopPropagation();
+                if(!isMulti){onSelect(b,s.id);onClose();}
+                else toggleItem(b,s.id);
+              }}
+                style={{display:"grid",gridTemplateColumns:gridCols,gap:"8px",padding:"8px 16px 8px 36px",borderBottom:`1px solid ${T.border}`,cursor:"pointer",alignItems:"center",background:sBg,borderLeft:`3px solid ${sSecili?"#1677ff":"#91caff"}`}}
+                onMouseEnter={e=>e.currentTarget.style.background="#e6f4ff"}
+                onMouseLeave={e=>e.currentTarget.style.background=sBg}>
+                {isMulti&&<div onClick={e=>{e.stopPropagation();toggleItem(b,s.id);}} style={cbxS(sSecili,false)}>
+                  {sSecili&&<Check size={12} color="#fff"/>}
+                </div>}
+                <div style={{fontSize:"10px",color:T.t3,textAlign:"center"}}>↳</div>
+                <div style={{fontSize:"11px",color:T.t3,fontFamily:"monospace"}}>#{s.siraNo||(si+1)}</div>
+                <div style={{fontSize:"12px",fontWeight:500,color:sTamam?"#52c41a":T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.aciklama||<span style={{color:T.t3,fontStyle:"italic"}}>(açıklama yok)</span>} {sMik>0&&<span style={{color:T.t3,fontWeight:400,marginLeft:"6px"}}>· {sMik.toLocaleString("tr-TR")} {b.birim||""}</span>}</div>
+                <div style={{fontSize:"12px",fontWeight:600,color:sTop>0?T.text:T.t3,textAlign:"right"}}>{sTop>0?sTop.toLocaleString("tr-TR",{minimumFractionDigits:2})+" ₺":"—"}</div>
+                <div></div>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {sTamam?<span style={{fontSize:"9px",fontWeight:700,color:"#52c41a",background:"#f6ffed",border:"1px solid #b7eb8f",borderRadius:"10px",padding:"1px 6px"}}>Tamam</span>
+                  :<span style={{fontSize:"9px",fontWeight:700,color:"#1677ff",background:"#e6f4ff",border:"1px solid #91caff",borderRadius:"10px",padding:"1px 6px"}}>Açık</span>}
+                </div>
+              </div>;
+            })}
+          </div>;
+        })}
+      </div>
+      {/* Alt bar — multi modda "Seçilenleri Ekle" butonu */}
+      {isMulti?<div style={{padding:"10px 16px",background:"#f0f5ff",borderTop:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <span style={{fontSize:"12px",color:T.t2}}>{seciliCount>0?`${seciliCount} kalem seçildi`:"Eklemek istediğiniz kalemleri seçin"}</span>
+        <div style={{display:"flex",gap:"8px"}}>
+          <button onClick={onClose} style={{padding:"6px 16px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>Vazgeç</button>
+          <button onClick={handleConfirm} disabled={seciliCount===0} style={{padding:"6px 20px",borderRadius:"6px",border:"none",background:seciliCount>0?T.primary:"#d9d9d9",color:"#fff",fontSize:"13px",cursor:seciliCount>0?"pointer":"not-allowed",fontWeight:600}}>Seçilenleri Ekle ({seciliCount})</button>
+        </div>
+      </div>
+      :<div style={{padding:"8px 16px",background:"#fafafa",borderTop:`1px solid ${T.border}`,fontSize:"11px",color:T.t3,textAlign:"center"}}>
+        Alt satiri olan kalemlerde ana satira tiklayip aç, alt satiri seç.
+      </div>}
     </div>
   </div>;
 };
@@ -7641,8 +7786,8 @@ export default function App(){
         {page==="projeler"&&<ProjelerPage projeler={projeler} setProjeler={setProjeler} onSave={saveProje} onDel={delProje} firmalar={firmalar} dosyaKategorileri={dosyaKategorileri} setDosyaKategorileri={setDosyaKategorileri} setPage={setPage} goToFirma={goToFirma} setEditMode={setEditMode}/>}
         {page==="teklifler"&&<AlinanTekliflerYonetim teklifler={teklifler} setTeklifler={setTeklifler} onSave={saveTeklif} onDel={delTeklif} malzemeler={malzemeler} firmalar={firmalar} projeler={projeler} onSpOlustur={spOlusturTeklifden}/>}
         {page==="teklif_verme"&&<div style={{padding:"80px",textAlign:"center",color:T.t3,fontSize:"16px",border:`1px dashed ${T.border}`,borderRadius:T.rl}}><div style={{fontSize:"32px",marginBottom:"12px"}}>📋</div>Teklif Verme modülü hazırlanıyor...</div>}
-        {page==="satinalma"&&<SatinalmaSiparisleriPage siparisler={siparisler} setSiparisler={setSiparisler} onSave={saveSiparis} onDel={delSiparis} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler}/>}
-        {page==="alis_fatura"&&<AlisFaturalariPage faturalar={faturalar} setFaturalar={setFaturalar} onSave={saveFatura} onDel={delFatura} siparisler={siparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler}/>}
+        {page==="satinalma"&&<SatinalmaSiparisleriPage siparisler={siparisler} setSiparisler={setSiparisler} onSave={saveSiparis} onDel={delSiparis} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler} butceKalemleri={butceKalemleri}/>}
+        {page==="alis_fatura"&&<AlisFaturalariPage faturalar={faturalar} setFaturalar={setFaturalar} onSave={saveFatura} onDel={delFatura} siparisler={siparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler} butceKalemleri={butceKalemleri}/>}
         {page==="maliyet"&&<MaliyetPage projeler={projeler} setProjeler={setProjeler} malzemeler={malzemeler} faturalar={faturalar} siparisler={siparisler} butceKalemleri={butceKalemleri} saveButceKalemi={saveButceKalemi} delButceKalemi={delButceKalemi} bulkSaveButceKalemleri={bulkSaveButceKalemleri}/>}
         {page==="satis_sunum"&&<SatisSunumPage projeler={projeler} setProjeler={setProjeler} firmalar={firmalar} saveProje={saveProje} saveFirma={saveFirma} setPage={setPage} goToFirma={goToFirma}/>}
       </div>
