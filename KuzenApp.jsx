@@ -60,6 +60,8 @@ const dosyaUrl = (d) => {
 const safeName = (name) => (name || "dosya").replace(/[^a-zA-Z0-9._-]/g, "_").substring(0, 80);
 
 const fmtDate=(d)=>{if(!d)return"—";const p=d.split("-");if(p.length!==3)return d;return`${p[2]}.${p[1]}.${p[0]}`;};
+const addDaysISO=(dateStr,days)=>{if(!dateStr||days===""||days===null||days===undefined)return"";const n=parseInt(days);if(isNaN(n))return"";const[y,m,d]=dateStr.split("-").map(Number);const dt=new Date(Date.UTC(y,m-1,d));dt.setUTCDate(dt.getUTCDate()+n);return dt.toISOString().split("T")[0];};
+const daysBetweenISO=(fromStr,toStr)=>{if(!fromStr||!toStr)return"";const[y1,m1,d1]=fromStr.split("-").map(Number);const[y2,m2,d2]=toStr.split("-").map(Number);const diff=Math.round((Date.UTC(y2,m2-1,d2)-Date.UTC(y1,m1-1,d1))/(1000*60*60*24));return String(diff);};
 const toTitleCase=(v)=>{
   const trUpper=(c)=>{if(c==='i')return 'İ';if(c==='ı')return 'I';return c.toUpperCase();};
   const trLower=(s)=>s.replace(/İ/g,'i').replace(/I/g,'ı').toLowerCase();
@@ -2900,7 +2902,7 @@ const SP_DURUMLARI=[
   {id:"taslak",label:"Taslak",color:"#8c8c8c",bg:"#f5f5f5",icon:"📝"},
   {id:"onaylandi",label:"Onaylandı",color:"#1677ff",bg:"#e6f4ff",icon:"✅"},
   {id:"kismen_teslim",label:"Kısmen Teslim",color:"#fa8c16",bg:"#fff7e6",icon:"📦"},
-  {id:"tamamlandi",label:"Tamamlandı",color:"#52c41a",bg:"#f6ffed",icon:"🎉"},
+  {id:"tamamlandi",label:"Kapandı",color:"#52c41a",bg:"#f6ffed",icon:"🔒"},
   {id:"iptal",label:"İptal",color:"#ff4d4f",bg:"#fff1f0",icon:"❌"},
 ];
 const TESLIM_KOSULLARI=["Şantiye Teslim","Fabrika Teslim","Ex-Works","CIF","FOB","Diğer"];
@@ -2920,7 +2922,7 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler
 
   const emptyForm={id:null,spNo:nextNo,teklifId:"",teklifNo:"",firmaId:"",firmaAd:"",projeId:"",projeAd:"",
     siparisTarihi:new Date().toISOString().split("T")[0],terminTarihi:"",
-    teslimatAdresi:"",teslimKosulu:"Şantiye Teslim",odemeVadesi:"",
+    teslimatAdresi:"",teslimKosulu:"Şantiye Teslim",odemeSekli:"",vadeGun:"",vadeTarihi:"",
     paraBirimi:"TL",aciklama:"",durum:"taslak",kalemler:[]};
   const[form,setForm]=useState({...emptyForm});
   const[bkPickerKalemId,setBkPickerKalemId]=useState(null);
@@ -3027,14 +3029,19 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler
           </div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:"14px",marginBottom:"14px"}}>
-          <div><label style={lS}>Sipariş Tarihi</label><input style={iS} type="date" value={form.siparisTarihi} onChange={e=>uf("siparisTarihi",e.target.value)} onFocus={foc} onBlur={blr}/></div>
+          <div><label style={lS}>Sipariş Tarihi</label><input style={iS} type="date" value={form.siparisTarihi} onChange={e=>{const st=e.target.value;setForm(p=>({...p,siparisTarihi:st,vadeTarihi:p.vadeGun!==""&&p.vadeGun!==null?addDaysISO(st,p.vadeGun):p.vadeTarihi}));}} onFocus={foc} onBlur={blr}/></div>
           <div><label style={lS}>Termin Tarihi</label><input style={iS} type="date" value={form.terminTarihi} onChange={e=>uf("terminTarihi",e.target.value)} onFocus={foc} onBlur={blr}/></div>
-          <div><label style={lS}>Ödeme Vadesi</label><input style={iS} value={form.odemeVadesi} onChange={e=>uf("odemeVadesi",e.target.value)} placeholder="Örn: 30 gün vadeli" onFocus={foc} onBlur={blr}/></div>
+          <div><label style={lS}>Ödeme Şekli</label><input style={iS} value={form.odemeSekli} onChange={e=>uf("odemeSekli",e.target.value)} placeholder="Örn: Peşin, Hakediş, Avans + Bakiye" onFocus={foc} onBlur={blr}/></div>
           <div><label style={lS}>Para Birimi</label>
             <select style={iS} value={form.paraBirimi} onChange={e=>uf("paraBirimi",e.target.value)} onFocus={foc} onBlur={blr}>
               {PARA_BIRIMLERI.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}
             </select>
           </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 2fr",gap:"14px",marginBottom:"14px"}}>
+          <div><label style={lS}>Vade (gün)</label><input style={iS} type="number" min="0" value={form.vadeGun} onChange={e=>{const g=e.target.value;if(g===""){setForm(p=>({...p,vadeGun:"",vadeTarihi:""}));return;}setForm(p=>({...p,vadeGun:g,vadeTarihi:addDaysISO(p.siparisTarihi,g)}));}} placeholder="Örn: 30" onFocus={foc} onBlur={blr}/></div>
+          <div><label style={lS}>Vade Tarihi (hesaplanan)</label><input style={iS} type="date" value={form.vadeTarihi} onChange={e=>{const t=e.target.value;if(!t){setForm(p=>({...p,vadeGun:"",vadeTarihi:""}));return;}setForm(p=>({...p,vadeTarihi:t,vadeGun:daysBetweenISO(p.siparisTarihi,t)}));}} onFocus={foc} onBlur={blr}/></div>
+          <div></div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px"}}>
           <div><label style={lS}>Teslimat Adresi</label><input style={iS} value={form.teslimatAdresi} onChange={e=>uf("teslimatAdresi",e.target.value)} placeholder="Şantiye adresi..." onFocus={foc} onBlur={blr}/></div>
@@ -3053,10 +3060,10 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler
           <div style={{fontWeight:600,fontSize:"14px",color:T.text}}>🛒 Sipariş Kalemleri</div>
           <div style={{display:"flex",gap:"8px"}}>
             {form.projeId&&<button onClick={()=>setBkMultiOpen(true)} style={{padding:"5px 14px",borderRadius:"6px",border:"1px solid #52c41a",background:"#f6ffed",color:"#52c41a",fontSize:"13px",cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:"4px"}}><Layers size={14}/>Bütçeden Ekle</button>}
-            <button onClick={kalemEkle} style={{padding:"5px 14px",borderRadius:"6px",border:`1px solid ${T.primary}`,background:T.pBg,color:T.primary,fontSize:"13px",cursor:"pointer",fontWeight:500}}>+ Kalem Ekle</button>
+            {!form.projeId&&<button onClick={kalemEkle} style={{padding:"5px 14px",borderRadius:"6px",border:`1px solid ${T.primary}`,background:T.pBg,color:T.primary,fontSize:"13px",cursor:"pointer",fontWeight:500}}>+ Kalem Ekle</button>}
           </div>
         </div>
-        {form.kalemler.length===0&&<div style={{padding:"32px",textAlign:"center",color:T.t3,fontSize:"13px"}}>Kalem yok. Bütçeden ekle veya manuel kalem ekle.</div>}
+        {form.kalemler.length===0&&<div style={{padding:"32px",textAlign:"center",color:T.t3,fontSize:"13px"}}>{form.projeId?"Bu sipariş bir projeye bağlı. Kalemleri bütçeden ekleyin.":"Kalem yok. Manuel kalem ekle."}</div>}
         {form.kalemler.map((k,idx)=>{
           return <div key={k.id} style={{padding:"12px 20px",borderBottom:`1px solid ${T.border}`,background:idx%2===0?"#fff":"#fafafa"}}>
             <div style={{display:"grid",gridTemplateColumns:"28px 2fr 80px 80px 100px 80px 32px",gap:"8px",alignItems:"center"}}>
@@ -3205,7 +3212,7 @@ const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklif
   const nextNo=(()=>{const yil=new Date().getFullYear();const mevcut=faturalar.filter(f=>(f.afNo||"").includes(`-${yil}-`)).map(f=>parseInt((f.afNo||"").split("-")[2])||0);const n=mevcut.length>0?Math.max(...mevcut)+1:1;return`AF-${yil}-${String(n).padStart(3,"0")}`;})();
 
   const emptyForm={id:null,afNo:nextNo,spId:"",spNo:"",teklifId:"",teklifNo:"",firmaId:"",firmaAd:"",projeId:"",projeAd:"",
-    faturaNo:"",faturaTarihi:new Date().toISOString().split("T")[0],vadeTarihi:"",
+    faturaNo:"",faturaTarihi:new Date().toISOString().split("T")[0],odemeSekli:"",vadeGun:"",vadeTarihi:"",
     paraBirimi:"TL",aciklama:"",durum:"beklemede",kalemler:[]};
   const[form,setForm]=useState({...emptyForm});
   const uf=(f,v)=>setForm(p=>({...p,[f]:v}));
@@ -3219,6 +3226,9 @@ const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklif
       firmaId:String(sp.firmaId),firmaAd:sp.firmaAd,
       projeId:sp.projeId?String(sp.projeId):"",projeAd:sp.projeAd||"",
       paraBirimi:sp.paraBirimi,
+      odemeSekli:sp.odemeSekli||"",
+      vadeGun:sp.vadeGun||"",
+      vadeTarihi:sp.vadeGun&&p.faturaTarihi?addDaysISO(p.faturaTarihi,sp.vadeGun):"",
       kalemler:(sp.kalemler||[]).map(k=>({...k,id:Date.now()+Math.random(),butceKalemiId:k.butceKalemiId||null,butceKalemiSatirId:k.butceKalemiSatirId||null}))
     }));
     setSpPickerOpen(false);
@@ -3294,7 +3304,7 @@ const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklif
           :<button onClick={()=>setSpPickerOpen(true)} style={{padding:"6px 16px",borderRadius:"6px",border:"1px solid #722ed1",background:"#f9f0ff",color:"#722ed1",fontSize:"13px",cursor:"pointer",fontWeight:600}}>Sipariş Seç</button>
         }
       </div>
-      {spPickerOpen&&<SiparisSeciciModal siparisler={siparisler.filter(s=>s.durum!=="iptal")} onSelect={s=>spdenDoldur(String(s.id))} onClose={()=>setSpPickerOpen(false)}/>}
+      {spPickerOpen&&<SiparisSeciciModal siparisler={siparisler.filter(s=>["taslak","onaylandi","kismen_teslim"].includes(s.durum)&&(!form.firmaId||String(s.firmaId)===String(form.firmaId))&&(!form.projeId||String(s.projeId)===String(form.projeId)))} onSelect={s=>spdenDoldur(String(s.id))} onClose={()=>setSpPickerOpen(false)}/>}
 
       <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,padding:"20px",marginBottom:"16px"}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"14px",marginBottom:"14px"}}>
@@ -3318,13 +3328,18 @@ const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklif
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:"14px",marginBottom:"14px"}}>
           <div><label style={lS}>Fatura No *</label><input style={iS} value={form.faturaNo} onChange={e=>uf("faturaNo",e.target.value)} placeholder="Tedarikçi fatura no" onFocus={foc} onBlur={blr}/></div>
-          <div><label style={lS}>Fatura Tarihi</label><input style={iS} type="date" value={form.faturaTarihi} onChange={e=>uf("faturaTarihi",e.target.value)} onFocus={foc} onBlur={blr}/></div>
-          <div><label style={lS}>Vade Tarihi</label><input style={iS} type="date" value={form.vadeTarihi} onChange={e=>uf("vadeTarihi",e.target.value)} onFocus={foc} onBlur={blr}/></div>
+          <div><label style={lS}>Fatura Tarihi</label><input style={iS} type="date" value={form.faturaTarihi} onChange={e=>{const ft=e.target.value;setForm(p=>({...p,faturaTarihi:ft,vadeTarihi:p.vadeGun!==""&&p.vadeGun!==null?addDaysISO(ft,p.vadeGun):p.vadeTarihi}));}} onFocus={foc} onBlur={blr}/></div>
+          <div><label style={lS}>Ödeme Şekli</label><input style={iS} value={form.odemeSekli} onChange={e=>uf("odemeSekli",e.target.value)} placeholder="Örn: Peşin, Hakediş, Avans + Bakiye" onFocus={foc} onBlur={blr}/></div>
           <div><label style={lS}>Para Birimi</label>
             <select style={iS} value={form.paraBirimi} onChange={e=>uf("paraBirimi",e.target.value)} onFocus={foc} onBlur={blr}>
               {PARA_BIRIMLERI.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}
             </select>
           </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 2fr",gap:"14px",marginBottom:"14px"}}>
+          <div><label style={lS}>Vade (gün)</label><input style={iS} type="number" min="0" value={form.vadeGun} onChange={e=>{const g=e.target.value;if(g===""){setForm(p=>({...p,vadeGun:"",vadeTarihi:""}));return;}setForm(p=>({...p,vadeGun:g,vadeTarihi:addDaysISO(p.faturaTarihi,g)}));}} placeholder="Örn: 30" onFocus={foc} onBlur={blr}/></div>
+          <div><label style={lS}>Vade Tarihi (hesaplanan)</label><input style={iS} type="date" value={form.vadeTarihi} onChange={e=>{const t=e.target.value;if(!t){setForm(p=>({...p,vadeGun:"",vadeTarihi:""}));return;}setForm(p=>({...p,vadeTarihi:t,vadeGun:daysBetweenISO(p.faturaTarihi,t)}));}} onFocus={foc} onBlur={blr}/></div>
+          <div></div>
         </div>
         <div><label style={lS}>Açıklama</label><textarea style={{...iS,height:"48px",resize:"vertical"}} value={form.aciklama} onChange={e=>uf("aciklama",e.target.value)} onFocus={foc} onBlur={blr}/></div>
       </div>
@@ -3916,7 +3931,7 @@ const siparisToLocal = (s, kalemler=[]) => ({
   firmaId:s.firma_id, firmaAd:s.firma_ad||"", projeId:s.proje_id, projeAd:s.proje_ad||"",
   siparisTarihi:s.siparis_tarihi||"", terminTarihi:s.termin_tarihi||"",
   teslimatAdresi:s.teslimat_adresi||"", teslimKosulu:s.teslim_kosulu||"Şantiye Teslim",
-  odemeVadesi:s.odeme_vadesi||"", paraBirimi:s.para_birimi||"TL",
+  odemeSekli:s.odeme_sekli||s.odeme_vadesi||"", vadeGun:s.vade_gun!==null&&s.vade_gun!==undefined?String(s.vade_gun):"", vadeTarihi:s.vade_tarihi||"", paraBirimi:s.para_birimi||"TL",
   aciklama:s.aciklama||"", durum:s.durum||"taslak", kalemler
 });
 const siparisKalemToLocal = (k) => ({
@@ -3931,7 +3946,7 @@ const siparisToDb = (s) => ({
   firma_id:s.firmaId||null, firma_ad:s.firmaAd||"", proje_id:s.projeId||null, proje_ad:s.projeAd||"",
   siparis_tarihi:s.siparisTarihi||null, termin_tarihi:s.terminTarihi||null,
   teslimat_adresi:s.teslimatAdresi||"", teslim_kosulu:s.teslimKosulu||"",
-  odeme_vadesi:s.odemeVadesi||"", para_birimi:s.paraBirimi||"TL",
+  odeme_sekli:s.odemeSekli||"", vade_gun:s.vadeGun!==""&&s.vadeGun!==null&&s.vadeGun!==undefined?parseInt(s.vadeGun):null, vade_tarihi:s.vadeTarihi||null, para_birimi:s.paraBirimi||"TL",
   aciklama:s.aciklama||"", durum:s.durum||"taslak"
 });
 const siparisKalemToDb = (k, siparisId) => ({
@@ -3947,7 +3962,7 @@ const faturaToLocal = (f, kalemler=[]) => ({
   id:f.id, afNo:f.af_no||"", spId:f.siparis_id, spNo:f.sp_no||"",
   teklifId:f.teklif_id, teklifNo:f.teklif_no||"",
   firmaId:f.firma_id, firmaAd:f.firma_ad||"", projeId:f.proje_id, projeAd:f.proje_ad||"",
-  faturaNo:f.fatura_no||"", faturaTarihi:f.fatura_tarihi||"", vadeTarihi:f.vade_tarihi||"",
+  faturaNo:f.fatura_no||"", faturaTarihi:f.fatura_tarihi||"", odemeSekli:f.odeme_sekli||"", vadeGun:f.vade_gun!==null&&f.vade_gun!==undefined?String(f.vade_gun):"", vadeTarihi:f.vade_tarihi||"",
   paraBirimi:f.para_birimi||"TL", aciklama:f.aciklama||"", durum:f.durum||"beklemede", kalemler
 });
 const faturaKalemToLocal = (k) => ({
@@ -3961,7 +3976,7 @@ const faturaToDb = (f) => ({
   af_no:f.afNo||"", siparis_id:f.spId||null, sp_no:f.spNo||"",
   teklif_id:f.teklifId||null, teklif_no:f.teklifNo||"",
   firma_id:f.firmaId||null, firma_ad:f.firmaAd||"", proje_id:f.projeId||null, proje_ad:f.projeAd||"",
-  fatura_no:f.faturaNo||"", fatura_tarihi:f.faturaTarihi||null, vade_tarihi:f.vadeTarihi||null,
+  fatura_no:f.faturaNo||"", fatura_tarihi:f.faturaTarihi||null, odeme_sekli:f.odemeSekli||"", vade_gun:f.vadeGun!==""&&f.vadeGun!==null&&f.vadeGun!==undefined?parseInt(f.vadeGun):null, vade_tarihi:f.vadeTarihi||null,
   para_birimi:f.paraBirimi||"TL", aciklama:f.aciklama||"", durum:f.durum||"beklemede"
 });
 const faturaKalemToDb = (k, faturaId) => ({
@@ -7678,6 +7693,32 @@ export default function App(){
         const kDb = form.kalemler.filter(k=>k.malzemeAd||k.malzemeId).map(k=>faturaKalemToDb(k, faturaId));
         if(kDb.length>0) await sbPost('alis_fatura_kalemleri', kDb);
       }
+      // Otomatik sipariş kapatma — fatura SP'ye bağlı ve sipariş açık durumda ise
+      if(form.spId) {
+        const spId = parseInt(form.spId);
+        const sp = siparisler.find(s=>s.id===spId);
+        if(sp && sp.durum!=='iptal' && sp.durum!=='tamamlandi') {
+          const tumFaturalar = [...faturalar.filter(f=>f.id!==form.id), form];
+          const spFaturalari = tumFaturalar.filter(f=>String(f.spId)===String(spId) && f.durum!=='iptal');
+          const spKalemleri = sp.kalemler||[];
+          let tumKapali = spKalemleri.length>0;
+          let enAzBir = false;
+          for(const sk of spKalemleri) {
+            const skMiktar = parseFloat(sk.miktar)||0;
+            if(skMiktar<=0){tumKapali=false;continue;}
+            const faturalanan = spFaturalari.reduce((t,f)=>t+(f.kalemler||[]).filter(fk=>sk.malzemeId && String(fk.malzemeId)===String(sk.malzemeId)).reduce((s,fk)=>s+(parseFloat(fk.miktar)||0),0), 0);
+            if(faturalanan>0) enAzBir = true;
+            if(faturalanan<skMiktar) tumKapali = false;
+          }
+          let yeniDurum = sp.durum;
+          if(tumKapali) yeniDurum = 'tamamlandi';
+          else if(enAzBir) yeniDurum = 'kismen_teslim';
+          if(yeniDurum!==sp.durum) {
+            try { await sbPatch('satinalma_siparisleri', spId, {durum: yeniDurum}); } catch(e) { console.warn("Sipariş durum güncelleme hatası:", e.message); }
+            setSiparisler(prev=>prev.map(s=>s.id===spId?{...s,durum:yeniDurum}:s));
+          }
+        }
+      }
       // NOT: Maliyet kalemi kapanışı MANUEL — kullanıcı Maliyet sayfasında checkbox ile kapatır.
       // İleride "görevlerim" modülünde faturası giren ama kapanmamış kalemler hatırlatılacak.
     } catch(e) {
@@ -7810,7 +7851,7 @@ export default function App(){
       firmaId:teklif.firmaId,firmaAd:teklif.firmaAd,
       projeId:teklif.projeId||null,projeAd:teklif.projeAd||"",
       siparisTarihi:new Date().toISOString().split("T")[0],terminTarihi:"",
-      teslimatAdresi:"",teslimKosulu:"Şantiye Teslim",odemeVadesi:"",
+      teslimatAdresi:"",teslimKosulu:"Şantiye Teslim",odemeSekli:teklif.odemeSekli||"",vadeGun:"",vadeTarihi:"",
       paraBirimi:teklif.paraBirimi,aciklama:`${teklif.teklifNo} teklifinden oluşturuldu`,
       durum:"taslak",
       kalemler:(teklif.kalemler||[]).map(k=>({...k,id:Date.now()+Math.random(),teslimMiktar:0,aciklama:"",butceKalemiId:null}))
