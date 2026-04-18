@@ -6135,6 +6135,48 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
       setFiyatSaved(true);setTimeout(()=>setFiyatSaved(false),2000);
     }catch(e){console.error("Fiyatlandırma kayıt hatası:",e.message);alert("Kayıt başarısız: "+e.message);}
   };
+
+  // Blok bazlı fiyatlandırma state
+  const[blokFiyatForm,setBlokFiyatForm]=useState({});
+  const[blokFiyatSaved,setBlokFiyatSaved]=useState({});
+  useEffect(()=>{
+    if(selProje&&selProje.bloklar){
+      const m={};
+      selProje.bloklar.forEach(bl=>{
+        m[bl.id]={
+          ongorulenM2KdvHaric:bl.ongorulenM2KdvHaric||"",
+          ongorulenM2KdvDahil:bl.ongorulenM2KdvDahil||""
+        };
+      });
+      setBlokFiyatForm(m);
+    }
+  },[selProjeId,selProje?.bloklar?.length]);
+  const blokFiyatHaricChange=(blokId,v)=>{
+    const cleaned=v.replace(/[^0-9.,]/g,"").replace(",",".");
+    const kdv=parseFloat(fiyatForm.varsayilanKdvOrani||"20");
+    const haricN=parseFloat(cleaned);
+    const dahilStr=!isNaN(haricN)?String(Math.round(haricN*(1+kdv/100)*100)/100):"";
+    setBlokFiyatForm(p=>({...p,[blokId]:{ongorulenM2KdvHaric:cleaned,ongorulenM2KdvDahil:dahilStr}}));
+  };
+  const blokFiyatDahilChange=(blokId,v)=>{
+    const cleaned=v.replace(/[^0-9.,]/g,"").replace(",",".");
+    const kdv=parseFloat(fiyatForm.varsayilanKdvOrani||"20");
+    const dahilN=parseFloat(cleaned);
+    const haricStr=!isNaN(dahilN)?String(Math.round(dahilN/(1+kdv/100)*100)/100):"";
+    setBlokFiyatForm(p=>({...p,[blokId]:{ongorulenM2KdvHaric:haricStr,ongorulenM2KdvDahil:cleaned}}));
+  };
+  const blokFiyatKaydet=async(blokId)=>{
+    const f=blokFiyatForm[blokId];if(!f)return;
+    try{
+      await sbPatch('bloklar',blokId,{
+        ongorulen_m2_kdv_haric:f.ongorulenM2KdvHaric!==""&&f.ongorulenM2KdvHaric!=null?Number(f.ongorulenM2KdvHaric):null,
+        ongorulen_m2_kdv_dahil:f.ongorulenM2KdvDahil!==""&&f.ongorulenM2KdvDahil!=null?Number(f.ongorulenM2KdvDahil):null
+      });
+      setProjeler(prev=>prev.map(p=>p.id===selProjeId?{...p,bloklar:(p.bloklar||[]).map(bl=>bl.id===blokId?{...bl,...f}:bl)}:p));
+      setBlokFiyatSaved(p=>({...p,[blokId]:true}));
+      setTimeout(()=>setBlokFiyatSaved(p=>({...p,[blokId]:false})),2000);
+    }catch(e){console.error("Blok fiyat kayıt hatası:",e.message);alert("Kayıt başarısız: "+e.message);}
+  };
   // Yeni yapı: butceKalemleri ayrı tablodan global state'ten gelir, proje bazında filtrelenir
   const butceKalemleri=useMemo(()=>selProjeId?butceKalemleriGlobal.filter(b=>b.projeId===selProjeId):[],[butceKalemleriGlobal,selProjeId]);
 
@@ -6754,9 +6796,58 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
               </div>
             </div>
 
+            {/* BLOK BAZLI ÖNGÖRÜLEN m² OVERRIDE */}
+            {(selProje.bloklar||[]).length>0&&<div style={{padding:"16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff",marginBottom:"16px"}}>
+              <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"4px"}}>🏢 Blok Bazında Öngörülen m² Maliyet</div>
+              <div style={{fontSize:"11px",color:T.t3,marginBottom:"12px"}}>Boş bırakılan bloklarda proje seviyesi öngörülen m² kullanılır.</div>
+              <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(3,(selProje.bloklar||[]).length)},1fr)`,gap:"12px"}}>
+                {(selProje.bloklar||[]).map(bl=>{
+                  const blBrutM2=blokM2Harita[bl.ad]||0;
+                  const blMaliyet=ozet.blokMaliyet[bl.ad]||0;
+                  const blMaliyetDahil=ozet.blokMaliyetKdvDahil[bl.ad]||0;
+                  const blMutM2=ozet.muteahhitOran>0?blBrutM2*ozet.muteahhitOran:blBrutM2;
+                  const blM2MaliyetNet=blMutM2>0?blMaliyet/blMutM2:0;
+                  const blM2MaliyetNetDahil=blMutM2>0?blMaliyetDahil/blMutM2:0;
+                  const f=blokFiyatForm[bl.id]||{ongorulenM2KdvHaric:"",ongorulenM2KdvDahil:""};
+                  const saved=blokFiyatSaved[bl.id];
+                  const ong=parseFloat(f.ongorulenM2KdvHaric);
+                  const hasOverride=f.ongorulenM2KdvHaric!=="";
+                  const etkinHaric=hasOverride?ong:parseFloat(fiyatForm.ongorulenM2KdvHaric);
+                  const sapma=!isNaN(etkinHaric)&&blM2MaliyetNet>0?etkinHaric-blM2MaliyetNet:null;
+                  const sapmaY=sapma!=null&&blM2MaliyetNet>0?(sapma/blM2MaliyetNet*100):null;
+                  const sapmaCol=sapmaY==null?T.t3:Math.abs(sapmaY)<5?T.ok:Math.abs(sapmaY)<15?T.warn:T.err;
+                  return<div key={bl.id} style={{padding:"12px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#fafafa"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
+                      <div style={{fontSize:"13px",fontWeight:700,color:T.text}}>{bl.ad} BLOK</div>
+                      {!hasOverride&&<span style={{fontSize:"10px",color:T.t3,fontStyle:"italic"}}>(proje seviyesi)</span>}
+                    </div>
+                    <div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",fontWeight:600,marginBottom:"4px"}}>🖥️ Hesaplanan Net m²</div>
+                    <div style={{display:"flex",alignItems:"baseline",gap:"6px",marginBottom:"2px"}}>
+                      <span style={{fontSize:"10px",color:T.t3,minWidth:"34px",fontWeight:600}}>Dahil</span>
+                      <span style={{fontSize:"14px",fontWeight:700,color:"#ff4d4f"}}>{blM2MaliyetNetDahil>0?blM2MaliyetNetDahil.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺":"—"}</span>
+                    </div>
+                    <div style={{display:"flex",alignItems:"baseline",gap:"6px",marginBottom:"10px"}}>
+                      <span style={{fontSize:"10px",color:T.t3,minWidth:"34px",fontWeight:600}}>Hariç</span>
+                      <span style={{fontSize:"12px",fontWeight:600,color:"#ff4d4f",opacity:0.7}}>{blM2MaliyetNet>0?blM2MaliyetNet.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺":"—"}</span>
+                    </div>
+                    <div style={{fontSize:"10px",color:T.t2,fontWeight:600,marginBottom:"3px"}}>🎯 Öngörülen m² (KDV Hariç)</div>
+                    <input type="text" value={f.ongorulenM2KdvHaric} onChange={e=>blokFiyatHaricChange(bl.id,e.target.value)} placeholder={fiyatForm.ongorulenM2KdvHaric||"0,00"} style={{width:"100%",padding:"6px 8px",border:`1px solid ${T.bDark}`,borderRadius:"4px",fontSize:"12px",boxSizing:"border-box",outline:"none",marginBottom:"6px"}}/>
+                    <div style={{fontSize:"10px",color:T.t2,fontWeight:600,marginBottom:"3px"}}>🎯 Öngörülen m² (KDV Dahil)</div>
+                    <input type="text" value={f.ongorulenM2KdvDahil} onChange={e=>blokFiyatDahilChange(bl.id,e.target.value)} placeholder={fiyatForm.ongorulenM2KdvDahil||"0,00"} style={{width:"100%",padding:"6px 8px",border:`1px solid ${T.bDark}`,borderRadius:"4px",fontSize:"12px",boxSizing:"border-box",outline:"none",marginBottom:"8px"}}/>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:"6px"}}>
+                      <div style={{fontSize:"11px",color:sapmaCol,fontWeight:600}}>
+                        {sapma==null?"—":"Sapma: "+(sapma>=0?"+":"")+sapma.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺ (%"+(sapmaY>=0?"+":"")+sapmaY.toFixed(1)+")"}
+                      </div>
+                      <button onClick={()=>blokFiyatKaydet(bl.id)} style={{padding:"4px 10px",background:saved?T.ok:T.primary,color:"#fff",border:"none",borderRadius:"4px",fontSize:"11px",fontWeight:600,cursor:"pointer",transition:"background 0.25s"}}>{saved?"✓":"💾"}</button>
+                    </div>
+                  </div>;
+                })}
+              </div>
+            </div>}
+
             {/* Info / Roadmap note */}
             <div style={{padding:"10px 12px",background:"#fffbe6",border:"1px solid #ffe58f",borderRadius:"6px",fontSize:"12px",color:"#8c6e00"}}>
-              ℹ️ <b>Öngörülen m²:</b> yöneticinin hedef satış maliyetidir. Hesaplanan <b>Net m²</b> ile karşılaştırılır (müteahhit payı esas alınır). Sonraki adım: <b>Faz 1-B3</b> — blok bazlı öngörülen m² override, ardından <b>Faz 1-B4</b> — satılmayan daireler için şerefiye + liste fiyatı girişi.
+              ℹ️ <b>Öngörülen m²:</b> yöneticinin hedef satış maliyetidir. Blok kartlarında <b>boş bırakılanlar proje seviyesini kullanır</b>. Sonraki adım: <b>Faz 1-B4</b> — satılmayan daireler için şerefiye + liste fiyatı girişi.
             </div>
           </>}
         </div>}
