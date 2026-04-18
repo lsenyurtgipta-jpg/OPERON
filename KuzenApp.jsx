@@ -3839,6 +3839,10 @@ const projeToLocal = (p) => ({
   arsaM2: p.arsa_m2||"", emsal: p.emsal||"", toplamEmsal: p.toplam_emsal||"",
   anlasmaYontemi: p.anlasma_yontemi||"", arsaSahibiPay: p.arsa_sahibi_pay||"", muteahhitPay: p.muteahhit_pay||"",
   aciklama: p.aciklama||"",
+  ongorulenM2KdvHaric: p.ongorulen_m2_kdv_haric!=null?String(p.ongorulen_m2_kdv_haric):"",
+  ongorulenM2KdvDahil: p.ongorulen_m2_kdv_dahil!=null?String(p.ongorulen_m2_kdv_dahil):"",
+  karMarjiYuzde: p.kar_marji_yuzde!=null?String(p.kar_marji_yuzde):"",
+  varsayilanKdvOrani: p.varsayilan_kdv_orani||"20",
   bloklar: p.bloklar||[], bolumler: p.bolumler||[],
   firmaBaglantilari: p.firma_baglantilari||[],
   tumDosyalar: p.tum_dosyalar||[],
@@ -3862,6 +3866,10 @@ const projeToDb = (p) => ({
   arsa_m2: p.arsaM2||"", emsal: p.emsal||"", toplam_emsal: p.toplamEmsal||"",
   anlasma_yontemi: p.anlasmaYontemi||"", arsa_sahibi_pay: p.arsaSahibiPay||"", muteahhit_pay: p.muteahhitPay||"",
   aciklama: p.aciklama||"",
+  ongorulen_m2_kdv_haric: p.ongorulenM2KdvHaric!==""&&p.ongorulenM2KdvHaric!=null?Number(p.ongorulenM2KdvHaric):null,
+  ongorulen_m2_kdv_dahil: p.ongorulenM2KdvDahil!==""&&p.ongorulenM2KdvDahil!=null?Number(p.ongorulenM2KdvDahil):null,
+  kar_marji_yuzde: p.karMarjiYuzde!==""&&p.karMarjiYuzde!=null?Number(p.karMarjiYuzde):null,
+  varsayilan_kdv_orani: p.varsayilanKdvOrani||"20",
   // bloklar ve bolumler ayrı tablolarda tutuluyor — JSONB sütunları paralel, bu sütunlara yazmıyoruz
   firma_baglantilari: p.firmaBaglantilari||[],
   tum_dosyalar: p.tumDosyalar||[],
@@ -3915,12 +3923,16 @@ const blokToLocal = (b) => ({
   id: b.id,
   projeId: b.proje_id,
   ad: b.ad||"",
-  ortakAlanM2: b.ortak_alan_m2!=null?String(b.ortak_alan_m2):""
+  ortakAlanM2: b.ortak_alan_m2!=null?String(b.ortak_alan_m2):"",
+  ongorulenM2KdvHaric: b.ongorulen_m2_kdv_haric!=null?String(b.ongorulen_m2_kdv_haric):"",
+  ongorulenM2KdvDahil: b.ongorulen_m2_kdv_dahil!=null?String(b.ongorulen_m2_kdv_dahil):""
 });
 const blokToDb = (b, projeId) => ({
   proje_id: projeId||b.projeId,
   ad: b.ad||"",
-  ortak_alan_m2: b.ortakAlanM2!==""&&b.ortakAlanM2!=null?Number(b.ortakAlanM2):null
+  ortak_alan_m2: b.ortakAlanM2!==""&&b.ortakAlanM2!=null?Number(b.ortakAlanM2):null,
+  ongorulen_m2_kdv_haric: b.ongorulenM2KdvHaric!==""&&b.ongorulenM2KdvHaric!=null?Number(b.ongorulenM2KdvHaric):null,
+  ongorulen_m2_kdv_dahil: b.ongorulenM2KdvDahil!==""&&b.ongorulenM2KdvDahil!=null?Number(b.ongorulenM2KdvDahil):null
 });
 
 // Bölüm dönüşümleri
@@ -3943,7 +3955,12 @@ const bolumToLocal = (b) => ({
   aliciFirmaId: b.alici_firma_id||"",
   aliciFirmaAd: b.alici_firma_ad||"",
   notlar: b.notlar||"",
-  gorseller: b.gorseller||[]
+  gorseller: b.gorseller||[],
+  kdvOrani: b.kdv_orani||"",
+  katSerefiyesiTl: b.kat_serefiyesi_tl!=null?String(b.kat_serefiyesi_tl):"",
+  cepheSerefiyesiTl: b.cephe_serefiyesi_tl!=null?String(b.cephe_serefiyesi_tl):"",
+  listeFiyatiKdvHaric: b.liste_fiyati_kdv_haric!=null?String(b.liste_fiyati_kdv_haric):"",
+  listeFiyatiKdvDahil: b.liste_fiyati_kdv_dahil!=null?String(b.liste_fiyati_kdv_dahil):""
 });
 const bolumToDb = (b, projeId) => ({
   proje_id: projeId||b.projeId,
@@ -3963,7 +3980,12 @@ const bolumToDb = (b, projeId) => ({
   alici_firma_id: b.aliciFirmaId||null,
   alici_firma_ad: b.aliciFirmaAd||"",
   notlar: b.notlar||"",
-  gorseller: b.gorseller||[]
+  gorseller: b.gorseller||[],
+  kdv_orani: b.kdvOrani||null,
+  kat_serefiyesi_tl: b.katSerefiyesiTl!==""&&b.katSerefiyesiTl!=null?Number(b.katSerefiyesiTl):0,
+  cephe_serefiyesi_tl: b.cepheSerefiyesiTl!==""&&b.cepheSerefiyesiTl!=null?Number(b.cepheSerefiyesiTl):0,
+  liste_fiyati_kdv_haric: b.listeFiyatiKdvHaric!==""&&b.listeFiyatiKdvHaric!=null?Number(b.listeFiyatiKdvHaric):null,
+  liste_fiyati_kdv_dahil: b.listeFiyatiKdvDahil!==""&&b.listeFiyatiKdvDahil!=null?Number(b.listeFiyatiKdvDahil):null
 });
 
 const teklifToLocal = (t, kalemler=[]) => ({
@@ -6066,6 +6088,53 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
   const[siralama,setSiralama]=useState({alan:"mlzKodu",yon:"asc"});
   const siraToggle=(alan)=>setSiralama(p=>p.alan===alan?{alan,yon:p.yon==="asc"?"desc":"asc"}:{alan,yon:"asc"});
   const selProje=projeler.find(p=>p.id===selProjeId);
+
+  // Fiyatlandırma state
+  const[fiyatForm,setFiyatForm]=useState({ongorulenM2KdvHaric:"",ongorulenM2KdvDahil:"",karMarjiYuzde:"",varsayilanKdvOrani:"20"});
+  const[fiyatSaved,setFiyatSaved]=useState(false);
+  useEffect(()=>{
+    if(selProje){
+      setFiyatForm({
+        ongorulenM2KdvHaric:selProje.ongorulenM2KdvHaric||"",
+        ongorulenM2KdvDahil:selProje.ongorulenM2KdvDahil||"",
+        karMarjiYuzde:selProje.karMarjiYuzde||"",
+        varsayilanKdvOrani:selProje.varsayilanKdvOrani||"20"
+      });
+    }
+  },[selProjeId]);
+  const fiyatHaricChange=(v)=>{
+    const cleaned=v.replace(/[^0-9.,]/g,"").replace(",",".");
+    const kdv=parseFloat(fiyatForm.varsayilanKdvOrani||"20");
+    const haricN=parseFloat(cleaned);
+    const dahilStr=!isNaN(haricN)?String(Math.round(haricN*(1+kdv/100)*100)/100):"";
+    setFiyatForm(p=>({...p,ongorulenM2KdvHaric:cleaned,ongorulenM2KdvDahil:dahilStr}));
+  };
+  const fiyatDahilChange=(v)=>{
+    const cleaned=v.replace(/[^0-9.,]/g,"").replace(",",".");
+    const kdv=parseFloat(fiyatForm.varsayilanKdvOrani||"20");
+    const dahilN=parseFloat(cleaned);
+    const haricStr=!isNaN(dahilN)?String(Math.round(dahilN/(1+kdv/100)*100)/100):"";
+    setFiyatForm(p=>({...p,ongorulenM2KdvDahil:cleaned,ongorulenM2KdvHaric:haricStr}));
+  };
+  const fiyatKdvChange=(v)=>{
+    const kdv=parseFloat(v);
+    const haricN=parseFloat(fiyatForm.ongorulenM2KdvHaric);
+    const dahilStr=!isNaN(haricN)?String(Math.round(haricN*(1+kdv/100)*100)/100):"";
+    setFiyatForm(p=>({...p,varsayilanKdvOrani:v,ongorulenM2KdvDahil:dahilStr}));
+  };
+  const fiyatKaydet=async()=>{
+    if(!selProjeId)return;
+    try{
+      await sbPatch('projeler',selProjeId,{
+        ongorulen_m2_kdv_haric:fiyatForm.ongorulenM2KdvHaric!==""&&fiyatForm.ongorulenM2KdvHaric!=null?Number(fiyatForm.ongorulenM2KdvHaric):null,
+        ongorulen_m2_kdv_dahil:fiyatForm.ongorulenM2KdvDahil!==""&&fiyatForm.ongorulenM2KdvDahil!=null?Number(fiyatForm.ongorulenM2KdvDahil):null,
+        kar_marji_yuzde:fiyatForm.karMarjiYuzde!==""&&fiyatForm.karMarjiYuzde!=null?Number(fiyatForm.karMarjiYuzde):null,
+        varsayilan_kdv_orani:fiyatForm.varsayilanKdvOrani||"20"
+      });
+      setProjeler(prev=>prev.map(p=>p.id===selProjeId?{...p,...fiyatForm}:p));
+      setFiyatSaved(true);setTimeout(()=>setFiyatSaved(false),2000);
+    }catch(e){console.error("Fiyatlandırma kayıt hatası:",e.message);alert("Kayıt başarısız: "+e.message);}
+  };
   // Yeni yapı: butceKalemleri ayrı tablodan global state'ten gelir, proje bazında filtrelenir
   const butceKalemleri=useMemo(()=>selProjeId?butceKalemleriGlobal.filter(b=>b.projeId===selProjeId):[],[butceKalemleriGlobal,selProjeId]);
 
@@ -6328,7 +6397,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
 
         {/* SEKME BARI */}
         <div style={{display:"flex",gap:"2px",marginBottom:"16px",borderBottom:`2px solid ${T.border}`}}>
-          {[{id:"dashboard",label:"Dashboard"},{id:"kategoriler",label:"Kategoriler"},{id:"kalemler",label:"Maliyet Kalemleri"}].map(s=><button key={s.id} onClick={()=>setAktifSekme(s.id)} style={{padding:"10px 20px",border:"none",background:aktifSekme===s.id?"#fff":"transparent",borderBottom:aktifSekme===s.id?`2px solid #1677ff`:"2px solid transparent",marginBottom:"-2px",fontSize:"14px",fontWeight:aktifSekme===s.id?600:400,color:aktifSekme===s.id?"#1677ff":T.t2,cursor:"pointer"}}>{s.label}</button>)}
+          {[{id:"dashboard",label:"Dashboard"},{id:"kategoriler",label:"Kategoriler"},{id:"kalemler",label:"Maliyet Kalemleri"},{id:"fiyatlandirma",label:"Fiyatlandırma"}].map(s=><button key={s.id} onClick={()=>setAktifSekme(s.id)} style={{padding:"10px 20px",border:"none",background:aktifSekme===s.id?"#fff":"transparent",borderBottom:aktifSekme===s.id?`2px solid #1677ff`:"2px solid transparent",marginBottom:"-2px",fontSize:"14px",fontWeight:aktifSekme===s.id?600:400,color:aktifSekme===s.id?"#1677ff":T.t2,cursor:"pointer"}}>{s.label}</button>)}
         </div>
 
         {aktifSekme==="dashboard"&&<div>
@@ -6602,6 +6671,94 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
             </>
           }
         </div>
+        </div>}
+
+        {aktifSekme==="fiyatlandirma"&&<div>
+          {!selProje?
+            <div style={{padding:"40px",textAlign:"center",color:T.t3,border:`1px dashed ${T.border}`,borderRadius:T.r,background:"#fafafa"}}>
+              <div style={{fontSize:"12px"}}>Lütfen önce bir proje seçin</div>
+            </div>
+          :<>
+            {/* PROJE ÖZET KARTI — m² MALİYET PLANLAMA */}
+            <div style={{padding:"16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff",marginBottom:"16px"}}>
+              <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"12px",display:"flex",alignItems:"center",gap:"6px"}}>📊 Proje Özet — m² Maliyet Planlaması</div>
+
+              {/* Row 1: Hesaplanan referans + Sapma */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px",marginBottom:"14px"}}>
+                <div style={{padding:"12px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#fafafa"}}>
+                  <div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",fontWeight:600,marginBottom:"6px"}}>🖥️ Hesaplanan Brüt m² (Sistem)</div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:"6px",marginBottom:"2px"}}>
+                    <span style={{fontSize:"10px",color:T.t3,minWidth:"34px",fontWeight:600}}>Dahil</span>
+                    <span style={{fontSize:"16px",fontWeight:700,color:"#722ed1"}}>{ozet.m2MaliyetKdvDahil>0?ozet.m2MaliyetKdvDahil.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺":"—"}</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:"6px"}}>
+                    <span style={{fontSize:"10px",color:T.t3,minWidth:"34px",fontWeight:600}}>Hariç</span>
+                    <span style={{fontSize:"13px",fontWeight:600,color:"#722ed1",opacity:0.7}}>{ozet.m2Maliyet>0?ozet.m2Maliyet.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺":"—"}</span>
+                  </div>
+                </div>
+                <div style={{padding:"12px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#fafafa"}}>
+                  <div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",fontWeight:600,marginBottom:"6px"}}>🖥️ Hesaplanan Net m² (Müteahhit Payı)</div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:"6px",marginBottom:"2px"}}>
+                    <span style={{fontSize:"10px",color:T.t3,minWidth:"34px",fontWeight:600}}>Dahil</span>
+                    <span style={{fontSize:"16px",fontWeight:700,color:"#ff4d4f"}}>{ozet.m2MaliyetNetKdvDahil>0?ozet.m2MaliyetNetKdvDahil.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺":"—"}</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:"6px"}}>
+                    <span style={{fontSize:"10px",color:T.t3,minWidth:"34px",fontWeight:600}}>Hariç</span>
+                    <span style={{fontSize:"13px",fontWeight:600,color:"#ff4d4f",opacity:0.7}}>{ozet.m2MaliyetNet>0?ozet.m2MaliyetNet.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺":"—"}</span>
+                  </div>
+                </div>
+                <div style={{padding:"12px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#fafafa"}}>
+                  <div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",fontWeight:600,marginBottom:"6px"}}>📏 Sapma (Öngörülen − Hesaplanan Net)</div>
+                  {(()=>{
+                    const ong=parseFloat(fiyatForm.ongorulenM2KdvHaric);
+                    const net=ozet.m2MaliyetNet;
+                    if(isNaN(ong)||net<=0)return<div style={{fontSize:"13px",color:T.t3,paddingTop:"6px"}}>—</div>;
+                    const sapma=ong-net;
+                    const sapmaY=net>0?(sapma/net*100):0;
+                    const col=Math.abs(sapmaY)<5?T.ok:Math.abs(sapmaY)<15?T.warn:T.err;
+                    return<>
+                      <div style={{fontSize:"16px",fontWeight:700,color:col}}>{(sapma>=0?"+":"")+sapma.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺"}</div>
+                      <div style={{fontSize:"11px",color:col,opacity:0.85,fontWeight:600}}>%{(sapmaY>=0?"+":"")+sapmaY.toFixed(1)}</div>
+                    </>;
+                  })()}
+                </div>
+              </div>
+
+              {/* Row 2: Input fields */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:"12px",alignItems:"end"}}>
+                <div>
+                  <div style={{fontSize:"11px",color:T.t2,fontWeight:600,marginBottom:"4px"}}>🎯 Öngörülen m² (KDV Hariç)</div>
+                  <input type="text" value={fiyatForm.ongorulenM2KdvHaric} onChange={e=>fiyatHaricChange(e.target.value)} placeholder="0,00" style={{width:"100%",padding:"8px 10px",border:`1px solid ${T.bDark}`,borderRadius:"6px",fontSize:"13px",boxSizing:"border-box",outline:"none"}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:"11px",color:T.t2,fontWeight:600,marginBottom:"4px"}}>🎯 Öngörülen m² (KDV Dahil)</div>
+                  <input type="text" value={fiyatForm.ongorulenM2KdvDahil} onChange={e=>fiyatDahilChange(e.target.value)} placeholder="0,00" style={{width:"100%",padding:"8px 10px",border:`1px solid ${T.bDark}`,borderRadius:"6px",fontSize:"13px",boxSizing:"border-box",outline:"none"}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:"11px",color:T.t2,fontWeight:600,marginBottom:"4px"}}>📈 Kar Marjı (%)</div>
+                  <input type="text" value={fiyatForm.karMarjiYuzde} onChange={e=>setFiyatForm(p=>({...p,karMarjiYuzde:e.target.value.replace(/[^0-9.,]/g,"").replace(",",".")}))} placeholder="0" style={{width:"100%",padding:"8px 10px",border:`1px solid ${T.bDark}`,borderRadius:"6px",fontSize:"13px",boxSizing:"border-box",outline:"none"}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:"11px",color:T.t2,fontWeight:600,marginBottom:"4px"}}>Varsayılan KDV Oranı</div>
+                  <select value={fiyatForm.varsayilanKdvOrani} onChange={e=>fiyatKdvChange(e.target.value)} style={{width:"100%",padding:"8px 10px",border:`1px solid ${T.bDark}`,borderRadius:"6px",fontSize:"13px",background:"#fff",boxSizing:"border-box",outline:"none",cursor:"pointer"}}>
+                    <option value="1">%1</option>
+                    <option value="10">%10</option>
+                    <option value="20">%20</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Save button */}
+              <div style={{display:"flex",justifyContent:"flex-end",marginTop:"14px"}}>
+                <button onClick={fiyatKaydet} disabled={!selProjeId} style={{padding:"8px 20px",background:fiyatSaved?T.ok:T.primary,color:"#fff",border:"none",borderRadius:"6px",fontSize:"13px",fontWeight:600,cursor:selProjeId?"pointer":"not-allowed",transition:"background 0.25s ease",opacity:selProjeId?1:0.5}}>{fiyatSaved?"✓ Kaydedildi":"💾 Kaydet"}</button>
+              </div>
+            </div>
+
+            {/* Info / Roadmap note */}
+            <div style={{padding:"10px 12px",background:"#fffbe6",border:"1px solid #ffe58f",borderRadius:"6px",fontSize:"12px",color:"#8c6e00"}}>
+              ℹ️ <b>Öngörülen m²:</b> yöneticinin hedef satış maliyetidir. Hesaplanan <b>Net m²</b> ile karşılaştırılır (müteahhit payı esas alınır). Sonraki adım: <b>Faz 1-B3</b> — blok bazlı öngörülen m² override, ardından <b>Faz 1-B4</b> — satılmayan daireler için şerefiye + liste fiyatı girişi.
+            </div>
+          </>}
         </div>}
       </div>
     }
