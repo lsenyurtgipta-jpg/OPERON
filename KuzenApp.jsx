@@ -3862,7 +3862,7 @@ const projeToDb = (p) => ({
   arsa_m2: p.arsaM2||"", emsal: p.emsal||"", toplam_emsal: p.toplamEmsal||"",
   anlasma_yontemi: p.anlasmaYontemi||"", arsa_sahibi_pay: p.arsaSahibiPay||"", muteahhit_pay: p.muteahhitPay||"",
   aciklama: p.aciklama||"",
-  bloklar: p.bloklar||[], bolumler: p.bolumler||[],
+  // bloklar ve bolumler ayrı tablolarda tutuluyor — JSONB sütunları paralel, bu sütunlara yazmıyoruz
   firma_baglantilari: p.firmaBaglantilari||[],
   tum_dosyalar: p.tumDosyalar||[],
   dosya_kategorileri: p.dosyaKategorileri||[],
@@ -3908,6 +3908,62 @@ const butceKalemiToDb = (k, projeId) => ({
   aciklama: k.aciklama||"",
   tamamlandi: k.tamamlandi===true,
   sira_no: k.siraNo||0
+});
+
+// Blok dönüşümleri
+const blokToLocal = (b) => ({
+  id: b.id,
+  projeId: b.proje_id,
+  ad: b.ad||"",
+  ortakAlanM2: b.ortak_alan_m2!=null?String(b.ortak_alan_m2):""
+});
+const blokToDb = (b, projeId) => ({
+  proje_id: projeId||b.projeId,
+  ad: b.ad||"",
+  ortak_alan_m2: b.ortakAlanM2!==""&&b.ortakAlanM2!=null?Number(b.ortakAlanM2):null
+});
+
+// Bölüm dönüşümleri
+const bolumToLocal = (b) => ({
+  id: b.id,
+  projeId: b.proje_id,
+  tipi: b.tipi||"Daire",
+  blok: b.blok||"",
+  no: b.no||"",
+  kat: b.kat!=null?String(b.kat):"",
+  brutM2: b.brut_m2!=null?String(b.brut_m2):"",
+  netM2: b.net_m2!=null?String(b.net_m2):"",
+  odaSayisi: b.oda_sayisi||"",
+  cephe: b.cephe||"",
+  durum: b.durum||"musait",
+  sahiplik: b.sahiplik||"",
+  satisFiyati: b.satis_fiyati!=null?String(b.satis_fiyati):"",
+  paraBirimi: b.para_birimi||"TL",
+  sozlesmeTarihi: b.sozlesme_tarihi||"",
+  aliciFirmaId: b.alici_firma_id||"",
+  aliciFirmaAd: b.alici_firma_ad||"",
+  notlar: b.notlar||"",
+  gorseller: b.gorseller||[]
+});
+const bolumToDb = (b, projeId) => ({
+  proje_id: projeId||b.projeId,
+  tipi: b.tipi||"Daire",
+  blok: b.blok||"",
+  no: b.no||"",
+  kat: b.kat!==""&&b.kat!=null?parseInt(b.kat):null,
+  brut_m2: b.brutM2!==""&&b.brutM2!=null?Number(b.brutM2):null,
+  net_m2: b.netM2!==""&&b.netM2!=null?Number(b.netM2):null,
+  oda_sayisi: b.odaSayisi||"",
+  cephe: b.cephe||"",
+  durum: b.durum||"musait",
+  sahiplik: b.sahiplik||"",
+  satis_fiyati: b.satisFiyati!==""&&b.satisFiyati!=null?Number(b.satisFiyati):null,
+  para_birimi: b.paraBirimi||"TL",
+  sozlesme_tarihi: b.sozlesmeTarihi||null,
+  alici_firma_id: b.aliciFirmaId||null,
+  alici_firma_ad: b.aliciFirmaAd||"",
+  notlar: b.notlar||"",
+  gorseller: b.gorseller||[]
 });
 
 const teklifToLocal = (t, kalemler=[]) => ({
@@ -7348,7 +7404,7 @@ export default function App(){
   const loadAll = useCallback(async (ilkYukleme=false) => {
     if(ilkYukleme) setLoading(true);
     try {
-      const [fDb, kDb, nDb, mDb, katDb, agDb, tDb, tkDb, sbDb, bkDb, ilDb, adDb, pDb, spDb, spkDb, afDb, afkDb, bkalDb] = await Promise.all([
+      const [fDb, kDb, nDb, mDb, katDb, agDb, tDb, tkDb, sbDb, bkDb, ilDb, adDb, pDb, spDb, spkDb, afDb, afkDb, bkalDb, blokDb, bolumDb] = await Promise.all([
         sbGet('firmalar','order=id.asc'),
         sbGet('kisiler','order=id.asc'),
         sbGet('notlar','order=id.asc'),
@@ -7367,6 +7423,8 @@ export default function App(){
         sbGet('alis_faturalari','order=id.asc'),
         sbGet('alis_fatura_kalemleri','order=id.asc'),
         sbGet('butce_kalemleri','order=proje_id.asc,sira_no.asc'),
+        sbGet('bloklar','order=proje_id.asc,id.asc'),
+        sbGet('bolumler','order=proje_id.asc,id.asc'),
       ]);
       const firmaList = fDb.map(f => {
         const loc = firmaToLocal(f);
@@ -7390,7 +7448,12 @@ export default function App(){
       setTeklifler(teklifList);
       setSiparisler(spDb.map(s=>{const kalemler=spkDb.filter(k=>k.siparis_id===s.id).map(siparisKalemToLocal);return siparisToLocal(s,kalemler);}));
       setFaturalar(afDb.map(f=>{const kalemler=afkDb.filter(k=>k.fatura_id===f.id).map(faturaKalemToLocal);return faturaToLocal(f,kalemler);}));
-      setProjeler(pDb.map(projeToLocal));
+      setProjeler(pDb.map(p=>{
+        const loc=projeToLocal(p);
+        loc.bloklar=(blokDb||[]).filter(b=>b.proje_id===p.id).map(blokToLocal);
+        loc.bolumler=(bolumDb||[]).filter(b=>b.proje_id===p.id).map(bolumToLocal);
+        return loc;
+      }));
       setButceKalemleri((bkalDb||[]).map(butceKalemiToLocal));
     } catch(e) {
       // Supabase bağlantısı yoksa sessizce devam et — local state ile çalışır
@@ -7764,6 +7827,24 @@ export default function App(){
       } else {
         await sbPatch('projeler', form.id, dbData);
       }
+      // Bloklar sync (delete all + reinsert, yeni server ID'lerini al)
+      try {
+        await sbReq(`bloklar?proje_id=eq.${form.id}`, {method:'DELETE', headers:{'Prefer':'count=none'}});
+        if(form.bloklar && form.bloklar.length > 0) {
+          const blokDbRows = form.bloklar.map(b => blokToDb(b, form.id));
+          const savedBloklar = await sbPost('bloklar', blokDbRows);
+          form.bloklar = (savedBloklar||[]).map(blokToLocal);
+        }
+      } catch(e) { console.warn("Bloklar sync hatası:", e.message); }
+      // Bolumler sync (delete all + reinsert)
+      try {
+        await sbReq(`bolumler?proje_id=eq.${form.id}`, {method:'DELETE', headers:{'Prefer':'count=none'}});
+        if(form.bolumler && form.bolumler.length > 0) {
+          const bolumDbRows = form.bolumler.map(b => bolumToDb(b, form.id));
+          const savedBolumler = await sbPost('bolumler', bolumDbRows);
+          form.bolumler = (savedBolumler||[]).map(bolumToLocal);
+        }
+      } catch(e) { console.warn("Bolumler sync hatası:", e.message); }
     } catch(e) {
       console.warn("Proje kaydetme hatası, local state'e yazılıyor:", e.message);
     } finally {
