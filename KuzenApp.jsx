@@ -7548,7 +7548,13 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
                 <div style={{fontSize:"22px",fontWeight:700,color:d.color,marginBottom:"8px"}}>{b.no||"—"}</div>
                 <div style={{fontSize:"12px",color:T.t2,marginBottom:"2px"}}>{b.odaSayisi||"—"}{b.kat?` • K:${b.kat}`:""}</div>
                 <div style={{fontSize:"12px",color:T.t2,marginBottom:"8px"}}>{b.brutM2?`${b.brutM2} m²`:"—"}</div>
-                {b.satisFiyati&&!tamEkran&&parseFloat(b.satisFiyati)>0&&<div style={{fontSize:"13px",fontWeight:700,color:T.text,marginBottom:"6px"}}>{fmtPara(b.satisFiyati,b.paraBirimi)}</div>}
+                {(()=>{
+                  const lst=parseFloat(b.listeFiyatiKdvDahil)||0;
+                  const sat=parseFloat(b.satisFiyati)||0;
+                  const tutar=lst>0?lst:sat;
+                  if(tutar<=0||tamEkran)return null;
+                  return <div style={{fontSize:"13px",fontWeight:700,color:T.text,marginBottom:"6px"}}>{lst>0?tutar.toLocaleString("tr-TR")+" ₺":fmtPara(sat,b.paraBirimi)}</div>;
+                })()}
                 <div style={{fontSize:"10px",padding:"3px 8px",borderRadius:"3px",background:d.color,color:"#fff",fontWeight:600,textTransform:"uppercase",display:"inline-block"}}>{d.label}</div>
               </div>;
             })}
@@ -7580,11 +7586,22 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
             <div style={{gridColumn:"1 / -1"}}><div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase"}}>Cephe</div><div style={{fontSize:"14px",fontWeight:600,color:T.text}}>{selBolum.cephe||"—"}</div></div>
           </div>
 
-          {/* FİYAT */}
-          {parseFloat(selBolum.satisFiyati||0)>0&&<div style={{padding:"14px",background:"linear-gradient(135deg,#e6f4ff 0%,#bae7ff 100%)",borderRadius:T.r,marginBottom:"14px",textAlign:"center"}}>
-            <div style={{fontSize:"11px",color:"#0050b3",textTransform:"uppercase",letterSpacing:"0.5px",fontWeight:600}}>Satış Fiyatı</div>
-            <div style={{fontSize:"26px",fontWeight:700,color:"#0050b3"}}>{fmtPara(selBolum.satisFiyati,selBolum.paraBirimi)}</div>
-          </div>}
+          {/* FİYAT — Liste Fiyatı (yönetici belirler, salt okunur) */}
+          {(()=>{
+            const listeDahil=parseFloat(selBolum.listeFiyatiKdvDahil)||0;
+            const listeHaric=parseFloat(selBolum.listeFiyatiKdvHaric)||0;
+            const satFiyat=parseFloat(selBolum.satisFiyati)||0;
+            if(listeDahil>0)return<div style={{padding:"14px",background:"linear-gradient(135deg,#e6f4ff 0%,#bae7ff 100%)",borderRadius:T.r,marginBottom:"14px",textAlign:"center"}}>
+              <div style={{fontSize:"11px",color:"#0050b3",textTransform:"uppercase",letterSpacing:"0.5px",fontWeight:600}}>Liste Fiyatı</div>
+              <div style={{fontSize:"26px",fontWeight:700,color:"#0050b3"}}>{listeDahil.toLocaleString("tr-TR")+" ₺"}</div>
+              <div style={{fontSize:"10px",color:"#0050b3",opacity:0.75,marginTop:"2px"}}>KDV Dahil{selBolum.kdvOrani?` (%${selBolum.kdvOrani})`:""}{listeHaric>0?` • Hariç: ${listeHaric.toLocaleString("tr-TR")} ₺`:""}</div>
+            </div>;
+            if(satFiyat>0)return<div style={{padding:"14px",background:"linear-gradient(135deg,#e6f4ff 0%,#bae7ff 100%)",borderRadius:T.r,marginBottom:"14px",textAlign:"center"}}>
+              <div style={{fontSize:"11px",color:"#0050b3",textTransform:"uppercase",letterSpacing:"0.5px",fontWeight:600}}>Satış Fiyatı</div>
+              <div style={{fontSize:"26px",fontWeight:700,color:"#0050b3"}}>{fmtPara(selBolum.satisFiyati,selBolum.paraBirimi)}</div>
+            </div>;
+            return null;
+          })()}
 
           {/* Müşteri bilgisi (tam ekran sunum modunda gizli) */}
           {!tamEkran&&selBolum.aliciFirmaAd&&<div style={{padding:"10px 12px",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffd591",marginBottom:"14px",fontSize:"12px"}}>
