@@ -6727,17 +6727,17 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
                     <div style={{fontSize:"13px",fontWeight:600,color:bloklar.length>1?"#d48806":"#1677ff"}}>{blokStr}</div>
                     <div style={{fontSize:"13px",color:T.t2}}>{k.mlzBirim||"—"}</div>
                     <div style={{fontSize:"13px",color:satMiktar?T.text:T.t3,textAlign:"right"}}>{satMiktar?satMiktar.toLocaleString("tr-TR"):"—"}</div>
-                    <div style={{fontSize:"13px",color:bFiyat?T.text:T.t3,textAlign:"right"}}>{bFiyat?bFiyat.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                    <div style={{fontSize:"13px",fontWeight:600,color:satKdvHaric?T.text:T.t3,textAlign:"right"}}>{satKdvHaric?satKdvHaric.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                    <div style={{fontSize:"13px",color:satKdv?T.t2:T.t3,textAlign:"right"}}>{satKdv?satKdv.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                    <div style={{fontSize:"13px",fontWeight:700,color:satKdvDahil?T.text:T.t3,textAlign:"right"}}>{satKdvDahil?satKdvDahil.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                    <div style={{fontSize:"13px",color:bFiyat?T.text:T.t3,textAlign:"right"}}>{bFiyat?bFiyat.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                    <div style={{fontSize:"13px",fontWeight:600,color:satKdvHaric?T.text:T.t3,textAlign:"right"}}>{satKdvHaric?satKdvHaric.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                    <div style={{fontSize:"13px",color:satKdv?T.t2:T.t3,textAlign:"right"}}>{satKdv?satKdv.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                    <div style={{fontSize:"13px",fontWeight:700,color:satKdvDahil?T.text:T.t3,textAlign:"right"}}>{satKdvDahil?satKdvDahil.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
                     {(()=>{
                       const bkTaahhut=taahhut.filter(t=>t.butceKalemiId===k.id).reduce((s,t)=>s+(parseFloat(t.netFiyat||0)*parseFloat(t.miktar||0)),0);
                       const bkGercek=gerceklesen.filter(g=>g.butceKalemiId===k.id).reduce((s,g)=>s+(parseFloat(g.netFiyat||0)*parseFloat(g.miktar||0)),0);
                       const bkKalan=satKdvHaric-bkTaahhut-bkGercek;
-                      return <><div style={{fontSize:"12px",color:bkTaahhut?"#fa8c16":T.t3,fontWeight:bkTaahhut?600:400,textAlign:"right"}}>{bkTaahhut?bkTaahhut.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                      <div style={{fontSize:"12px",color:bkGercek?"#1677ff":T.t3,fontWeight:bkGercek?600:400,textAlign:"right"}}>{bkGercek?bkGercek.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                      <div style={{fontSize:"12px",fontWeight:600,color:bkKalan<0?"#ff4d4f":bkKalan>0?"#52c41a":T.t3,textAlign:"right"}}>{satKdvHaric?bkKalan.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div></>;
+                      return <><div style={{fontSize:"12px",color:bkTaahhut?"#fa8c16":T.t3,fontWeight:bkTaahhut?600:400,textAlign:"right"}}>{bkTaahhut?bkTaahhut.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                      <div style={{fontSize:"12px",color:bkGercek?"#1677ff":T.t3,fontWeight:bkGercek?600:400,textAlign:"right"}}>{bkGercek?bkGercek.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                      <div style={{fontSize:"12px",fontWeight:600,color:bkKalan<0?"#ff4d4f":bkKalan>0?"#52c41a":T.t3,textAlign:"right"}}>{satKdvHaric?bkKalan.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div></>;
                     })()}
                     <div style={{fontSize:"11px",fontWeight:600,color:T.primary,textAlign:"right"}}>{satKdvHaric&&ozet.planlananTop>0?(satKdvHaric/ozet.planlananTop*100).toFixed(1)+"%":"—"}</div>
                     <button onClick={e=>{e.stopPropagation();if(confirm("Bu kalemi silmek istiyor musunuz?"))delButceKalemi(k.id);}} style={{padding:"0",border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={14}/></button>
@@ -6754,16 +6754,16 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
                     <div></div>
                     <div></div>
                     <div></div>
-                    <div style={{fontSize:"15px",fontWeight:700,color:"#fff",textAlign:"right"}}>{topKdvHaric>0?topKdvHaric.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                    <div style={{fontSize:"15px",fontWeight:700,color:"#d1d9de",textAlign:"right"}}>{topKdv>0?topKdv.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                    <div style={{fontSize:"15px",fontWeight:700,color:"#52c41a",textAlign:"right"}}>{topKdvDahil>0?topKdvDahil.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+                    <div style={{fontSize:"15px",fontWeight:700,color:"#fff",textAlign:"right"}}>{topKdvHaric>0?topKdvHaric.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                    <div style={{fontSize:"15px",fontWeight:700,color:"#d1d9de",textAlign:"right"}}>{topKdv>0?topKdv.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                    <div style={{fontSize:"15px",fontWeight:700,color:"#52c41a",textAlign:"right"}}>{topKdvDahil>0?topKdvDahil.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
                     {(()=>{
                       const tTop=taahhut.reduce((s,t)=>s+(parseFloat(t.netFiyat||0)*parseFloat(t.miktar||0)),0);
                       const gTop=gerceklesen.reduce((s,g)=>s+(parseFloat(g.netFiyat||0)*parseFloat(g.miktar||0)),0);
                       const kTop=topKdvHaric-tTop-gTop;
-                      return <><div style={{fontSize:"14px",fontWeight:700,color:"#fa8c16",textAlign:"right"}}>{tTop>0?tTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                      <div style={{fontSize:"14px",fontWeight:700,color:"#1677ff",textAlign:"right"}}>{gTop>0?gTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                      <div style={{fontSize:"14px",fontWeight:700,color:kTop<0?"#ff4d4f":"#52c41a",textAlign:"right"}}>{topKdvHaric?kTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div></>;
+                      return <><div style={{fontSize:"14px",fontWeight:700,color:"#fa8c16",textAlign:"right"}}>{tTop>0?tTop.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                      <div style={{fontSize:"14px",fontWeight:700,color:"#1677ff",textAlign:"right"}}>{gTop>0?gTop.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                      <div style={{fontSize:"14px",fontWeight:700,color:kTop<0?"#ff4d4f":"#52c41a",textAlign:"right"}}>{topKdvHaric?kTop.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div></>;
                     })()}
                     <div style={{fontSize:"13px",fontWeight:700,color:"#fff"}}>100%</div>
                     <div></div>
