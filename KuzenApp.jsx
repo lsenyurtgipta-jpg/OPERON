@@ -6260,7 +6260,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
       if(filtre==="plansiz")return!parseFloat(k.planlananToplam||0);
       if(filtre==="tamamlandi")return k.tamamlandi===true;
       // Durum bazlı filtreler (chip mantığı ile aynı)
-      if(["siparisyok","siparisacik","tamam","sapma"].includes(filtre)){
+      if(["siparisyok","siparisacik","sapma"].includes(filtre)){
         const pt=parseFloat(k.planlananToplam||0);
         if(pt<=0)return false;
         if(k.tamamlandi===true)return false;
@@ -6278,8 +6278,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
         });
         if(filtre==="siparisyok")return bkT===0&&bkG===0;
         if(filtre==="sapma")return bkG>pt*1.05;
-        if(filtre==="tamam")return bkG>0&&Math.abs(bkG-pt)<=pt*0.05;
-        if(filtre==="siparisacik")return(bkT>0||bkG>0)&&!(bkG>pt*1.05)&&!(bkG>0&&Math.abs(bkG-pt)<=pt*0.05);
+        if(filtre==="siparisacik")return(bkT>0||bkG>0)&&!(bkG>pt*1.05);
       }
       return true;
     });
@@ -6638,9 +6637,8 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
           <div style={{flex:1}}></div>
           <button onClick={()=>setFiltre("siparisyok")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="siparisyok"?"#ff4d4f":T.border}`,background:filtre==="siparisyok"?"#fff1f0":"#fff",color:filtre==="siparisyok"?"#ff4d4f":T.t2,fontSize:"14px",cursor:"pointer"}}>Sipariş Yok</button>
           <button onClick={()=>setFiltre("siparisacik")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="siparisacik"?"#fa8c16":T.border}`,background:filtre==="siparisacik"?"#fff7e6":"#fff",color:filtre==="siparisacik"?"#fa8c16":T.t2,fontSize:"14px",cursor:"pointer"}}>Sipariş Açık</button>
-          <button onClick={()=>setFiltre("tamam")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="tamam"?"#1677ff":T.border}`,background:filtre==="tamam"?"#e6f4ff":"#fff",color:filtre==="tamam"?"#1677ff":T.t2,fontSize:"14px",cursor:"pointer"}}>Tamam</button>
           <button onClick={()=>setFiltre("sapma")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="sapma"?"#722ed1":T.border}`,background:filtre==="sapma"?"#f9f0ff":"#fff",color:filtre==="sapma"?"#722ed1":T.t2,fontSize:"14px",cursor:"pointer"}}>Sapma</button>
-          <button onClick={()=>setFiltre("tamamlandi")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="tamamlandi"?"#52c41a":T.border}`,background:filtre==="tamamlandi"?"#f6ffed":"#fff",color:filtre==="tamamlandi"?"#52c41a":T.t2,fontSize:"14px",cursor:"pointer"}}>Tamamlandı</button>
+          <button onClick={()=>setFiltre("tamamlandi")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="tamamlandi"?"#52c41a":T.border}`,background:filtre==="tamamlandi"?"#f6ffed":"#fff",color:filtre==="tamamlandi"?"#52c41a":T.t2,fontSize:"14px",cursor:"pointer"}}>Manuel Kapat</button>
           <button onClick={()=>setFiltre("planli")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="planli"?"#52c41a":T.border}`,background:filtre==="planli"?"#f6ffed":"#fff",color:filtre==="planli"?"#52c41a":T.t2,fontSize:"14px",cursor:"pointer"}}>Planlı</button>
           <button onClick={()=>setFiltre("plansiz")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="plansiz"?"#ff4d4f":T.border}`,background:filtre==="plansiz"?"#fff1f0":"#fff",color:filtre==="plansiz"?"#ff4d4f":T.t2,fontSize:"14px",cursor:"pointer"}}>Plansız</button>
           <button onClick={()=>setFiltre("hepsi")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="hepsi"?"#384248":T.border}`,background:filtre==="hepsi"?"#384248":"#fff",color:filtre==="hepsi"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Hepsi</button>
@@ -6702,7 +6700,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
                         yeniKalem.planlananSatirlari=k.planlananSatirlari.map(s=>({...s,tamamlandi:true}));
                       }
                       await saveBKProp(yeniKalem,selProjeId);
-                    }} title={tamamlandi?"Tamamlandı işaretini kaldır":"Tamamlandı olarak işaretle"} style={{display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                    }} title={tamamlandi?"Manuel kapatma işaretini kaldır":"Manuel kapat"} style={{display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
                       <div style={{width:"16px",height:"16px",borderRadius:"3px",border:`2px solid ${tamamlandi?"#52c41a":T.bDark}`,background:tamamlandi?"#52c41a":"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
                         {tamamlandi&&<span style={{color:"#fff",fontSize:"11px",fontWeight:700,lineHeight:1}}>✓</span>}
                       </div>
@@ -6713,11 +6711,10 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
                       const _bkT=taahhut.filter(t=>t.butceKalemiId===k.id).reduce((s,t)=>s+(parseFloat(t.netFiyat||0)*parseFloat(t.miktar||0)),0);
                       const _bkG=gerceklesen.filter(g=>g.butceKalemiId===k.id).reduce((s,g)=>s+(parseFloat(g.netFiyat||0)*parseFloat(g.miktar||0)),0);
                       let dLabel,dClr,dBg;
-                      if(tamamlandi){dLabel="Tamamlandı";dClr="#52c41a";dBg="#f6ffed";}
+                      if(tamamlandi){dLabel="Manuel Kapat";dClr="#52c41a";dBg="#f6ffed";}
                       else if(!satKdvHaric||satKdvHaric===0){dLabel="Plansız";dClr="#8c8c8c";dBg="#f5f5f5";}
                       else if(_bkT===0&&_bkG===0){dLabel="Sipariş Yok";dClr="#ff4d4f";dBg="#fff1f0";}
                       else if(_bkG>satKdvHaric*1.05){dLabel="Sapma";dClr="#722ed1";dBg="#f9f0ff";}
-                      else if(_bkG>0&&Math.abs(_bkG-satKdvHaric)<=satKdvHaric*0.05){dLabel="Tamam";dClr="#1677ff";dBg="#e6f4ff";}
                       else{dLabel="Sipariş Açık";dClr="#fa8c16";dBg="#fff7e6";}
                       return <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
                         <span style={{fontSize:"10px",fontWeight:700,color:dClr,background:dBg,border:`1px solid ${dClr}40`,borderRadius:"10px",padding:"2px 8px",whiteSpace:"nowrap"}}>{dLabel}</span>
