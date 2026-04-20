@@ -6253,7 +6253,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
   const filtrelenmis=useMemo(()=>{
     const list=kalemListesi.filter(k=>{
       // Arama filtresi
-      if(kalemAra){const q=kalemAra.toLowerCase();const ms=(k.mlzKodu||"").toLowerCase().includes(q)||(k.mlzAd||"").toLowerCase().includes(q)||(k.mlzGrupAd||"").toLowerCase().includes(q);if(!ms)return false;}
+      if(kalemAra){const nTR=s=>(s||"").replace(/[İIı]/g,"i").replace(/[şŞ]/g,"s").replace(/[ğĞ]/g,"g").replace(/[üÜ]/g,"u").replace(/[öÖ]/g,"o").replace(/[çÇ]/g,"c").toLowerCase();const q=nTR(kalemAra);const ms=nTR(k.mlzKodu).includes(q)||nTR(k.mlzAd).includes(q)||nTR(k.mlzGrupAd).includes(q);if(!ms)return false;}
       if(filtre.startsWith("blok_")){const blokAd=filtre.replace("blok_","");return(k.bloklar||[]).includes(blokAd);}
       if(filtre==="ortak")return(k.bloklar||[]).length>1;
       if(filtre==="atanmamis")return(k.bloklar||[]).length===0;
