@@ -3898,6 +3898,7 @@ const butceKalemiToLocal = (b) => ({
   firmaSatirlari: b.firma_satirlari||[],
   aciklama: b.aciklama||"",
   tamamlandi: b.tamamlandi||false,
+  tamamlandiKaynak: b.tamamlandi_kaynak||"",
   siraNo: b.sira_no||0
 });
 const butceKalemiToDb = (k, projeId) => ({
@@ -3914,6 +3915,7 @@ const butceKalemiToDb = (k, projeId) => ({
   firma_satirlari: k.firmaSatirlari||[],
   aciklama: k.aciklama||"",
   tamamlandi: k.tamamlandi===true,
+  tamamlandi_kaynak: k.tamamlandiKaynak||null,
   sira_no: k.siraNo||0
 });
 
@@ -6258,7 +6260,9 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
       if(filtre==="atanmamis")return(k.bloklar||[]).length===0;
       if(filtre==="planli")return parseFloat(k.planlananToplam||0)>0;
       if(filtre==="plansiz")return!parseFloat(k.planlananToplam||0);
-      if(filtre==="tamamlandi")return k.tamamlandi===true;
+      if(filtre==="tamamlandi"||filtre==="kapali")return k.tamamlandi===true;
+      if(filtre==="manuelkapat")return k.tamamlandi===true&&k.tamamlandiKaynak!=="otomatik";
+      if(filtre==="otokapali")return k.tamamlandi===true&&k.tamamlandiKaynak==="otomatik";
       // Durum bazlı filtreler (chip mantığı ile aynı)
       if(["siparisyok","siparisacik","sapma"].includes(filtre)){
         const pt=parseFloat(k.planlananToplam||0);
@@ -6638,7 +6642,8 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
           <button onClick={()=>setFiltre("siparisyok")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="siparisyok"?"#ff4d4f":T.border}`,background:filtre==="siparisyok"?"#fff1f0":"#fff",color:filtre==="siparisyok"?"#ff4d4f":T.t2,fontSize:"14px",cursor:"pointer"}}>Sipariş Yok</button>
           <button onClick={()=>setFiltre("siparisacik")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="siparisacik"?"#fa8c16":T.border}`,background:filtre==="siparisacik"?"#fff7e6":"#fff",color:filtre==="siparisacik"?"#fa8c16":T.t2,fontSize:"14px",cursor:"pointer"}}>Sipariş Açık</button>
           <button onClick={()=>setFiltre("sapma")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="sapma"?"#722ed1":T.border}`,background:filtre==="sapma"?"#f9f0ff":"#fff",color:filtre==="sapma"?"#722ed1":T.t2,fontSize:"14px",cursor:"pointer"}}>Sapma</button>
-          <button onClick={()=>setFiltre("tamamlandi")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="tamamlandi"?"#52c41a":T.border}`,background:filtre==="tamamlandi"?"#f6ffed":"#fff",color:filtre==="tamamlandi"?"#52c41a":T.t2,fontSize:"14px",cursor:"pointer"}}>Manuel Kapat</button>
+          <button onClick={()=>setFiltre("kapali")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="kapali"?"#52c41a":T.border}`,background:filtre==="kapali"?"#f6ffed":"#fff",color:filtre==="kapali"?"#52c41a":T.t2,fontSize:"14px",cursor:"pointer"}}>Kapalı</button>
+          <button onClick={()=>setFiltre("manuelkapat")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="manuelkapat"?"#389e0d":T.border}`,background:filtre==="manuelkapat"?"#d9f7be":"#fff",color:filtre==="manuelkapat"?"#389e0d":T.t2,fontSize:"14px",cursor:"pointer"}}>Manuel Kapat</button>
           <button onClick={()=>setFiltre("planli")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="planli"?"#52c41a":T.border}`,background:filtre==="planli"?"#f6ffed":"#fff",color:filtre==="planli"?"#52c41a":T.t2,fontSize:"14px",cursor:"pointer"}}>Planlı</button>
           <button onClick={()=>setFiltre("plansiz")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="plansiz"?"#ff4d4f":T.border}`,background:filtre==="plansiz"?"#fff1f0":"#fff",color:filtre==="plansiz"?"#ff4d4f":T.t2,fontSize:"14px",cursor:"pointer"}}>Plansız</button>
           <button onClick={()=>setFiltre("hepsi")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${filtre==="hepsi"?"#384248":T.border}`,background:filtre==="hepsi"?"#384248":"#fff",color:filtre==="hepsi"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Hepsi</button>
@@ -6694,7 +6699,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
                     <div onClick={async e=>{
                       e.stopPropagation();
                       const yeniTamamlandi=!tamamlandi;
-                      const yeniKalem={...k,tamamlandi:yeniTamamlandi};
+                      const yeniKalem={...k,tamamlandi:yeniTamamlandi,tamamlandiKaynak:yeniTamamlandi?"manuel":""};
                       // Kapanma: alt satırları da kapat. Açılma: alt satırlar olduğu gibi kalır (B seçeneği)
                       if(yeniTamamlandi&&(k.planlananSatirlari||[]).length>0){
                         yeniKalem.planlananSatirlari=k.planlananSatirlari.map(s=>({...s,tamamlandi:true}));
@@ -6711,7 +6716,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
                       const _bkT=taahhut.filter(t=>t.butceKalemiId===k.id).reduce((s,t)=>s+(parseFloat(t.netFiyat||0)*parseFloat(t.miktar||0)),0);
                       const _bkG=gerceklesen.filter(g=>g.butceKalemiId===k.id).reduce((s,g)=>s+(parseFloat(g.netFiyat||0)*parseFloat(g.miktar||0)),0);
                       let dLabel,dClr,dBg;
-                      if(tamamlandi){dLabel="Manuel Kapat";dClr="#52c41a";dBg="#f6ffed";}
+                      if(tamamlandi){dLabel="Kapalı";dClr="#52c41a";dBg="#f6ffed";}
                       else if(!satKdvHaric||satKdvHaric===0){dLabel="Plansız";dClr="#8c8c8c";dBg="#f5f5f5";}
                       else if(_bkT===0&&_bkG===0){dLabel="Sipariş Yok";dClr="#ff4d4f";dBg="#fff1f0";}
                       else if(_bkG>satKdvHaric*1.05){dLabel="Sapma";dClr="#722ed1";dBg="#f9f0ff";}
@@ -8147,8 +8152,43 @@ export default function App(){
           }
         }
       }
-      // NOT: Maliyet kalemi kapanışı MANUEL — kullanıcı Maliyet sayfasında checkbox ile kapatır.
-      // İleride "görevlerim" modülünde faturası giren ama kapanmamış kalemler hatırlatılacak.
+      // OTOMATİK MALİYET KALEMİ KAPATMA — fatura kalemleri planla birebir (miktar+fiyat) eşleşirse kalem kapanır
+      {
+        const bkIds = new Set();
+        (form.kalemler||[]).forEach(k=>{if(k.butceKalemiId)bkIds.add(k.butceKalemiId);});
+        const tumFaturalar = [...faturalar.filter(f=>f.id!==form.id), form].filter(f=>f.durum!=='iptal');
+        for(const bkId of bkIds) {
+          const bk = butceKalemleri.find(b=>b.id===bkId);
+          if(!bk || bk.tamamlandi) continue;
+          const fkAll = tumFaturalar.flatMap(f=>(f.kalemler||[]).filter(fk=>String(fk.butceKalemiId)===String(bkId)));
+          const planSatirlari = bk.planlananSatirlari||[];
+          let tumuKapali;
+          if(planSatirlari.length>0) {
+            tumuKapali = planSatirlari.every(ps=>{
+              const pm=parseFloat(ps.miktar)||0, pf=parseFloat(ps.birimFiyat)||0;
+              if(pm<=0||pf<=0) return false;
+              const fk = fkAll.filter(x=>String(x.butceKalemiSatirId)===String(ps.id));
+              const fm = fk.reduce((s,x)=>s+(parseFloat(x.miktar)||0),0);
+              const miktarOk = Math.abs(fm-pm)<0.001;
+              const fiyatOk = fk.length>0 && fk.every(x=>Math.abs((parseFloat(x.netFiyat)||0)-pf)<0.001);
+              return miktarOk && fiyatOk;
+            });
+          } else {
+            const pm=parseFloat(bk.planlananMiktar)||0, pf=parseFloat(bk.planlananBirimFiyat)||0;
+            if(pm<=0||pf<=0) tumuKapali=false;
+            else {
+              const fm = fkAll.reduce((s,x)=>s+(parseFloat(x.miktar)||0),0);
+              const miktarOk = Math.abs(fm-pm)<0.001;
+              const fiyatOk = fkAll.length>0 && fkAll.every(x=>Math.abs((parseFloat(x.netFiyat)||0)-pf)<0.001);
+              tumuKapali = miktarOk && fiyatOk;
+            }
+          }
+          if(tumuKapali) {
+            try { await sbPatch('butce_kalemleri', bkId, {tamamlandi:true, tamamlandi_kaynak:'otomatik'}); } catch(e) { console.warn("Maliyet kalemi oto-kapatma hatası:", e.message); }
+            setButceKalemleri(prev=>prev.map(b=>b.id===bkId?{...b,tamamlandi:true,tamamlandiKaynak:'otomatik'}:b));
+          }
+        }
+      }
       setFaturalar(prev => {
         const exists = prev.find(f=>f.id===form.id);
         if(exists) return prev.map(f=>f.id===form.id?form:f);
