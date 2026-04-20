@@ -2929,6 +2929,7 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler
   const[bkPickerKalemId,setBkPickerKalemId]=useState(null);
   const[bkMultiOpen,setBkMultiOpen]=useState(false);
   const[mlzPickerKalemId,setMlzPickerKalemId]=useState(null);
+  const[firmaPickerOpen,setFirmaPickerOpen]=useState(false);
   const uf=(f,v)=>setForm(p=>({...p,[f]:v}));
 
   const teklifdenDoldur=(teklifId)=>{
@@ -2989,6 +2990,7 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler
     const{kdvHaric,kdvDahil}=toplamHesapla(form.kalemler);
     const headerFirmaAd=form.firmaId?firmalar.find(f=>f.id===parseInt(form.firmaId))?.ad||"":"";
     return <div>
+      {firmaPickerOpen&&<FirmaSeciciModal firmalar={firmalar} turFiltre={["tedarikci","taseron","resmi"]} onSelect={f=>{uf("firmaId",String(f.id));uf("firmaAd",f.ad);}} onClose={()=>setFirmaPickerOpen(false)} baslik="TEDARİKÇİ / TAŞERON / RESMİ KURUM SEÇ"/>}
       {/* HEADER — dark bar */}
       <div style={{display:"flex",alignItems:"center",gap:"16px",marginBottom:"20px",padding:"12px 20px",background:"#384248",borderRadius:"8px"}}>
         <button onClick={()=>{setView("list");setForm({...emptyForm,spNo:nextNo});}} title="Geri" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={32}/></button>
@@ -3012,10 +3014,7 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler
       <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,padding:"20px",marginBottom:"16px"}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"14px",marginBottom:"14px"}}>
           <div><label style={lS}>Firma *</label>
-            <select style={iS} value={form.firmaId} onChange={e=>{const f=firmalar.find(x=>x.id===parseInt(e.target.value));uf("firmaId",e.target.value);if(f)uf("firmaAd",f.ad);}} onFocus={foc} onBlur={blr}>
-              <option value="">— Firma seçiniz —</option>
-              {firmalar.filter(f=>f.turler&&(f.turler.includes("tedarikci")||f.turler.includes("taseron"))).map(f=><option key={f.id} value={f.id}>{f.ad}</option>)}
-            </select>
+            <button onClick={()=>setFirmaPickerOpen(true)} style={{...iS,textAlign:"left",cursor:"pointer",color:form.firmaAd?T.text:T.t3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{form.firmaAd||"— Firma seçiniz —"}</button>
           </div>
           <div><label style={lS}>Proje</label>
             <select style={iS} value={form.projeId} onChange={e=>{const p=projeler.find(x=>x.id===parseInt(e.target.value));uf("projeId",e.target.value);if(p)uf("projeAd",p.ad);}} onFocus={foc} onBlur={blr}>
