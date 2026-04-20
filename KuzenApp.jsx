@@ -7944,14 +7944,15 @@ export default function App(){
       } else {
         await sbPatch('malzemeler', form.id, dbData);
       }
-    } catch(e) {
-      console.warn("Malzeme kaydetme hatası:", e.message);
-    } finally {
       setMalzemeler(prev => {
         const exists = prev.find(m=>m.id===form.id);
         if(exists) return prev.map(m=>m.id===form.id?form:m);
-        return [...prev, {...form, id:form.id||Date.now()}];
+        return [...prev, form];
       });
+    } catch(e) {
+      console.error("Malzeme kaydetme hatası:", e.message);
+      alert(`❌ Malzeme Supabase'e kaydedilemedi!\n\nHata: ${e.message}\n\nKayıt YAPILMADI. Bağlantıyı kontrol edip tekrar deneyin.`);
+    } finally {
       malzemeSavingRef.current = false;
     }
   };
@@ -8049,11 +8050,7 @@ export default function App(){
       return teklifId;
     } catch(e) {
       console.error("Teklif Supabase kayıt hatası:", e.message);
-      setTeklifler(prev => {
-        const exists = prev.find(t=>t.id===form.id);
-        if(exists) return prev.map(t=>t.id===form.id?form:t);
-        return [...prev, {...form, id:form.id||Date.now()}];
-      });
+      alert(`❌ Teklif Supabase'e kaydedilemedi!\n\nHata: ${e.message}\n\nKayıt YAPILMADI. Bağlantıyı kontrol edip tekrar deneyin.`);
       return null;
     } finally {
       teklifSavingRef.current = false;
@@ -8087,14 +8084,15 @@ export default function App(){
         const kDb = form.kalemler.filter(k=>k.malzemeAd||k.malzemeId).map(k=>siparisKalemToDb(k, siparisId));
         if(kDb.length>0) await sbPost('satinalma_siparis_kalemleri', kDb);
       }
-    } catch(e) {
-      console.warn("Sipariş kaydetme hatası:", e.message);
-    } finally {
       setSiparisler(prev => {
         const exists = prev.find(s=>s.id===form.id);
         if(exists) return prev.map(s=>s.id===form.id?form:s);
-        return [...prev, {...form, id:form.id||Date.now()}];
+        return [...prev, form];
       });
+    } catch(e) {
+      console.error("Sipariş kaydetme hatası:", e.message);
+      alert(`❌ Sipariş Supabase'e kaydedilemedi!\n\nHata: ${e.message}\n\nKayıt YAPILMADI. Bağlantıyı kontrol edip tekrar deneyin.`);
+    } finally {
       siparisSavingRef.current = false;
     }
   };
@@ -8154,14 +8152,15 @@ export default function App(){
       }
       // NOT: Maliyet kalemi kapanışı MANUEL — kullanıcı Maliyet sayfasında checkbox ile kapatır.
       // İleride "görevlerim" modülünde faturası giren ama kapanmamış kalemler hatırlatılacak.
-    } catch(e) {
-      console.warn("Fatura kaydetme hatası:", e.message);
-    } finally {
       setFaturalar(prev => {
         const exists = prev.find(f=>f.id===form.id);
         if(exists) return prev.map(f=>f.id===form.id?form:f);
-        return [...prev, {...form, id:form.id||Date.now()}];
+        return [...prev, form];
       });
+    } catch(e) {
+      console.error("Fatura kaydetme hatası:", e.message);
+      alert(`❌ Fatura Supabase'e kaydedilemedi!\n\nHata: ${e.message}\n\nKayıt YAPILMADI. Bağlantıyı kontrol edip tekrar deneyin.`);
+    } finally {
       faturaSavingRef.current = false;
     }
   };
@@ -8215,14 +8214,15 @@ export default function App(){
           form.bolumler = (savedBolumler||[]).map(bolumToLocal);
         }
       } catch(e) { console.warn("Bolumler sync hatası:", e.message); }
-    } catch(e) {
-      console.warn("Proje kaydetme hatası, local state'e yazılıyor:", e.message);
-    } finally {
       setProjeler(prev => {
         const exists = prev.find(p=>p.id===form.id);
         if(exists) return prev.map(p=>p.id===form.id?form:p);
-        return [...prev, {...form, id:form.id||Date.now()}];
+        return [...prev, form];
       });
+    } catch(e) {
+      console.error("Proje kaydetme hatası:", e.message);
+      alert(`❌ Proje Supabase'e kaydedilemedi!\n\nHata: ${e.message}\n\nKayıt YAPILMADI. Bağlantıyı kontrol edip tekrar deneyin.`);
+    } finally {
       projeSavingRef.current = false;
     }
   };
