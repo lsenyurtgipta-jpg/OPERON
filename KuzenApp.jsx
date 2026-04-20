@@ -58,6 +58,7 @@ const dosyaUrl = (d) => {
   return "";
 };
 const safeName = (name) => (name || "dosya").replace(/[^a-zA-Z0-9._-]/g, "_").substring(0, 80);
+const nTR = (s) => (s==null?"":String(s)).replace(/[İIı]/g,"i").replace(/[şŞ]/g,"s").replace(/[ğĞ]/g,"g").replace(/[üÜ]/g,"u").replace(/[öÖ]/g,"o").replace(/[çÇ]/g,"c").toLowerCase();
 
 const fmtDate=(d)=>{if(!d)return"—";const p=d.split("-");if(p.length!==3)return d;return`${p[2]}.${p[1]}.${p[0]}`;};
 const addDaysISO=(dateStr,days)=>{if(!dateStr||days===""||days===null||days===undefined)return"";const n=parseInt(days);if(isNaN(n))return"";const[y,m,d]=dateStr.split("-").map(Number);const dt=new Date(Date.UTC(y,m-1,d));dt.setUTCDate(dt.getUTCDate()+n);return dt.toISOString().split("T")[0];};
@@ -760,7 +761,7 @@ const Sel=({label,value,options,onChange,placeholder})=>{
   const[s,setS]=useState("");
   const[hi,setHi]=useState(-1);
   const listRef=React.useRef(null);
-  const fil=options.filter(o=>o.toLowerCase().includes(s.toLowerCase()));
+  const fil=options.filter(o=>nTR(o).includes(nTR(s)));
   const onKey=(e)=>{
     if(e.key==="ArrowDown"){e.preventDefault();setHi(p=>p<fil.length-1?p+1:0);}
     else if(e.key==="ArrowUp"){e.preventDefault();setHi(p=>p>0?p-1:fil.length-1);}
@@ -1248,9 +1249,9 @@ const FirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,projele
           </div>
           <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
             {(()=>{
-              const q=kisiAra.toLowerCase();
+              const q=nTR(kisiAra);
               const filtered=form.kisiler.map((k,idx)=>({...k,_idx:idx}))
-                .filter(k=>!q||`${k.ad} ${k.soyad} ${k.unvan} ${k.departman}`.toLowerCase().includes(q))
+                .filter(k=>!q||nTR(`${k.ad} ${k.soyad} ${k.unvan} ${k.departman}`).includes(q))
                 .sort((a,b)=>{const v=(a[kisiSort.key]||"").localeCompare(b[kisiSort.key]||"","tr");return v*kisiSort.dir;});
               if(filtered.length===0)return <div style={{padding:"20px",textAlign:"center",color:T.t3,fontSize:"13px"}}>Sonuç bulunamadı</div>;
               return filtered.map(k=><div key={k.id} style={{display:"flex",alignItems:"center",gap:"12px",padding:"10px 16px",background:editKisiIdx===k._idx?T.pBg:"#fff",borderBottom:`1px solid ${T.border}`,transition:"background .15s"}}
@@ -1357,9 +1358,9 @@ const FirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,projele
           </div>
           <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
             {(()=>{
-              const q=subeAra.toLowerCase();
+              const q=nTR(subeAra);
               const filtered=form.subeler.map((s,i)=>({...s,_i:i}))
-                .filter(s=>!q||`${s.ad} ${s.tipi} ${s.il} ${s.ilce}`.toLowerCase().includes(q))
+                .filter(s=>!q||nTR(`${s.ad} ${s.tipi} ${s.il} ${s.ilce}`).includes(q))
                 .sort((a,b)=>(a[subeSort.key]||"").localeCompare(b[subeSort.key]||"","tr")*subeSort.dir);
               if(filtered.length===0)return <div style={{padding:"20px",textAlign:"center",color:T.t3,fontSize:"13px"}}>Sonuç bulunamadı</div>;
               return filtered.map(s=><div key={s.id} style={{display:"flex",alignItems:"center",gap:"12px",padding:"10px 16px",background:editSubeIdx===s._i?T.pBg:"#fff",borderBottom:`1px solid ${T.border}`,transition:"background .15s"}}
@@ -1434,9 +1435,9 @@ const FirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,projele
           </div>
           <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
             {(()=>{
-              const q=bankaAra.toLowerCase();
+              const q=nTR(bankaAra);
               const filtered=form.bankalar.map((b,i)=>({...b,_i:i}))
-                .filter(b=>!q||`${b.banka_adi} ${b.sube_adi} ${b.iban} ${b.para_birimi}`.toLowerCase().includes(q))
+                .filter(b=>!q||nTR(`${b.banka_adi} ${b.sube_adi} ${b.iban} ${b.para_birimi}`).includes(q))
                 .sort((a,b)=>{
                   if(a.varsayilan&&!b.varsayilan)return -1;
                   if(!a.varsayilan&&b.varsayilan)return 1;
@@ -1526,9 +1527,9 @@ const FirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,projele
           </div>
           <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
             {(()=>{
-              const q=adresAra.toLowerCase();
+              const q=nTR(adresAra);
               const filtered=form.adresler.map((a,i)=>({...a,_i:i}))
-                .filter(a=>!q||`${a.ad} ${a.tipi} ${a.il} ${a.ilce} ${a.adres}`.toLowerCase().includes(q))
+                .filter(a=>!q||nTR(`${a.ad} ${a.tipi} ${a.il} ${a.ilce} ${a.adres}`).includes(q))
                 .sort((a,b)=>(a[adresSort.key]||"").localeCompare(b[adresSort.key]||"","tr")*adresSort.dir);
               if(filtered.length===0)return <div style={{padding:"20px",textAlign:"center",color:T.t3,fontSize:"13px"}}>Sonuç bulunamadı</div>;
               return filtered.map(a=><div key={a.id} style={{display:"flex",alignItems:"center",gap:"12px",padding:"10px 16px",background:editAdresIdx===a._i?T.pBg:"#fff",borderBottom:`1px solid ${T.border}`,transition:"background .15s"}}
@@ -1670,7 +1671,7 @@ const MalzemeKoduCreator=({malzemeler,altKategoriler,altGruplar,onComplete,onClo
         <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"8px"}}>Grup Seçin (3 hane)</div>
         <div style={{marginBottom:"10px"}}><input style={{width:"100%",padding:"7px 10px",borderRadius:"6px",border:`1px solid ${T.bDark}`,fontSize:"13px",outline:"none",boxSizing:"border-box"}} value={srcGrp} onChange={e=>setSrcGrp(e.target.value)} placeholder="Kod veya isim ara..." onFocus={foc} onBlur={blr}/></div>
         {(()=>{
-          const tum=(altKategoriler||[]).filter(a=>{if(!srcGrp)return true;const q=srcGrp.toLowerCase();return a.kod.includes(q)||a.ad.toLowerCase().includes(q);}).sort((a,b)=>a.kod.localeCompare(b.kod));
+          const tum=(altKategoriler||[]).filter(a=>{if(!srcGrp)return true;const q=nTR(srcGrp);return nTR(a.kod).includes(q)||nTR(a.ad).includes(q);}).sort((a,b)=>a.kod.localeCompare(b.kod));
           if(tum.length===0)return <div style={{padding:"24px",textAlign:"center",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffe58f"}}><div style={{fontSize:"28px",marginBottom:"8px"}}>⚠️</div><div style={{color:"#d48806",fontSize:"13px",fontWeight:500}}>Henüz grup tanımlanmamış.</div><div style={{color:T.t3,fontSize:"12px",marginTop:"4px"}}>Malzemeler → Grup Yönetimi sekmesinden yeni grup ekleyin.</div></div>;
           return <div style={{display:"flex",flexDirection:"column",gap:"4px",maxHeight:"280px",overflow:"auto"}}>
             {tum.map(a=>{const sel=selGrup===a.kod;return <button key={a.id} onClick={()=>{setSelGrup(a.kod);setSelGrupAd(a.ad);}} style={{display:"flex",alignItems:"center",gap:"10px",padding:"10px 14px",borderRadius:"6px",border:`1px solid ${sel?T.primary:T.border}`,background:sel?T.pBg:"#fff",cursor:"pointer",textAlign:"left",transition:"all .15s"}}>
@@ -1691,7 +1692,7 @@ const MalzemeKoduCreator=({malzemeler,altKategoriler,altGruplar,onComplete,onClo
         {(()=>{
           const tum=(altGruplar||[]).filter(g=>g.grupKod===selGrup);
           if(tum.length===0)return <div style={{padding:"24px",textAlign:"center",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffe58f"}}><div style={{fontSize:"28px",marginBottom:"8px"}}>⚠️</div><div style={{color:"#d48806",fontSize:"13px",fontWeight:500}}>Bu gruba ait alt grup tanımlanmamış.</div><div style={{color:T.t3,fontSize:"12px",marginTop:"4px"}}>Malzemeler → Grup Yönetimi sekmesinden alt grup ekleyin.</div></div>;
-          const mevcutlar=tum.filter(g=>{if(!srcAG)return true;const q=srcAG.toLowerCase();return g.kod.includes(q)||g.ad.toLowerCase().includes(q);}).sort((a,b)=>a.kod.localeCompare(b.kod));
+          const mevcutlar=tum.filter(g=>{if(!srcAG)return true;const q=nTR(srcAG);return nTR(g.kod).includes(q)||nTR(g.ad).includes(q);}).sort((a,b)=>a.kod.localeCompare(b.kod));
           return <div>
             <div style={{marginBottom:"8px"}}><input autoFocus style={{width:"100%",padding:"7px 10px",borderRadius:"6px",border:`1px solid ${T.bDark}`,fontSize:"13px",outline:"none",boxSizing:"border-box"}} value={srcAG} onChange={e=>setSrcAG(e.target.value)} placeholder="Kod veya isim ara..." onFocus={foc} onBlur={blr}/></div>
             {mevcutlar.length===0
@@ -2305,8 +2306,8 @@ const FirmaSeciciModal=({firmalar,turFiltre=[],onSelect,onClose,baslik="FİRMA S
   const filtered=firmalar.filter(f=>{
     if(turFiltre.length>0&&!turFiltre.some(t=>f.turler.includes(t)))return false;
     if(!src)return true;
-    const q=src.toLowerCase();
-    return f.ad.toLowerCase().includes(q)||(f.firmaKodu||"").toLowerCase().includes(q)||(f.kisiler||[]).some(k=>`${k.ad} ${k.soyad}`.toLowerCase().includes(q));
+    const q=nTR(src);
+    return nTR(f.ad).includes(q)||nTR(f.firmaKodu).includes(q)||(f.kisiler||[]).some(k=>nTR(`${k.ad} ${k.soyad}`).includes(q));
   });
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
     <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"750px",maxHeight:"80vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
@@ -2343,8 +2344,8 @@ const MalzemeSeciciModal=({malzemeler,onSelect,onClose})=>{
   const[src,setSrc]=useState("");
   const[fTip,setFTip]=useState("all");
   const filtered=malzemeler.filter(m=>{
-    const q=src.toLowerCase();
-    const ms=m.ad.toLowerCase().includes(q)||(m.malzemeKodu||"").toLowerCase().includes(q)||(m.grupAd||"").toLowerCase().includes(q);
+    const q=nTR(src);
+    const ms=nTR(m.ad).includes(q)||nTR(m.malzemeKodu).includes(q)||nTR(m.grupAd).includes(q);
     const mt=fTip==="all"||m.tip===fTip;
     return ms&&mt;
   });
@@ -2501,8 +2502,8 @@ const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,fi
   };
 
   const filtered=teklifler.filter(t=>{
-    const q=search.toLowerCase();
-    const ms=(t.teklifNo||"").toLowerCase().includes(q)||(t.firmaAd||"").toLowerCase().includes(q)||(t.aciklama||"").toLowerCase().includes(q)||(t.projeAd||"").toLowerCase().includes(q)||(t.kalemler||[]).some(k=>(k.malzemeAd||"").toLowerCase().includes(q));
+    const q=nTR(search);
+    const ms=nTR(t.teklifNo).includes(q)||nTR(t.firmaAd).includes(q)||nTR(t.aciklama).includes(q)||nTR(t.projeAd).includes(q)||(t.kalemler||[]).some(k=>nTR(k.malzemeAd).includes(q));
     const md=fDurum==="all"||t.durum===fDurum;
     return ms&&md;
   }).sort((a,b)=>(b.teklifTarihi||"").localeCompare(a.teklifTarihi||""));
@@ -2976,8 +2977,8 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler
   const durumGuncelle=(sp,yeniDurum)=>setSiparisler(prev=>prev.map(s=>s.id===sp.id?{...s,durum:yeniDurum}:s));
 
   const filtered=siparisler.filter(s=>{
-    const q=search.toLowerCase();
-    const ms=(s.spNo||"").toLowerCase().includes(q)||(s.firmaAd||"").toLowerCase().includes(q)||(s.projeAd||"").toLowerCase().includes(q)||(s.kalemler||[]).some(k=>(k.malzemeAd||"").toLowerCase().includes(q));
+    const q=nTR(search);
+    const ms=nTR(s.spNo).includes(q)||nTR(s.firmaAd).includes(q)||nTR(s.projeAd).includes(q)||(s.kalemler||[]).some(k=>nTR(k.malzemeAd).includes(q));
     const md=fDurum==="all"||s.durum===fDurum;
     return ms&&md;
   }).sort((a,b)=>(b.siparisTarihi||"").localeCompare(a.siparisTarihi||""));
@@ -3273,8 +3274,8 @@ const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklif
   const durumGuncelle=(af,yeniDurum)=>setFaturalar(prev=>prev.map(f=>f.id===af.id?{...f,durum:yeniDurum}:f));
 
   const filtered=faturalar.filter(f=>{
-    const q=search.toLowerCase();
-    const ms=(f.afNo||"").toLowerCase().includes(q)||(f.faturaNo||"").toLowerCase().includes(q)||(f.firmaAd||"").toLowerCase().includes(q)||(f.projeAd||"").toLowerCase().includes(q)||(f.kalemler||[]).some(k=>(k.malzemeAd||"").toLowerCase().includes(q));
+    const q=nTR(search);
+    const ms=nTR(f.afNo).includes(q)||nTR(f.faturaNo).includes(q)||nTR(f.firmaAd).includes(q)||nTR(f.projeAd).includes(q)||(f.kalemler||[]).some(k=>nTR(k.malzemeAd).includes(q));
     const md=fDurum==="all"||f.durum===fDurum;
     return ms&&md;
   }).sort((a,b)=>(b.faturaTarihi||"").localeCompare(a.faturaTarihi||""));
@@ -3490,8 +3491,8 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
 
   const[fDurum,setFDurum]=useState("aktif");
   const filtered=malzemeler.filter(m=>{
-    const q=search.toLowerCase();
-    const ms=m.ad.toLowerCase().includes(q)||m.malzemeKodu.toLowerCase().includes(q)||(m.grupAd||"").toLowerCase().includes(q)||(m.altGrupAd||"").toLowerCase().includes(q)||(m.marka||"").toLowerCase().includes(q);
+    const q=nTR(search);
+    const ms=nTR(m.ad).includes(q)||nTR(m.malzemeKodu).includes(q)||nTR(m.grupAd).includes(q)||nTR(m.altGrupAd).includes(q)||nTR(m.marka).includes(q);
     const mk=fKat==="all"||m.tip===fKat;
     const md=fDurum==="all"||(fDurum==="aktif"?m.durum!=="pasif":m.durum==="pasif");
     return ms&&mk&&md;
@@ -3652,7 +3653,7 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
   },[initialFirmaId]);
   const[initData,setInitData]=useState(null);
 
-  const filtered=firmalar.filter(f=>{const q=search.toLowerCase();const ms=f.ad.toLowerCase().includes(q)||f.firmaKodu.toLowerCase().includes(q)||(f.aciklama||"").toLowerCase().includes(q)||f.kisiler.some(k=>`${k.ad} ${k.soyad}`.toLowerCase().includes(q));const mt=fTur==="all"||f.turler.includes(fTur);const md=fDurum==="all"||(fDurum==="aktif"?f.aktif!==false:f.aktif===false);return ms&&mt&&md;});
+  const filtered=firmalar.filter(f=>{const q=nTR(search);const ms=nTR(f.ad).includes(q)||nTR(f.firmaKodu).includes(q)||nTR(f.aciklama).includes(q)||f.kisiler.some(k=>nTR(`${k.ad} ${k.soyad}`).includes(q));const mt=fTur==="all"||f.turler.includes(fTur);const md=fDurum==="all"||(fDurum==="aktif"?f.aktif!==false:f.aktif===false);return ms&&mt&&md;});
 
   const handleSave=async(d)=>{
     if(onSave){d._isNew=(view!=="form-edit");await onSave(d);}
@@ -4148,7 +4149,7 @@ const SearchSel=({value,options,onChange,placeholder,width})=>{
   const[s,setS]=useState("");
   const[hi,setHi]=useState(-1);
   const listRef=React.useRef(null);
-  const fil=options.filter(o=>o.toLowerCase().includes(s.toLowerCase()));
+  const fil=options.filter(o=>nTR(o).includes(nTR(s)));
   const onKey=(e)=>{
     if(e.key==="ArrowDown"){e.preventDefault();setHi(p=>p<fil.length-1?p+1:0);}
     else if(e.key==="ArrowUp"){e.preventDefault();setHi(p=>p>0?p-1:fil.length-1);}
@@ -5753,9 +5754,9 @@ const OmurgaPickerModal=({malzemeler,projeTuru,mevcutIds,onEkle,onClose})=>{
 
   // Filtrelenmiş liste
   const filtered=useMemo(()=>{
-    const q=src.toLowerCase();
+    const q=nTR(src);
     return omurgaMlz.filter(m=>{
-      const ms=m.ad.toLowerCase().includes(q)||(m.malzemeKodu||"").toLowerCase().includes(q)||(m.grupAd||"").toLowerCase().includes(q);
+      const ms=nTR(m.ad).includes(q)||nTR(m.malzemeKodu).includes(q)||nTR(m.grupAd).includes(q);
       const mt=fTip==="all"||m.tip===fTip;
       const mg=fGruplar.length===0||fGruplar.includes(m.grupAd||"");
       return ms&&mt&&mg;
@@ -5853,8 +5854,8 @@ const MalzemePickerModal=({malzemeler,onSelect,onClose})=>{
   const[src,setSrc]=useState("");
   const[fKat,setFKat]=useState("all");
   const filtered=malzemeler.filter(m=>{
-    const q=src.toLowerCase();
-    const ms=m.ad.toLowerCase().includes(q)||m.malzemeKodu.toLowerCase().includes(q)||(m.grupAd||"").toLowerCase().includes(q);
+    const q=nTR(src);
+    const ms=nTR(m.ad).includes(q)||nTR(m.malzemeKodu).includes(q)||nTR(m.grupAd).includes(q);
     const mk=fKat==="all"||m.tip===fKat;
     return ms&&mk;
   });
@@ -5884,10 +5885,10 @@ const MalzemePickerModal=({malzemeler,onSelect,onClose})=>{
 // Sipariş Seçici Modal — alış faturası için SP seçimi
 const SiparisSeciciModal=({siparisler=[],onSelect,onClose})=>{
   const[src,setSrc]=useState("");
-  const q=src.toLowerCase();
+  const q=nTR(src);
   const filtered=siparisler.filter(s=>{
     if(!q)return true;
-    return(s.spNo||"").toLowerCase().includes(q)||(s.firmaAd||"").toLowerCase().includes(q)||(s.projeAd||"").toLowerCase().includes(q)||(s.kalemler||[]).some(k=>(k.malzemeAd||"").toLowerCase().includes(q));
+    return nTR(s.spNo).includes(q)||nTR(s.firmaAd).includes(q)||nTR(s.projeAd).includes(q)||(s.kalemler||[]).some(k=>nTR(k.malzemeAd).includes(q));
   });
   const toplamHesapla=(kalemler)=>{let t=0;(kalemler||[]).forEach(k=>{t+=(parseFloat(k.miktar)||0)*(parseFloat(k.netFiyat)||0);});return t;};
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
@@ -5927,17 +5928,17 @@ const ButceKalemiSeciciModal=({butceKalemleri=[],mode="single",onSelect,onConfir
   const[src,setSrc]=useState("");
   const[expanded,setExpanded]=useState({});
   const[secili,setSecili]=useState({}); // multi mod: {"bkId:satirId": {bk, satirId}}
-  const q=src.toLowerCase();
+  const q=nTR(src);
   const filtered=butceKalemleri.filter(b=>{
     if(!q)return true;
-    if((b.malzemeKodu||"").toLowerCase().includes(q))return true;
-    if((b.malzemeAd||"").toLowerCase().includes(q))return true;
-    if((b.aciklama||"").toLowerCase().includes(q))return true;
-    if((b.bloklar||[]).join(" ").toLowerCase().includes(q))return true;
-    return(b.planlananSatirlari||[]).some(s=>(s.aciklama||"").toLowerCase().includes(q));
+    if(nTR(b.malzemeKodu).includes(q))return true;
+    if(nTR(b.malzemeAd).includes(q))return true;
+    if(nTR(b.aciklama).includes(q))return true;
+    if(nTR((b.bloklar||[]).join(" ")).includes(q))return true;
+    return(b.planlananSatirlari||[]).some(s=>nTR(s.aciklama).includes(q));
   });
   const autoExpanded={...expanded};
-  if(q){filtered.forEach(b=>{if((b.planlananSatirlari||[]).some(s=>(s.aciklama||"").toLowerCase().includes(q)))autoExpanded[b.id]=true;});}
+  if(q){filtered.forEach(b=>{if((b.planlananSatirlari||[]).some(s=>nTR(s.aciklama).includes(q)))autoExpanded[b.id]=true;});}
   const toggleExpand=(id)=>setExpanded(p=>({...p,[id]:!p[id]}));
   // Multi mode helpers
   const secKey=(bkId,satirId)=>`${bkId}:${satirId||"null"}`;
@@ -6253,7 +6254,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],b
   const filtrelenmis=useMemo(()=>{
     const list=kalemListesi.filter(k=>{
       // Arama filtresi
-      if(kalemAra){const nTR=s=>(s||"").replace(/[İIı]/g,"i").replace(/[şŞ]/g,"s").replace(/[ğĞ]/g,"g").replace(/[üÜ]/g,"u").replace(/[öÖ]/g,"o").replace(/[çÇ]/g,"c").toLowerCase();const q=nTR(kalemAra);const ms=nTR(k.mlzKodu).includes(q)||nTR(k.mlzAd).includes(q)||nTR(k.mlzGrupAd).includes(q);if(!ms)return false;}
+      if(kalemAra){const q=nTR(kalemAra);const ms=nTR(k.mlzKodu).includes(q)||nTR(k.mlzAd).includes(q)||nTR(k.mlzGrupAd).includes(q);if(!ms)return false;}
       if(filtre.startsWith("blok_")){const blokAd=filtre.replace("blok_","");return(k.bloklar||[]).includes(blokAd);}
       if(filtre==="ortak")return(k.bloklar||[]).length>1;
       if(filtre==="atanmamis")return(k.bloklar||[]).length===0;
@@ -7073,11 +7074,11 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
   const[yeniForm,setYeniForm]=useState({ad:"",telefon:"",eposta:"",kanal:"",not:""});
   const aliciFirmalar=useMemo(()=>firmalar.filter(f=>(f.turler||[]).includes("alici")),[firmalar]);
   const filtered=useMemo(()=>{
-    const q=src.toLowerCase();
+    const q=nTR(src);
     return aliciFirmalar.filter(f=>
-      (f.ad||"").toLowerCase().includes(q)||
-      (f.firmaKodu||"").toLowerCase().includes(q)||
-      (f.telefon||"").includes(q)
+      nTR(f.ad).includes(q)||
+      nTR(f.firmaKodu).includes(q)||
+      nTR(f.telefon).includes(q)
     );
   },[aliciFirmalar,src]);
 
@@ -7655,7 +7656,7 @@ const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategoriler
   </div>;
 
   const fil=projeler.filter(p=>{
-    const araOk=!ara||p.ad.toLowerCase().includes(ara.toLowerCase())||(p.projeKodu||"").toLowerCase().includes(ara.toLowerCase())||(p.il||"").toLowerCase().includes(ara.toLowerCase());
+    const q=nTR(ara);const araOk=!q||nTR(p.ad).includes(q)||nTR(p.projeKodu).includes(q)||nTR(p.il).includes(q);
     const durumOk=durumFil==="hepsi"||(p.durum||"")===(durumFil);
     const turOk=turFil==="hepsi"||(p.tur||"")===(turFil);
     const aktifOk=aktifFil==="all"||(aktifFil==="aktif"?p.aktif!==false:p.aktif===false);
