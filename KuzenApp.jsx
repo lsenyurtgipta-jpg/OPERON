@@ -2529,7 +2529,7 @@ const AlinanTekliflerYonetim=({teklifler,setTeklifler,onSave,onDel,malzemeler,fi
         {form.id&&<button onClick={()=>sil(form.id)} title="Teklifi Sil" style={{padding:"0",border:"none",background:"transparent",color:"#ff6b6b",cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={32}/></button>}
       </div>
 
-      {firmaPickerOpen&&<FirmaSeciciModal firmalar={firmalar} turFiltre={["tedarikci","taseron"]} onSelect={f=>{uf("firmaId",String(f.id));uf("yetkiliKisiId","");uf("yetkiliKisiAd","");uf("yetkiliTelefon","");uf("yetkiliEposta","");uf("teslimatAdresId","");}} onClose={()=>setFirmaPickerOpen(false)} baslik="TEDARİKÇİ / TAŞERON SEÇ"/>}
+      {firmaPickerOpen&&<FirmaSeciciModal firmalar={firmalar} turFiltre={["tedarikci","taseron","resmi"]} onSelect={f=>{uf("firmaId",String(f.id));uf("yetkiliKisiId","");uf("yetkiliKisiAd","");uf("yetkiliTelefon","");uf("yetkiliEposta","");uf("teslimatAdresId","");}} onClose={()=>setFirmaPickerOpen(false)} baslik="TEDARİKÇİ / TAŞERON / RESMİ KURUM SEÇ"/>}
 
       {/* BÖLÜM 1: İki Kart — Sol: Teklif Bilgileri / Sağ: Koşullar */}
       <div style={{display:"grid",gridTemplateColumns:"2.5fr 1fr",gap:"12px",marginBottom:"12px"}}>
@@ -3215,6 +3215,7 @@ const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklif
     faturaNo:"",faturaTarihi:new Date().toISOString().split("T")[0],odemeSekli:"",vadeGun:"",vadeTarihi:"",
     paraBirimi:"TL",aciklama:"",durum:"beklemede",kalemler:[]};
   const[form,setForm]=useState({...emptyForm});
+  const[firmaPickerOpen,setFirmaPickerOpen]=useState(false);
   const uf=(f,v)=>setForm(p=>({...p,[f]:v}));
 
   const spdenDoldur=(spId)=>{
@@ -3285,6 +3286,7 @@ const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklif
     const{kdvHaric,kdvToplam,kdvDahil}=toplamHesapla(form.kalemler);
     const headerFirmaAd=form.firmaId?firmalar.find(f=>f.id===parseInt(form.firmaId))?.ad||"":"";
     return <div>
+      {firmaPickerOpen&&<FirmaSeciciModal firmalar={firmalar} turFiltre={["tedarikci","taseron","resmi"]} onSelect={f=>{uf("firmaId",String(f.id));uf("firmaAd",f.ad);}} onClose={()=>setFirmaPickerOpen(false)} baslik="TEDARİKÇİ / TAŞERON / RESMİ KURUM SEÇ"/>}
       {/* HEADER — dark bar */}
       <div style={{display:"flex",alignItems:"center",gap:"16px",marginBottom:"20px",padding:"12px 20px",background:"#384248",borderRadius:"8px"}}>
         <button onClick={()=>{setView("list");setForm({...emptyForm,afNo:nextNo});}} title="Geri" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={32}/></button>
@@ -3309,10 +3311,7 @@ const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklif
       <div style={{background:T.card,borderRadius:T.rl,border:`1px solid ${T.border}`,padding:"20px",marginBottom:"16px"}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"14px",marginBottom:"14px"}}>
           <div><label style={lS}>Firma *</label>
-            <select style={iS} value={form.firmaId} onChange={e=>{const f=firmalar.find(x=>x.id===parseInt(e.target.value));uf("firmaId",e.target.value);if(f)uf("firmaAd",f.ad);}} onFocus={foc} onBlur={blr}>
-              <option value="">— Firma seçiniz —</option>
-              {firmalar.filter(f=>f.turler&&(f.turler.includes("tedarikci")||f.turler.includes("taseron"))).map(f=><option key={f.id} value={f.id}>{f.ad}</option>)}
-            </select>
+            <button onClick={()=>setFirmaPickerOpen(true)} style={{...iS,textAlign:"left",cursor:"pointer",color:form.firmaAd?T.text:T.t3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{form.firmaAd||"— Firma seçiniz —"}</button>
           </div>
           <div><label style={lS}>Proje</label>
             <select style={iS} value={form.projeId} onChange={e=>{const p=projeler.find(x=>x.id===parseInt(e.target.value));uf("projeId",e.target.value);if(p)uf("projeAd",p.ad);}} onFocus={foc} onBlur={blr}>
