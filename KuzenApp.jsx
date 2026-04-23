@@ -2921,7 +2921,7 @@ const SP_DURUMLARI=[
 ];
 const TESLIM_KOSULLARI=["Şantiye Teslim","Fabrika Teslim","Ex-Works","CIF","FOB","Diğer"];
 
-const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler,firmalar,projeler,malzemeler,butceKalemleri=[],initialOpenId,onClearInitial})=>{
+const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler,firmalar,projeler,malzemeler,butceKalemleri=[]})=>{
   const[view,setView]=useState("list");
   const[saved,setSaved]=useState(false);
   const[search,setSearch]=useState("");
@@ -2988,11 +2988,6 @@ const SatinalmaSiparisleriPage=({siparisler,setSiparisler,onSave,onDel,teklifler
 
   const sil=(id)=>{if(onDel){onDel(id);}else{if(!confirm("Bu siparişi silmek istediğinize emin misiniz?"))return;setSiparisler(prev=>prev.filter(s=>s.id!==id));}};
   const edit=(s)=>{setForm({...s,firmaId:String(s.firmaId),projeId:s.projeId?String(s.projeId):"",kalemler:s.kalemler.map(k=>({...k,malzemeId:k.malzemeId?String(k.malzemeId):""}))} );setView("form");};
-  useEffect(()=>{
-    if(!initialOpenId)return;
-    const sp=siparisler.find(s=>s.id===initialOpenId);
-    if(sp){edit(sp);onClearInitial&&onClearInitial();}
-  },[initialOpenId,siparisler]);
   const durumGuncelle=(sp,yeniDurum)=>setSiparisler(prev=>prev.map(s=>s.id===sp.id?{...s,durum:yeniDurum}:s));
 
   const filtered=siparisler.filter(s=>{
@@ -3216,7 +3211,7 @@ const AF_DURUMLARI=[
   {id:"iptal",label:"İptal",color:"#ff4d4f",bg:"#fff1f0",icon:"❌"},
 ];
 
-const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklifler,firmalar,projeler,malzemeler,butceKalemleri=[],initialOpenId,onClearInitial})=>{
+const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklifler,firmalar,projeler,malzemeler,butceKalemleri=[]})=>{
   const[view,setView]=useState("list");
   const[saved,setSaved]=useState(false);
   const[search,setSearch]=useState("");
@@ -3289,11 +3284,6 @@ const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklif
 
   const sil=(id)=>{if(onDel){onDel(id);}else{if(!confirm("Bu faturayı silmek istediğinize emin misiniz?"))return;setFaturalar(prev=>prev.filter(f=>f.id!==id));}};
   const edit=(f)=>{setForm({...f,firmaId:String(f.firmaId),projeId:f.projeId?String(f.projeId):"",kalemler:f.kalemler.map(k=>({...k,malzemeId:k.malzemeId?String(k.malzemeId):""}))});setView("form");};
-  useEffect(()=>{
-    if(!initialOpenId)return;
-    const af=faturalar.find(f=>f.id===initialOpenId);
-    if(af){edit(af);onClearInitial&&onClearInitial();}
-  },[initialOpenId,faturalar]);
   const durumGuncelle=(af,yeniDurum)=>setFaturalar(prev=>prev.map(f=>f.id===af.id?{...f,durum:yeniDurum}:f));
 
   const filtered=faturalar.filter(f=>{
@@ -5499,7 +5489,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
 
 /* --- Dosya Kategori Yönetim --- */
 /* --- Bütçe Kalem Modal --- */
-const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],projeBolumler=[],ortakAlanM2="",siparisler=[],faturalar=[],firmalar=[],onGotoSp,onGotoAf})=>{
+const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],projeBolumler=[],ortakAlanM2="",siparisler=[],faturalar=[],firmalar=[]})=>{
   const kalemInit=(k)=>({
     ...k,
     bloklar:k.bloklar||[],
@@ -6210,7 +6200,7 @@ const ButceKalemiSeciciModal=({butceKalemleri=[],mode="single",onSelect,onConfir
 };
 
 /* ========== MALİYET YÖNETİMİ ========== */
-const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],firmalar=[],butceKalemleri:butceKalemleriGlobal=[],saveButceKalemi:saveBKProp,delButceKalemi:delBKProp,bulkSaveButceKalemleri:bulkSaveBKProp,onGotoSp,onGotoAf})=>{
+const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],firmalar=[],butceKalemleri:butceKalemleriGlobal=[],saveButceKalemi:saveBKProp,delButceKalemi:delBKProp,bulkSaveButceKalemleri:bulkSaveBKProp})=>{
   const[selProjeId,setSelProjeId]=useState(null);
   const[butceModal,setButceModal]=useState(null);
   const[filtre,setFiltre]=useState("hepsi");
@@ -6629,7 +6619,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
       :<div>
         {pickerOpen&&<MalzemePickerModal malzemeler={malzemeler} onSelect={kalemEkle} onClose={()=>setPickerOpen(false)}/>}
         {omurgaPickerOpen&&<OmurgaPickerModal malzemeler={malzemeler} projeTuru={selProje.tur} mevcutIds={new Set(butceKalemleri.map(k=>k.malzemeId))} onEkle={omurgaKalemEkle} onClose={()=>setOmurgaPickerOpen(false)}/>}
-        {butceModal&&<ButceKalemModal kalem={butceModal} onSave={saveButceKalemi} onDel={delButceKalemi} onClose={()=>setButceModal(null)} malzemeler={malzemeler} projeBloklar={selProje?.bloklar||[]} projeBolumler={selProje?.bolumler||[]} ortakAlanM2={String((selProje?.bloklar||[]).reduce((s,b)=>s+parseFloat(b.ortakAlanM2||0),0))} siparisler={siparisler.filter(s=>s.projeId===selProjeId)} faturalar={faturalar.filter(f=>f.projeId===selProjeId)} firmalar={firmalar} onGotoSp={onGotoSp} onGotoAf={onGotoAf}/>}
+        {butceModal&&<ButceKalemModal kalem={butceModal} onSave={saveButceKalemi} onDel={delButceKalemi} onClose={()=>setButceModal(null)} malzemeler={malzemeler} projeBloklar={selProje?.bloklar||[]} projeBolumler={selProje?.bolumler||[]} ortakAlanM2={String((selProje?.bloklar||[]).reduce((s,b)=>s+parseFloat(b.ortakAlanM2||0),0))} siparisler={siparisler.filter(s=>s.projeId===selProjeId)} faturalar={faturalar.filter(f=>f.projeId===selProjeId)} firmalar={firmalar}/>}
 
         {/* SEKME BARI */}
         <div style={{display:"flex",gap:"2px",marginBottom:"16px",borderBottom:`2px solid ${T.border}`}}>
@@ -7882,10 +7872,6 @@ export default function App(){
   const[editMode,setEditMode]=useState(false);
   const[goToId,setGoToId]=useState(null);
   const goToFirma=(firmaId)=>{setGoToId(firmaId);setPage("firmalar");};
-  const[openSpId,setOpenSpId]=useState(null);
-  const[openAfId,setOpenAfId]=useState(null);
-  const gotoSp=(id)=>{setOpenSpId(id);setPage("satinalma");};
-  const gotoAf=(id)=>{setOpenAfId(id);setPage("alis_fatura");};
   const[sbOpen,setSbOpen]=useState(true);
   const[loading,setLoading]=useState(true);
   const firmaSavingRef=useRef(false);
@@ -8505,9 +8491,9 @@ export default function App(){
         {page==="projeler"&&<ProjelerPage projeler={projeler} setProjeler={setProjeler} onSave={saveProje} onDel={delProje} firmalar={firmalar} dosyaKategorileri={dosyaKategorileri} setDosyaKategorileri={setDosyaKategorileri} setPage={setPage} goToFirma={goToFirma} setEditMode={setEditMode}/>}
         {page==="teklifler"&&<AlinanTekliflerYonetim teklifler={teklifler} setTeklifler={setTeklifler} onSave={saveTeklif} onDel={delTeklif} malzemeler={malzemeler} firmalar={firmalar} projeler={projeler} onSpOlustur={spOlusturTeklifden}/>}
         {page==="teklif_verme"&&<div style={{padding:"80px",textAlign:"center",color:T.t3,fontSize:"16px",border:`1px dashed ${T.border}`,borderRadius:T.rl}}><div style={{fontSize:"32px",marginBottom:"12px"}}>📋</div>Teklif Verme modülü hazırlanıyor...</div>}
-        {page==="satinalma"&&<SatinalmaSiparisleriPage siparisler={siparisler} setSiparisler={setSiparisler} onSave={saveSiparis} onDel={delSiparis} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler} butceKalemleri={butceKalemleri} initialOpenId={openSpId} onClearInitial={()=>setOpenSpId(null)}/>}
-        {page==="alis_fatura"&&<AlisFaturalariPage faturalar={faturalar} setFaturalar={setFaturalar} onSave={saveFatura} onDel={delFatura} siparisler={siparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler} butceKalemleri={butceKalemleri} initialOpenId={openAfId} onClearInitial={()=>setOpenAfId(null)}/>}
-        {page==="maliyet"&&<MaliyetPage projeler={projeler} setProjeler={setProjeler} malzemeler={malzemeler} faturalar={faturalar} siparisler={siparisler} firmalar={firmalar} butceKalemleri={butceKalemleri} saveButceKalemi={saveButceKalemi} delButceKalemi={delButceKalemi} bulkSaveButceKalemleri={bulkSaveButceKalemleri} onGotoSp={gotoSp} onGotoAf={gotoAf}/>}
+        {page==="satinalma"&&<SatinalmaSiparisleriPage siparisler={siparisler} setSiparisler={setSiparisler} onSave={saveSiparis} onDel={delSiparis} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler} butceKalemleri={butceKalemleri}/>}
+        {page==="alis_fatura"&&<AlisFaturalariPage faturalar={faturalar} setFaturalar={setFaturalar} onSave={saveFatura} onDel={delFatura} siparisler={siparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler} butceKalemleri={butceKalemleri}/>}
+        {page==="maliyet"&&<MaliyetPage projeler={projeler} setProjeler={setProjeler} malzemeler={malzemeler} faturalar={faturalar} siparisler={siparisler} firmalar={firmalar} butceKalemleri={butceKalemleri} saveButceKalemi={saveButceKalemi} delButceKalemi={delButceKalemi} bulkSaveButceKalemleri={bulkSaveButceKalemleri}/>}
         {page==="satis_sunum"&&<SatisSunumPage projeler={projeler} setProjeler={setProjeler} firmalar={firmalar} saveProje={saveProje} saveFirma={saveFirma} setPage={setPage} goToFirma={goToFirma}/>}
       </div>
     </div>
