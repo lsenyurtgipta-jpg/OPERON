@@ -7216,8 +7216,8 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
             <div style={{padding:"16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff",marginBottom:"16px"}}>
               <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"12px",display:"flex",alignItems:"center",gap:"6px"}}>📊 Proje Özet — m² Maliyet Planlaması</div>
 
-              {/* Row 1: Hesaplanan referans + Sapma */}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px",marginBottom:"14px"}}>
+              {/* Row 1: Hesaplanan referans + Sapma + m² Satış Fiyatı */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:"12px",marginBottom:"14px"}}>
                 <div style={{padding:"12px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#fafafa"}}>
                   <div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",fontWeight:600,marginBottom:"6px"}}>🖥️ Hesaplanan Brüt m² (Sistem)</div>
                   <div style={{display:"flex",alignItems:"baseline",gap:"6px",marginBottom:"2px"}}>
@@ -7255,6 +7255,27 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
                     </>;
                   })()}
                 </div>
+                <div style={{padding:"12px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#f6ffed"}}>
+                  <div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",fontWeight:600,marginBottom:"6px"}}>📈 Öngörülen m² Satış Fiyatı</div>
+                  {(()=>{
+                    const ongHaric=parseFloat(fiyatForm.ongorulenM2KdvHaric);
+                    const kar=parseFloat(fiyatForm.karMarjiYuzde)||0;
+                    const kdv=parseFloat(fiyatForm.varsayilanKdvOrani)||0;
+                    if(isNaN(ongHaric)||ongHaric<=0)return<div style={{fontSize:"13px",color:T.t3,paddingTop:"6px"}}>—</div>;
+                    const sHaric=ongHaric*(1+kar/100);
+                    const sDahil=sHaric*(1+kdv/100);
+                    return<>
+                      <div style={{display:"flex",alignItems:"baseline",gap:"6px",marginBottom:"2px"}}>
+                        <span style={{fontSize:"10px",color:T.t3,minWidth:"34px",fontWeight:600}}>Dahil</span>
+                        <span style={{fontSize:"16px",fontWeight:700,color:"#52c41a"}}>{sDahil.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺"}</span>
+                      </div>
+                      <div style={{display:"flex",alignItems:"baseline",gap:"6px"}}>
+                        <span style={{fontSize:"10px",color:T.t3,minWidth:"34px",fontWeight:600}}>Hariç</span>
+                        <span style={{fontSize:"13px",fontWeight:600,color:"#52c41a",opacity:0.7}}>{sHaric.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺"}</span>
+                      </div>
+                    </>;
+                  })()}
+                </div>
               </div>
 
               {/* Row 2: Input fields */}
@@ -7283,7 +7304,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
 
               {/* Save button */}
               <div style={{display:"flex",justifyContent:"flex-end",marginTop:"14px"}}>
-                <button onClick={fiyatKaydet} disabled={!selProjeId} style={{padding:"8px 20px",background:fiyatSaved?T.ok:T.primary,color:"#fff",border:"none",borderRadius:"6px",fontSize:"13px",fontWeight:600,cursor:selProjeId?"pointer":"not-allowed",transition:"background 0.25s ease",opacity:selProjeId?1:0.5}}>{fiyatSaved?"✓ Kaydedildi":"💾 Kaydet"}</button>
+                <button onClick={fiyatKaydet} disabled={!selProjeId} title={fiyatSaved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:fiyatSaved?"#52c41a":"#8799a3",cursor:selProjeId?"pointer":"not-allowed",display:"flex",alignItems:"center",opacity:selProjeId?1:0.5,transition:"color .3s"}}><Save size={26}/></button>
               </div>
             </div>
 
@@ -7325,11 +7346,29 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
                     <input type="text" value={f.ongorulenM2KdvHaric} onChange={e=>blokFiyatHaricChange(bl.id,e.target.value)} placeholder={fiyatForm.ongorulenM2KdvHaric||"0,00"} style={{width:"100%",padding:"6px 8px",border:`1px solid ${T.bDark}`,borderRadius:"4px",fontSize:"12px",boxSizing:"border-box",outline:"none",marginBottom:"6px"}}/>
                     <div style={{fontSize:"10px",color:T.t2,fontWeight:600,marginBottom:"3px"}}>🎯 Öngörülen m² (KDV Dahil)</div>
                     <input type="text" value={f.ongorulenM2KdvDahil} onChange={e=>blokFiyatDahilChange(bl.id,e.target.value)} placeholder={fiyatForm.ongorulenM2KdvDahil||"0,00"} style={{width:"100%",padding:"6px 8px",border:`1px solid ${T.bDark}`,borderRadius:"4px",fontSize:"12px",boxSizing:"border-box",outline:"none",marginBottom:"8px"}}/>
+                    {(()=>{
+                      const kar=parseFloat(fiyatForm.karMarjiYuzde)||0;
+                      const kdv=parseFloat(fiyatForm.varsayilanKdvOrani)||0;
+                      if(isNaN(etkinHaric)||etkinHaric<=0)return null;
+                      const sHaric=etkinHaric*(1+kar/100);
+                      const sDahil=sHaric*(1+kdv/100);
+                      return <div style={{marginTop:"8px",marginBottom:"8px",padding:"8px",borderRadius:"4px",background:"#f6ffed",border:"1px solid #b7eb8f"}}>
+                        <div style={{fontSize:"9px",color:T.t3,fontWeight:600,textTransform:"uppercase",marginBottom:"4px"}}>📈 m² Satış Fiyatı</div>
+                        <div style={{display:"flex",alignItems:"baseline",gap:"6px",marginBottom:"1px"}}>
+                          <span style={{fontSize:"9px",color:T.t3,minWidth:"30px",fontWeight:600}}>Dahil</span>
+                          <span style={{fontSize:"13px",fontWeight:700,color:"#52c41a"}}>{sDahil.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺"}</span>
+                        </div>
+                        <div style={{display:"flex",alignItems:"baseline",gap:"6px"}}>
+                          <span style={{fontSize:"9px",color:T.t3,minWidth:"30px",fontWeight:600}}>Hariç</span>
+                          <span style={{fontSize:"11px",fontWeight:600,color:"#52c41a",opacity:0.7}}>{sHaric.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺"}</span>
+                        </div>
+                      </div>;
+                    })()}
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:"6px"}}>
                       <div style={{fontSize:"11px",color:sapmaCol,fontWeight:600}}>
                         {sapma==null?"—":"Sapma: "+(sapma>=0?"+":"")+sapma.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺ (%"+(sapmaY>=0?"+":"")+sapmaY.toFixed(1)+")"}
                       </div>
-                      <button onClick={()=>blokFiyatKaydet(bl.id)} style={{padding:"4px 10px",background:saved?T.ok:T.primary,color:"#fff",border:"none",borderRadius:"4px",fontSize:"11px",fontWeight:600,cursor:"pointer",transition:"background 0.25s"}}>{saved?"✓":"💾"}</button>
+                      <button onClick={()=>blokFiyatKaydet(bl.id)} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={18}/></button>
                     </div>
                   </div>;
                 })}
@@ -7375,7 +7414,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
                       <input type="text" value={f.listeFiyatiKdvHaric||""} onChange={e=>daireListeHaricChange(bo.id,e.target.value)} placeholder="—" style={{padding:"4px 6px",border:`1px solid ${T.bDark}`,borderRadius:"3px",fontSize:"11px",boxSizing:"border-box",outline:"none",width:"100%",textAlign:"right"}}/>
                       <input type="text" value={f.listeFiyatiKdvDahil||""} onChange={e=>daireListeDahilChange(bo.id,e.target.value)} placeholder="—" style={{padding:"4px 6px",border:`1px solid ${T.bDark}`,borderRadius:"3px",fontSize:"11px",boxSizing:"border-box",outline:"none",width:"100%",textAlign:"right"}}/>
                       {(()=>{const autoKdv=daireKdvHesapla(bo.netM2);const net=parseFloat(bo.netM2);const hasNet=!isNaN(net);return <div title={hasNet?`Net ${net.toLocaleString("tr-TR",{maximumFractionDigits:2})} m² → %${autoKdv} (yönetmelik: <150→%10, ≥150→%20)`:"Net m² girilmemiş — varsayılan %10"} style={{padding:"4px 2px",borderRadius:"3px",fontSize:"11px",textAlign:"center",fontWeight:700,background:autoKdv==="20"?"#fff1f0":"#f6ffed",color:autoKdv==="20"?"#cf1322":"#389e0d",border:`1px solid ${autoKdv==="20"?"#ffa39e":"#b7eb8f"}`}}>%{autoKdv}</div>;})()}
-                      <button onClick={()=>daireFiyatKaydet(bo.id)} style={{padding:"3px 6px",background:saved?T.ok:T.primary,color:"#fff",border:"none",borderRadius:"3px",fontSize:"10px",fontWeight:600,cursor:"pointer",transition:"background 0.25s"}}>{saved?"✓":"💾"}</button>
+                      <button onClick={()=>daireFiyatKaydet(bo.id)} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={14}/></button>
                     </div>;
                   })}
                 </div>
