@@ -2303,12 +2303,25 @@ const addIsGunu=(startDateStr,gun)=>{
 /* ---- FİRMA PICKER MODAL (teklif/sipariş/fatura için) ---- */
 const FirmaSeciciModal=({firmalar,turFiltre=[],onSelect,onClose,baslik="FİRMA SEÇ"})=>{
   const[src,setSrc]=useState("");
+  const[activeIndex,setActiveIndex]=useState(0);
+  const listRef=useRef(null);
   const filtered=firmalar.filter(f=>{
     if(turFiltre.length>0&&!turFiltre.some(t=>f.turler.includes(t)))return false;
     if(!src)return true;
     const q=nTR(src);
     return nTR(f.ad).includes(q)||nTR(f.firmaKodu).includes(q)||(f.kisiler||[]).some(k=>nTR(`${k.ad} ${k.soyad}`).includes(q));
   });
+  useEffect(()=>{setActiveIndex(0);},[src]);
+  useEffect(()=>{
+    const el=listRef.current?.querySelector(`[data-fsm-idx="${activeIndex}"]`);
+    if(el&&el.scrollIntoView)el.scrollIntoView({block:"nearest"});
+  },[activeIndex]);
+  const handleKey=(e)=>{
+    if(e.key==="ArrowDown"){e.preventDefault();setActiveIndex(i=>Math.min(i+1,Math.max(filtered.length-1,0)));}
+    else if(e.key==="ArrowUp"){e.preventDefault();setActiveIndex(i=>Math.max(i-1,0));}
+    else if(e.key==="Enter"){e.preventDefault();const f=filtered[activeIndex];if(f){onSelect(f);onClose();}}
+    else if(e.key==="Escape"){e.preventDefault();onClose();}
+  };
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
     <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"750px",maxHeight:"80vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <div style={{padding:"12px 20px",background:"#384248",display:"flex",alignItems:"center",gap:"16px",borderRadius:`${T.rl} ${T.rl} 0 0`}}>
@@ -2316,18 +2329,18 @@ const FirmaSeciciModal=({firmalar,turFiltre=[],onSelect,onClose,baslik="FİRMA S
         <span style={{fontSize:"15px",fontWeight:600,color:"#8799a3",flex:1,textAlign:"center"}}>{baslik}</span>
       </div>
       <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`}}>
-        <input style={{width:"100%",height:"40px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"15px",outline:"none",boxSizing:"border-box"}} value={src} onChange={e=>setSrc(e.target.value)} placeholder="Firma adı, kodu veya kişi ara..." autoFocus onFocus={foc} onBlur={blr}/>
+        <input style={{width:"100%",height:"40px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"15px",outline:"none",boxSizing:"border-box"}} value={src} onChange={e=>setSrc(e.target.value)} onKeyDown={handleKey} placeholder="Firma adı, kodu veya kişi ara..." autoFocus onFocus={foc} onBlur={blr}/>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"100px 1fr 100px 150px",gap:"8px",padding:"8px 16px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
         {["Kod","Firma Adı","Tür","Kişi"].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>{h}</div>)}
       </div>
-      <div style={{flex:1,overflow:"auto"}}>
+      <div ref={listRef} style={{flex:1,overflow:"auto"}}>
         {filtered.length===0?<div style={{padding:"40px",textAlign:"center",color:T.t3}}>Sonuç bulunamadı</div>:
-        filtered.map(f=>{
+        filtered.map((f,i)=>{
           const turLabels=f.turler.map(t=>{const o=FIRMA_TURLERI.find(x=>x.id===t);return o?o.label:t;}).join(", ");
           const ilkKisi=f.kisiler?.[0];
-          return <div key={f.id} onClick={()=>{onSelect(f);onClose();}} style={{display:"grid",gridTemplateColumns:"100px 1fr 100px 150px",gap:"8px",padding:"10px 16px",borderBottom:`1px solid ${T.border}`,cursor:"pointer",alignItems:"center"}}
-            onMouseEnter={e=>e.currentTarget.style.background=T.pBg} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+          const isActive=activeIndex===i;
+          return <div key={f.id} data-fsm-idx={i} onClick={()=>{onSelect(f);onClose();}} onMouseEnter={()=>setActiveIndex(i)} style={{display:"grid",gridTemplateColumns:"100px 1fr 100px 150px",gap:"8px",padding:"10px 16px",borderBottom:`1px solid ${T.border}`,cursor:"pointer",alignItems:"center",background:isActive?T.pBg:"#fff"}}>
             <div style={{fontSize:"12px",color:T.t3,fontFamily:"monospace"}}>{f.firmaKodu}</div>
             <div style={{fontSize:"14px",fontWeight:600,color:T.text}}>{f.ad}</div>
             <div style={{fontSize:"12px",color:T.t2}}>{turLabels}</div>
