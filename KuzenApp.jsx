@@ -3932,6 +3932,47 @@ const butceKalemiToDb = (k, projeId) => ({
   sira_no: k.siraNo||0
 });
 
+// Bütçe kalemi otomatik kapatma kontrolü — saveFatura + backfill effect ortak kullanır
+const isBkAutoClosed = (bk, faturalarList) => {
+  if(!bk || bk.tamamlandi) return false;
+  const fkAll = (faturalarList||[])
+    .filter(f=>f.durum!=='iptal')
+    .flatMap(f=>(f.kalemler||[]).filter(fk=>String(fk.butceKalemiId)===String(bk.id)));
+  if(fkAll.length===0) return false;
+  const planSatirlari = bk.planlananSatirlari||[];
+  if(planSatirlari.length>0) {
+    const strictOk = planSatirlari.every(ps=>{
+      const pm=parseFloat(ps.miktar)||0, pf=parseFloat(ps.birimFiyat)||0;
+      if(pm<=0||pf<=0) return false;
+      const fk = fkAll.filter(x=>String(x.butceKalemiSatirId)===String(ps.id));
+      const fm = fk.reduce((s,x)=>s+(parseFloat(x.miktar)||0),0);
+      const miktarOk = Math.abs(fm-pm)<0.001;
+      const fiyatOk = fk.length>0 && fk.every(x=>Math.abs((parseFloat(x.netFiyat)||0)-pf)<0.001);
+      return miktarOk && fiyatOk;
+    });
+    if(strictOk) return true;
+    // Fallback: eski faturalarda butceKalemiSatirId boş olabilir — toplam miktar + toplam tutar eşleşirse kapat
+    const anyMissingSatirId = fkAll.some(x=>!x.butceKalemiSatirId);
+    if(anyMissingSatirId) {
+      const planToplamMiktar = planSatirlari.reduce((s,p)=>s+(parseFloat(p.miktar)||0),0);
+      const planToplamTutar = planSatirlari.reduce((s,p)=>s+(parseFloat(p.miktar)||0)*(parseFloat(p.birimFiyat)||0),0);
+      if(planToplamMiktar<=0||planToplamTutar<=0) return false;
+      const faturaToplamMiktar = fkAll.reduce((s,x)=>s+(parseFloat(x.miktar)||0),0);
+      const faturaToplamTutar = fkAll.reduce((s,x)=>s+(parseFloat(x.miktar)||0)*(parseFloat(x.netFiyat)||0),0);
+      const miktarOk = Math.abs(faturaToplamMiktar-planToplamMiktar)<0.001;
+      const tutarOk = Math.abs(faturaToplamTutar-planToplamTutar)<0.01;
+      return miktarOk && tutarOk;
+    }
+    return false;
+  }
+  const pm=parseFloat(bk.planlananMiktar)||0, pf=parseFloat(bk.planlananBirimFiyat)||0;
+  if(pm<=0||pf<=0) return false;
+  const fm = fkAll.reduce((s,x)=>s+(parseFloat(x.miktar)||0),0);
+  const miktarOk = Math.abs(fm-pm)<0.001;
+  const fiyatOk = fkAll.every(x=>Math.abs((parseFloat(x.netFiyat)||0)-pf)<0.001);
+  return miktarOk && fiyatOk;
+};
+
 // Blok dönüşümleri
 const blokToLocal = (b) => ({
   id: b.id,
@@ -7774,6 +7815,7 @@ export default function App(){
   const faturaSavingRef=useRef(false);
   const projeSavingRef=useRef(false);
   const butceKalemiSavingRef=useRef(false);
+  const backfillDoneRef=useRef(false);
   const[butceKalemleri,setButceKalemleri]=useState([]);
   const[firmalar,setFirmalar]=useState([]);
   const[malzemeler,setMalzemeler]=useState([]);
@@ -7848,6 +7890,25 @@ export default function App(){
   }, []);
 
   useEffect(()=>{ loadAll(true); },[loadAll]);
+
+  // BACKFILL — eski kayıtlar için bir kez oto-kapatma kontrolü (yeni auto-close mantığı eklenmeden önce kaydedilenler)
+  useEffect(()=>{
+    if(backfillDoneRef.current) return;
+    if(loading) return;
+    if(butceKalemleri.length===0) return;
+    backfillDoneRef.current = true;
+    (async()=>{
+      const acikKalemler = butceKalemleri.filter(bk=>!bk.tamamlandi);
+      for(const bk of acikKalemler) {
+        if(isBkAutoClosed(bk, faturalar)) {
+          try {
+            await sbPatch('butce_kalemleri', bk.id, {tamamlandi:true, tamamlandi_kaynak:'otomatik'});
+            setButceKalemleri(prev=>prev.map(b=>b.id===bk.id?{...b,tamamlandi:true,tamamlandiKaynak:'otomatik'}:b));
+          } catch(e) { console.warn("Backfill oto-kapatma hatası:", e.message); }
+        }
+      }
+    })();
+  },[loading,butceKalemleri,faturalar]);
 
   const saveFirma = async (form) => {
     if(firmaSavingRef.current) { console.warn("Firma kayıt işlemi devam ediyor, çift çağrı engellendi"); return; }
@@ -8165,38 +8226,15 @@ export default function App(){
           }
         }
       }
-      // OTOMATİK MALİYET KALEMİ KAPATMA — fatura kalemleri planla birebir (miktar+fiyat) eşleşirse kalem kapanır
+      // OTOMATİK MALİYET KALEMİ KAPATMA — isBkAutoClosed helper (saveFatura + backfill ortak)
       {
         const bkIds = new Set();
         (form.kalemler||[]).forEach(k=>{if(k.butceKalemiId)bkIds.add(k.butceKalemiId);});
-        const tumFaturalar = [...faturalar.filter(f=>f.id!==form.id), form].filter(f=>f.durum!=='iptal');
+        const tumFaturalar = [...faturalar.filter(f=>f.id!==form.id), form];
         for(const bkId of bkIds) {
           const bk = butceKalemleri.find(b=>b.id===bkId);
           if(!bk || bk.tamamlandi) continue;
-          const fkAll = tumFaturalar.flatMap(f=>(f.kalemler||[]).filter(fk=>String(fk.butceKalemiId)===String(bkId)));
-          const planSatirlari = bk.planlananSatirlari||[];
-          let tumuKapali;
-          if(planSatirlari.length>0) {
-            tumuKapali = planSatirlari.every(ps=>{
-              const pm=parseFloat(ps.miktar)||0, pf=parseFloat(ps.birimFiyat)||0;
-              if(pm<=0||pf<=0) return false;
-              const fk = fkAll.filter(x=>String(x.butceKalemiSatirId)===String(ps.id));
-              const fm = fk.reduce((s,x)=>s+(parseFloat(x.miktar)||0),0);
-              const miktarOk = Math.abs(fm-pm)<0.001;
-              const fiyatOk = fk.length>0 && fk.every(x=>Math.abs((parseFloat(x.netFiyat)||0)-pf)<0.001);
-              return miktarOk && fiyatOk;
-            });
-          } else {
-            const pm=parseFloat(bk.planlananMiktar)||0, pf=parseFloat(bk.planlananBirimFiyat)||0;
-            if(pm<=0||pf<=0) tumuKapali=false;
-            else {
-              const fm = fkAll.reduce((s,x)=>s+(parseFloat(x.miktar)||0),0);
-              const miktarOk = Math.abs(fm-pm)<0.001;
-              const fiyatOk = fkAll.length>0 && fkAll.every(x=>Math.abs((parseFloat(x.netFiyat)||0)-pf)<0.001);
-              tumuKapali = miktarOk && fiyatOk;
-            }
-          }
-          if(tumuKapali) {
+          if(isBkAutoClosed(bk, tumFaturalar)) {
             try { await sbPatch('butce_kalemleri', bkId, {tamamlandi:true, tamamlandi_kaynak:'otomatik'}); } catch(e) { console.warn("Maliyet kalemi oto-kapatma hatası:", e.message); }
             setButceKalemleri(prev=>prev.map(b=>b.id===bkId?{...b,tamamlandi:true,tamamlandiKaynak:'otomatik'}:b));
           }
