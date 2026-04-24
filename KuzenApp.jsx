@@ -1617,7 +1617,7 @@ const FirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,projele
                   <div style={{fontSize:"12px",color:T.t2}}>{d.blok||"—"} Blok</div>
                   <div style={{fontSize:"12px",color:T.t2}}>Daire {d.no||"—"}</div>
                   <div style={{fontSize:"12px",color:T.t2}}>{d.brutM2?`${d.brutM2} m²`:"—"} {d.odaSayisi?`• ${d.odaSayisi}`:""}</div>
-                  <div style={{fontSize:"13px",fontWeight:600,color:"#fa8c16",textAlign:"right"}}>{d.satisFiyati?parseFloat(d.satisFiyati).toLocaleString("tr-TR")+" ₺":"—"}</div>
+                  <div style={{fontSize:"13px",fontWeight:600,color:"#fa8c16",textAlign:"right"}} title="Satış Bedeli + PLUS (KDV Hariç)">{(()=>{const n=(parseFloat(d.satisBedeli)||0)+(parseFloat(d.plus)||0);return n>0?n.toLocaleString("tr-TR")+" ₺":"—";})()}</div>
                 </div>)}
               </div>}
           </div>
@@ -1634,7 +1634,7 @@ const FirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,projele
                   <div style={{fontSize:"12px",color:T.t2}}>{d.blok||"—"} Blok</div>
                   <div style={{fontSize:"12px",color:T.t2}}>Daire {d.no||"—"}</div>
                   <div style={{fontSize:"12px",color:T.t2}}>{d.brutM2?`${d.brutM2} m²`:"—"} {d.odaSayisi?`• ${d.odaSayisi}`:""}</div>
-                  <div style={{fontSize:"13px",fontWeight:700,color:"#1677ff",textAlign:"right"}}>{d.satisFiyati?parseFloat(d.satisFiyati).toLocaleString("tr-TR")+" ₺":"—"}</div>
+                  <div style={{fontSize:"13px",fontWeight:700,color:"#1677ff",textAlign:"right"}} title="Satış Bedeli + PLUS (KDV Hariç)">{(()=>{const n=(parseFloat(d.satisBedeli)||0)+(parseFloat(d.plus)||0);return n>0?n.toLocaleString("tr-TR")+" ₺":"—";})()}</div>
                 </div>)}
               </div>}
           </div>
@@ -4173,7 +4173,8 @@ const bolumToLocal = (b) => ({
   cephe: b.cephe||"",
   durum: b.durum||"musait",
   sahiplik: b.sahiplik||"",
-  satisFiyati: b.satis_fiyati!=null?String(b.satis_fiyati):"",
+  satisBedeli: b.satis_bedeli!=null?String(b.satis_bedeli):"",
+  plus: b.plus!=null?String(b.plus):"",
   paraBirimi: b.para_birimi||"TL",
   sozlesmeTarihi: b.sozlesme_tarihi||"",
   aliciFirmaId: b.alici_firma_id||"",
@@ -4198,7 +4199,8 @@ const bolumToDb = (b, projeId) => ({
   cephe: b.cephe||"",
   durum: b.durum||"musait",
   sahiplik: b.sahiplik||"",
-  satis_fiyati: b.satisFiyati!==""&&b.satisFiyati!=null?Number(b.satisFiyati):null,
+  satis_bedeli: b.satisBedeli!==""&&b.satisBedeli!=null?Number(b.satisBedeli):null,
+  plus: b.plus!==""&&b.plus!=null?Number(b.plus):null,
   para_birimi: b.paraBirimi||"TL",
   sozlesme_tarihi: b.sozlesmeTarihi||null,
   alici_firma_id: b.aliciFirmaId||null,
@@ -4897,7 +4899,10 @@ const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[],anlasmaYontemi
               </label>)}
             </div>
           </div>}
-          <div><label style={lS}>Satış Fiyatı</label><input style={iS} value={form.satisFiyati?Number(form.satisFiyati).toLocaleString("tr-TR"):""} onChange={e=>{const v=e.target.value.replace(/\./g,"").replace(/[^0-9]/g,"");u("satisFiyati",v);}} placeholder="0" onFocus={foc} onBlur={blr}/></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
+            <div><label style={lS}>Satış Bedeli <span style={{color:T.t3,fontSize:"11px"}}>(KDV Hariç, Fatura)</span></label><input style={iS} value={form.satisBedeli?Number(form.satisBedeli).toLocaleString("tr-TR"):""} onChange={e=>{const v=e.target.value.replace(/\./g,"").replace(/[^0-9]/g,"");u("satisBedeli",v);}} placeholder="0" onFocus={foc} onBlur={blr}/></div>
+            <div><label style={lS}>PLUS</label><input style={{...iS,background:"#fffbe6",color:"#d48806",fontWeight:600}} value={form.plus?Number(form.plus).toLocaleString("tr-TR"):""} onChange={e=>{const v=e.target.value.replace(/\./g,"").replace(/[^0-9]/g,"");u("plus",v);}} placeholder="0" onFocus={foc} onBlur={blr}/></div>
+          </div>
           {/* SÖZLEŞMELER MODÜLÜNDEN GELECEK */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
             <div>
@@ -5008,7 +5013,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
 
   // Bölüm işlemleri
   const addBolum=()=>{
-    const yeni={id:Date.now(),tipi:"Daire",blok:"",no:"",kat:"",brutM2:"",netM2:"",odaSayisi:"",cephe:"",durum:"musait",sahiplik:"",satisFiyati:"",paraBirimi:"TL",sozlesmeTarihi:"",aliciFirmaId:"",aliciFirmaAd:"",notlar:"",gorseller:[]};
+    const yeni={id:Date.now(),tipi:"Daire",blok:"",no:"",kat:"",brutM2:"",netM2:"",odaSayisi:"",cephe:"",durum:"musait",sahiplik:"",satisBedeli:"",plus:"",paraBirimi:"TL",sozlesmeTarihi:"",aliciFirmaId:"",aliciFirmaAd:"",notlar:"",gorseller:[]};
     setBolumModal(yeni);
   };
   const saveBolum=(b)=>{
@@ -5319,7 +5324,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
         };
 
         const addBolumToBlok=(blokAd)=>{
-          const yeni={id:Date.now(),tipi:"Daire",blok:blokAd,no:"",kat:"",brutM2:"",netM2:"",odaSayisi:"",cephe:"",durum:"musait",sahiplik:"",satisFiyati:"",paraBirimi:"TL",sozlesmeTarihi:"",aliciFirmaId:"",aliciFirmaAd:"",notlar:"",gorseller:[]};
+          const yeni={id:Date.now(),tipi:"Daire",blok:blokAd,no:"",kat:"",brutM2:"",netM2:"",odaSayisi:"",cephe:"",durum:"musait",sahiplik:"",satisBedeli:"",plus:"",paraBirimi:"TL",sozlesmeTarihi:"",aliciFirmaId:"",aliciFirmaAd:"",notlar:"",gorseller:[]};
           setBolumModal(yeni);
         };
 
@@ -5350,8 +5355,8 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
                 }} title="Blok Düzenle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePen size={30}/></button>
                 <button onClick={()=>{
                   const rows=[["No","Kat","Tip","Brüt m²","Net m²","Oda","Cephe","Fiyat","Durum"]];
-                  blokBolumler.forEach(b=>{const ds=BOLUM_DURUMLARI.find(d=>d.id===b.durum);rows.push([b.no||"",b.kat||"",b.tipi||"",b.brutM2||"",b.netM2||"",b.odaSayisi||"",b.cephe||"",b.satisFiyati||"",ds?ds.label:""]);});
-                  rows.push(["","","TOPLAM",topBrut,topNet,"","",blokBolumler.reduce((s,b)=>s+parseFloat(b.satisFiyati||0),0),""]);
+                  blokBolumler.forEach(b=>{const ds=BOLUM_DURUMLARI.find(d=>d.id===b.durum);const net=(parseFloat(b.satisBedeli)||0)+(parseFloat(b.plus)||0);rows.push([b.no||"",b.kat||"",b.tipi||"",b.brutM2||"",b.netM2||"",b.odaSayisi||"",b.cephe||"",net||"",ds?ds.label:""]);});
+                  rows.push(["","","TOPLAM",topBrut,topNet,"","",blokBolumler.reduce((s,b)=>s+(parseFloat(b.satisBedeli)||0)+(parseFloat(b.plus)||0),0),""]);
                   const csv=rows.map(r=>r.map(c=>`"${c}"`).join(";")).join("\n");
                   const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
                   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${blokAd}_bolumler.csv`;a.click();
@@ -5390,7 +5395,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
                       <div style={{fontSize:"14px",color:T.text}}>{b.netM2||"—"}</div>
                       <div style={{fontSize:"14px",color:T.t2}}>{b.odaSayisi||"—"}</div>
                       <div style={{fontSize:"14px",color:T.t2}}>{b.cephe||"—"}</div>
-                      <div style={{fontSize:"13px",fontWeight:600,color:T.text}}>{b.satisFiyati?Number(b.satisFiyati).toLocaleString("tr-TR")+" "+pb.symbol:"—"}</div>
+                      <div style={{fontSize:"13px",fontWeight:600,color:T.text}} title="Satış Bedeli + PLUS (KDV Hariç)">{(()=>{const n=(parseFloat(b.satisBedeli)||0)+(parseFloat(b.plus)||0);return n>0?n.toLocaleString("tr-TR")+" "+pb.symbol:"—";})()}</div>
                       <div><span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"12px",color:ds.color,background:ds.bg,border:`1px solid ${ds.color}33`,whiteSpace:"nowrap"}}>{ds.label}</span></div>
                       {hasAnlasma&&<div><span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"12px",fontWeight:600,whiteSpace:"nowrap",color:b.sahiplik==="Arsa Sahibi"?"#d4880f":b.sahiplik==="Müteahhit"?"#1677ff":"#999",background:b.sahiplik==="Arsa Sahibi"?"#fff7e6":b.sahiplik==="Müteahhit"?"#e6f4ff":"#f5f5f5",border:`1px solid ${b.sahiplik==="Arsa Sahibi"?"#d4880f33":b.sahiplik==="Müteahhit"?"#1677ff33":"#ddd"}`}}>{b.sahiplik||"—"}</span></div>}
                     </div>;
@@ -5403,7 +5408,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
                     <div style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{topBrut>0?topBrut.toLocaleString("tr-TR"):"—"}</div>
                     <div style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{topNet>0?topNet.toLocaleString("tr-TR"):"—"}</div>
                     <div></div><div></div>
-                    <div style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{(()=>{const t=blokBolumler.reduce((s,b)=>s+parseFloat(b.satisFiyati||0),0);return t>0?t.toLocaleString("tr-TR"):"—";})()}</div>
+                    <div style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{(()=>{const t=blokBolumler.reduce((s,b)=>s+(parseFloat(b.satisBedeli)||0)+(parseFloat(b.plus)||0),0);return t>0?t.toLocaleString("tr-TR"):"—";})()}</div>
                     <div></div>
                     {hasAnlasma&&<div></div>}
                   </div>
@@ -5430,7 +5435,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
             <div style={{display:"flex",gap:"16px",flexWrap:"wrap",alignItems:"center"}}>
               {BOLUM_DURUMLARI.map(d=>{
                 const adet=bolumler.filter(b=>b.durum===d.id).length;
-                const topFiyat=bolumler.filter(b=>b.durum===d.id).reduce((s,b)=>s+parseFloat(b.satisFiyati||0),0);
+                const topFiyat=bolumler.filter(b=>b.durum===d.id).reduce((s,b)=>s+(parseFloat(b.satisBedeli)||0)+(parseFloat(b.plus)||0),0);
                 return <div key={d.id} style={{display:"flex",alignItems:"center",gap:"8px",padding:"0 14px",borderRadius:"6px",background:"#384248",fontSize:"16px",height:"36px"}}>
                   <span style={{color:"#8799a3"}}>{d.label}:</span>
                   <span style={{color:"#fff",fontWeight:600}}>{adet}</span>
@@ -7332,7 +7337,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
                     const uretimSF=daireMaliyet*(1+karMarji/100);
                     const hesapSF=uretimSF+katSrf+cepheSrf;
                     hesapSatisTop+=hesapSF;
-                    if(bo.durum==="satildi"){satilan++;gerceklesenTop+=parseFloat(bo.satisFiyati)||0;}
+                    if(bo.durum==="satildi"){satilan++;gerceklesenTop+=(parseFloat(bo.satisBedeli)||0)+(parseFloat(bo.plus)||0);}
                     else kalanHesapSatisTop+=hesapSF;
                   });
                   const butce=ozet.planlananTop||0;
@@ -7397,10 +7402,10 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
               const satilanSayisi=muteahhitDaireler.filter(bo=>bo.durum==="satildi").length;
               return <div style={{padding:"16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff",marginBottom:"16px"}}>
                 <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"4px"}}>Müteahhit Daireleri — Maliyet & Fiyat Planlaması ({muteahhitDaireler.length} daire{satilanSayisi>0?`, ${satilanSayisi} satıldı`:""})</div>
-                <div style={{fontSize:"11px",color:T.t3,marginBottom:"12px"}}>Proje kârlılık hesabının kalbidir. Satılan daireler dahil müteahhide ait tüm daireler listelenir. Liste Fiyatı müteahhitin pazarlık başlangıç rakamıdır (satıştan bağımsız, her zaman düzenlenebilir). Gerçekleşen Satış Fiyatı satış modülünden otomatik gelir.</div>
+                <div style={{fontSize:"11px",color:T.t3,marginBottom:"12px"}}>Proje kârlılık hesabının kalbidir. Satılan daireler dahil müteahhide ait tüm daireler listelenir. Liste Fiyatı müteahhitin pazarlık başlangıç rakamıdır (KDV Dahil, satıştan bağımsız, her zaman düzenlenebilir). Gerçekleşen Satış satış modülünden gelir — Satış Bedeli (KDV Hariç Fatura Matrahı) + PLUS toplamıdır.</div>
                 <div style={{overflowX:"auto"}}>
                   <div style={{display:"grid",gridTemplateColumns:"60px 50px 40px 80px 50px 60px 80px 95px 50px 105px 85px 85px 105px 50px 110px 110px 115px 100px",gap:"4px",fontSize:"12px",fontWeight:700,color:T.t3,textTransform:"uppercase",padding:"6px 4px",borderBottom:`2px solid ${T.border}`,alignItems:"end",minWidth:"1438px",textAlign:"center"}}>
-                    <div>Blok</div><div>No</div><div>Kat</div><div>Cephe</div><div>Oda</div><div>Brüt m²</div><div>Öngörülen m²</div><div>Daire Maliyet</div><div>Kar %</div><div>Satış Fiyatı</div><div>Kat Şfye</div><div>Cephe Şfye</div><div>Toplam Satış</div><div>KDV</div><div>KDV Dahil Satış</div><div>Liste Fiyatı</div><div>Gerçekleşen Satış Fiyatı</div><div>Durum</div>
+                    <div>Blok</div><div>No</div><div>Kat</div><div>Cephe</div><div>Oda</div><div>Brüt m²</div><div>Öngörülen m²</div><div>Daire Maliyet</div><div>Kar %</div><div>Satış Fiyatı</div><div>Kat Şfye</div><div>Cephe Şfye</div><div>Toplam Satış</div><div>KDV</div><div>KDV Dahil Satış</div><div>Liste Fiyatı</div><div>Gerçekleşen Satış</div><div>Durum</div>
                   </div>
                   {muteahhitDaireler.sort((a,b)=>(a.blok||"").localeCompare(b.blok||"")||(a.kat||0)-(b.kat||0)||(a.no||"").localeCompare(b.no||"")).map(bo=>{
                     const f=daireFiyatForm[bo.id]||{};
@@ -7419,7 +7424,9 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
                     const autoKdvNum=parseInt(autoKdv);
                     const kdvDahilSatis=hesapSF*(1+autoKdvNum/100);
                     const satildi=bo.durum==="satildi";
-                    const gerceklesenSatis=parseFloat(bo.satisFiyati)||0;
+                    const satBed=parseFloat(bo.satisBedeli)||0;
+                    const plusTl=parseFloat(bo.plus)||0;
+                    const gerceklesenSatis=satBed+plusTl;
                     const rowBg=satildi?"#fafafa":"#fff";
                     const lockedInputStyle=(base)=>({...base,background:"#f5f5f5",color:T.t3,cursor:"not-allowed",border:`1px solid ${T.border}`});
                     return<div key={bo.id} style={{display:"grid",gridTemplateColumns:"60px 50px 40px 80px 50px 60px 80px 95px 50px 105px 85px 85px 105px 50px 110px 110px 115px 100px",gap:"4px",fontSize:"13px",padding:"5px 4px",borderBottom:`1px solid ${T.border}`,alignItems:"center",minWidth:"1438px",background:rowBg}}>
@@ -7439,7 +7446,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
                       <div title={!isNaN(parseFloat(bo.netM2))?`Net ${parseFloat(bo.netM2).toLocaleString("tr-TR",{maximumFractionDigits:2})} m² → %${autoKdv} (yönetmelik: <150→%10, ≥150→%20)`:"Net m² girilmemiş — varsayılan %10"} style={{padding:"4px 2px",borderRadius:"3px",fontSize:"13px",textAlign:"center",fontWeight:700,background:autoKdv==="20"?"#fff1f0":"#f6ffed",color:autoKdv==="20"?"#cf1322":"#389e0d",border:`1px solid ${autoKdv==="20"?"#ffa39e":"#b7eb8f"}`}}>%{autoKdv}</div>
                       <div style={{textAlign:"right",color:"#389e0d",fontWeight:700}}>{kdvDahilSatis>0?kdvDahilSatis.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
                       <input type="text" value={f._listeEdit?(f.listeFiyatiKdvDahil||""):fmtInt(f.listeFiyatiKdvDahil)} onChange={e=>daireListeChange(bo.id,e.target.value)} onFocus={()=>setDaireFlag(bo.id,"_listeEdit",true)} onBlur={()=>{setDaireFlag(bo.id,"_listeEdit",false);daireFiyatKaydet(bo.id);}} placeholder="—" title="Müteahhitin pazarlık başlangıç fiyatı (KDV Dahil) — satıştan bağımsız manuel giriş" style={{padding:"4px 6px",border:`1px solid ${saved?"#52c41a":"#d48806"}`,borderRadius:"3px",fontSize:"13px",fontWeight:700,color:"#d48806",boxSizing:"border-box",outline:"none",width:"100%",textAlign:"right",background:"#fffbe6",transition:"border-color .3s"}}/>
-                      <div title={satildi?"Satış modülünden gelir":"Daire henüz satılmadı"} style={{padding:"4px 6px",borderRadius:"3px",fontSize:"13px",fontWeight:700,color:gerceklesenSatis>0?"#0050b3":T.t3,textAlign:"right",background:gerceklesenSatis>0?"#e6f4ff":"#fafafa",border:`1px solid ${gerceklesenSatis>0?"#91caff":T.border}`,boxSizing:"border-box",width:"100%"}}>{gerceklesenSatis>0?gerceklesenSatis.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                      <div title={satildi?`Satış Bedeli (KDV Hariç): ${satBed.toLocaleString("tr-TR")} ₺ · PLUS: ${plusTl.toLocaleString("tr-TR")} ₺ → Gerçekleşen Net ${gerceklesenSatis.toLocaleString("tr-TR")} ₺`:"Daire henüz satılmadı"} style={{padding:"4px 6px",borderRadius:"3px",fontSize:"13px",fontWeight:700,color:gerceklesenSatis>0?"#0050b3":T.t3,textAlign:"right",background:gerceklesenSatis>0?"#e6f4ff":"#fafafa",border:`1px solid ${gerceklesenSatis>0?"#91caff":T.border}`,boxSizing:"border-box",width:"100%"}}>{gerceklesenSatis>0?gerceklesenSatis.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
                       <div style={{display:"flex",justifyContent:"center",alignItems:"center"}}>
                         <span style={{padding:"4px 10px",borderRadius:"12px",background:durumMeta.bg,color:durumMeta.color,fontSize:"12px",fontWeight:700,border:`1px solid ${durumMeta.color}66`,whiteSpace:"nowrap"}}>{durumMeta.label}</span>
                       </div>
@@ -7565,30 +7572,39 @@ const DosyaKategoriYonetim=({dosyaKategorileri,setDosyaKategorileri})=>{
 /* ========== SATIŞ SUNUM MODÜLÜ ========== */
 
 /* ---- MÜŞTERİ PICKER MODAL ---- */
-const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTERİ SEÇ",pickerIslem="satildi",listeFiyatiOneri="",initialFirma=null,initialFiyat=""})=>{
+const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTERİ SEÇ",pickerIslem="satildi",listeFiyatiOneri="",initialFirma=null,initialSatisBedeli="",initialPlus="",bolum=null})=>{
   const[src,setSrc]=useState("");
   const[mode,setMode]=useState(initialFirma?"onay":"list"); // list | yeni | onay
   const[yeniForm,setYeniForm]=useState({ad:"",telefon:"",eposta:"",kanal:"",ilgiSeviyesi:"orta",sonTemasTarihi:new Date().toISOString().split("T")[0],not:""});
   const[secilenFirma,setSecilenFirma]=useState(initialFirma||null);
-  const[satisFiyati,setSatisFiyati]=useState(initialFiyat?String(initialFiyat):"");
-  const[fiyatEdit,setFiyatEdit]=useState(false);
+  const[satisBedeli,setSatisBedeli]=useState(initialSatisBedeli?String(initialSatisBedeli):"");
+  const[plus,setPlus]=useState(initialPlus?String(initialPlus):"");
+  const[bedelEdit,setBedelEdit]=useState(false);
+  const[plusEdit,setPlusEdit]=useState(false);
   const[kaydediyor,setKaydediyor]=useState(false);
   const fmtFiyat=(v)=>{const n=parseFloat(v||0);return n>0?n.toLocaleString("tr-TR",{maximumFractionDigits:0}):"";};
+  // KDV oranı daire net m² kuralından otomatik (<150 → %10, ≥150 → %20)
+  const kdvOran=(()=>{const n=parseFloat(bolum?.netM2);return !isNaN(n)&&n>=150?20:10;})();
   const firmaSeciminiOnayla=(firma)=>{
     setSecilenFirma(firma);
     // Opsiyondan satışa geçişte kullanıcı doğrulasın, otomatik doldurmaya dikkat
-    setSatisFiyati("");
+    setSatisBedeli("");
+    setPlus("");
     setMode("onay");
   };
   const listedenDoldur=()=>{
+    // Liste Fiyatı KDV Dahil → KDV hariç matraha çevir, PLUS sıfır (tam fatura varsayımı)
     const temiz=String(listeFiyatiOneri||"").replace(/[^0-9]/g,"");
-    setSatisFiyati(temiz);
+    const kdvDahil=parseFloat(temiz)||0;
+    const matrah=kdvDahil>0?Math.round(kdvDahil/(1+kdvOran/100)):0;
+    setSatisBedeli(matrah>0?String(matrah):"");
+    setPlus("");
   };
   const onayla=()=>{
     if(pickerIslem==="satildi"){
-      if(!satisFiyati||parseFloat(satisFiyati)<=0){alert("Satış fiyatı zorunludur.");return;}
+      if(!satisBedeli||parseFloat(satisBedeli)<=0){alert("Satış bedeli zorunludur.");return;}
     }
-    onSelect(secilenFirma,{satisFiyati:satisFiyati||"",paraBirimi:"TL"});
+    onSelect(secilenFirma,{satisBedeli:satisBedeli||"",plus:plus||"",kdvOrani:String(kdvOran),paraBirimi:"TL"});
     onClose();
   };
   const aliciFirmalar=useMemo(()=>firmalar.filter(f=>(f.turler||[]).includes("alici")||(f.turler||[]).includes("potansiyel")),[firmalar]);
@@ -7689,7 +7705,7 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
           <button onClick={()=>setMode("yeni")} style={{width:"100%",padding:"10px",borderRadius:T.r,border:`1px dashed ${T.primary}`,background:"#fff",color:T.primary,fontSize:"14px",fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px"}}><Plus size={16}/> Yeni Potansiyel Müşteri Ekle</button>
           <div style={{fontSize:"10px",color:T.t3,textAlign:"center",marginTop:"6px"}}>Yeni eklenenler otomatik "Potansiyel" olarak kaydedilir. Satışa çevirirken Alıcı bilgileri tamamlanmalı.</div>
         </div>
-      </>:<>
+      </>:mode==="yeni"?<>
         <div style={{padding:"16px 20px",flex:1,overflow:"auto",display:"flex",flexDirection:"column",gap:"12px"}}>
           <div><label style={lS}>Ad Soyad <span style={{color:T.err}}>*</span></label><input style={iS} value={yeniForm.ad} onChange={e=>setYeniForm(p=>({...p,ad:toTitleCase(e.target.value)}))} placeholder="Örn. Ahmet Yılmaz" autoFocus onFocus={foc} onBlur={blr}/></div>
           <div><label style={lS}>Telefon</label><input style={iS} value={yeniForm.telefon} onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,11);setYeniForm(p=>({...p,telefon:v}));}} placeholder="05XXXXXXXXX" onFocus={foc} onBlur={blr}/></div>
@@ -7716,7 +7732,7 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
           <button onClick={()=>setMode("list")} style={{padding:"8px 16px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>← Listeye Dön</button>
           <button onClick={kaydetVeSec} disabled={kaydediyor} style={{padding:"8px 20px",borderRadius:T.r,border:"none",background:kaydediyor?"#8c8c8c":T.primary,color:"#fff",fontSize:"13px",fontWeight:600,cursor:kaydediyor?"not-allowed":"pointer"}}>{kaydediyor?"Kaydediliyor...":"Kaydet ve Seç"}</button>
         </div>
-      </>}
+      </>:null}
 
       {mode==="onay"&&secilenFirma&&<>
         <div style={{padding:"16px 20px",flex:1,overflow:"auto",display:"flex",flexDirection:"column",gap:"14px"}}>
@@ -7727,23 +7743,75 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
               <div style={{fontSize:"15px",fontWeight:600,color:T.text}}>{secilenFirma.ad}</div>
               <div style={{fontSize:"11px",color:T.t3,fontFamily:"monospace"}}>{secilenFirma.firmaKodu} {secilenFirma.telefon?`• ${secilenFirma.telefon}`:""}</div>
             </div>
-            <button onClick={()=>{setMode("list");setSecilenFirma(null);setSatisFiyati("");}} style={{padding:"6px 12px",borderRadius:"4px",border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"12px",cursor:"pointer"}}>Değiştir</button>
+            <button onClick={()=>{setMode("list");setSecilenFirma(null);setSatisBedeli("");setPlus("");}} style={{padding:"6px 12px",borderRadius:"4px",border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"12px",cursor:"pointer"}}>Değiştir</button>
           </div>
 
-          <div>
-            <label style={{...lS,fontSize:"12px",fontWeight:600,marginBottom:"6px",color:T.text}}>
-              {pickerIslem==="satildi"?"Satış Fiyatı (KDV Dahil, TL)":"Opsiyon Fiyatı (KDV Dahil, TL)"}
-              {pickerIslem==="satildi"&&<span style={{color:T.err,marginLeft:"4px"}}>*</span>}
-              {pickerIslem==="opsiyonla"&&<span style={{color:T.t3,fontSize:"11px",marginLeft:"6px",fontWeight:400}}>(opsiyonel)</span>}
-            </label>
-            <div style={{display:"flex",gap:"8px",alignItems:"stretch"}}>
-              <input type="text" value={fiyatEdit?satisFiyati:fmtFiyat(satisFiyati)} onChange={e=>setSatisFiyati(e.target.value.replace(/[^0-9]/g,""))} onFocus={()=>setFiyatEdit(true)} onBlur={()=>setFiyatEdit(false)} placeholder={listeFiyatiOneri?`Liste: ${fmtFiyat(listeFiyatiOneri)} ₺`:"0"} autoFocus style={{flex:1,padding:"10px 12px",border:`1px solid ${T.bDark}`,borderRadius:T.r,fontSize:"16px",fontWeight:700,color:"#d48806",outline:"none",textAlign:"right",background:"#fffbe6"}}/>
-              {parseFloat(listeFiyatiOneri||0)>0&&<button onClick={listedenDoldur} title="Plan (liste) fiyatını kopyala" style={{padding:"0 14px",borderRadius:T.r,border:`1px solid ${T.primary}`,background:"#fff",color:T.primary,fontSize:"12px",fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>Listeden Doldur</button>}
+          <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+            {/* SATIŞ BEDELİ — KDV Hariç Fatura Matrahı */}
+            <div>
+              <label style={{...lS,fontSize:"12px",fontWeight:600,marginBottom:"6px",color:T.text}}>
+                {pickerIslem==="satildi"?"Satış Bedeli (KDV Hariç, Fatura Matrahı)":"Opsiyon Bedeli (KDV Hariç, TL)"}
+                {pickerIslem==="satildi"&&<span style={{color:T.err,marginLeft:"4px"}}>*</span>}
+                {pickerIslem==="opsiyonla"&&<span style={{color:T.t3,fontSize:"11px",marginLeft:"6px",fontWeight:400}}>(opsiyonel)</span>}
+              </label>
+              <div style={{display:"flex",gap:"8px",alignItems:"stretch"}}>
+                <input type="text" value={bedelEdit?satisBedeli:fmtFiyat(satisBedeli)} onChange={e=>setSatisBedeli(e.target.value.replace(/[^0-9]/g,""))} onFocus={()=>setBedelEdit(true)} onBlur={()=>setBedelEdit(false)} placeholder={listeFiyatiOneri?`Liste KDV hariç ~${fmtFiyat(Math.round((parseFloat(listeFiyatiOneri)||0)/(1+kdvOran/100)))} ₺`:"0"} autoFocus style={{flex:1,padding:"10px 12px",border:`1px solid ${T.bDark}`,borderRadius:T.r,fontSize:"16px",fontWeight:700,color:"#1677ff",outline:"none",textAlign:"right",background:"#fff"}}/>
+                {parseFloat(listeFiyatiOneri||0)>0&&<button onClick={listedenDoldur} title="Liste Fiyatı (KDV Dahil) → KDV'yi düşerek matraha çevir" style={{padding:"0 14px",borderRadius:T.r,border:`1px solid ${T.primary}`,background:"#fff",color:T.primary,fontSize:"12px",fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>Listeden Doldur</button>}
+              </div>
             </div>
-            {parseFloat(listeFiyatiOneri||0)>0&&<div style={{fontSize:"11px",color:T.t3,marginTop:"4px"}}>Plan liste fiyatı: <strong>{fmtFiyat(listeFiyatiOneri)} ₺</strong> — pazarlık sonrası gerçek fiyatı girin.</div>}
+
+            {pickerIslem==="satildi"&&<>
+              {/* KDV — Satış Bedelinin KDV'si (otomatik, kilitli) */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}}>
+                <div>
+                  <label style={{...lS,fontSize:"11px",color:T.t3,marginBottom:"4px"}}>KDV Oranı (Daire Kuralı)</label>
+                  <div title={bolum?.netM2?`Net ${bolum.netM2} m² → %${kdvOran} (yönetmelik: <150→%10, ≥150→%20)`:"Net m² bilgisi yok — varsayılan %10"} style={{padding:"8px 10px",borderRadius:T.r,background:"#fafafa",border:`1px solid ${T.border}`,fontSize:"14px",fontWeight:700,color:"#8c8c8c",textAlign:"center",cursor:"not-allowed"}}>%{kdvOran}</div>
+                </div>
+                <div>
+                  <label style={{...lS,fontSize:"11px",color:T.t3,marginBottom:"4px"}}>Satış KDV'si (Hesap)</label>
+                  <div style={{padding:"8px 10px",borderRadius:T.r,background:"#fafafa",border:`1px solid ${T.border}`,fontSize:"14px",fontWeight:700,color:"#8c8c8c",textAlign:"right"}}>{fmtFiyat((parseFloat(satisBedeli)||0)*kdvOran/100)||"0"} ₺</div>
+                </div>
+              </div>
+
+              {/* PLUS */}
+              <div>
+                <label style={{...lS,fontSize:"12px",fontWeight:600,marginBottom:"6px",color:"#d48806"}}>
+                  ➕ PLUS <span style={{color:T.t3,fontSize:"11px",fontWeight:400,marginLeft:"4px"}}>(opsiyonel)</span>
+                </label>
+                <input type="text" value={plusEdit?plus:fmtFiyat(plus)} onChange={e=>setPlus(e.target.value.replace(/[^0-9]/g,""))} onFocus={()=>setPlusEdit(true)} onBlur={()=>setPlusEdit(false)} placeholder="0" style={{width:"100%",padding:"10px 12px",border:`1px solid #d48806`,borderRadius:T.r,fontSize:"16px",fontWeight:700,color:"#d48806",outline:"none",textAlign:"right",background:"#fffbe6",boxSizing:"border-box"}}/>
+              </div>
+
+              {/* CANLI FORMÜL KARTI */}
+              {(()=>{
+                const bed=parseFloat(satisBedeli)||0;
+                const pls=parseFloat(plus)||0;
+                const kdv=bed*kdvOran/100;
+                const net=bed+pls;
+                const brut=bed+kdv+pls;
+                return <div style={{padding:"12px 14px",borderRadius:T.r,background:"linear-gradient(135deg,#f6ffed 0%,#d9f7be 100%)",border:"1px solid #b7eb8f",marginTop:"2px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"6px"}}>
+                    <span style={{fontSize:"13px",fontWeight:700,color:"#237804"}}>💰 Gerçekleşen Satış (KDV Hariç)</span>
+                    <span style={{fontSize:"18px",fontWeight:700,color:"#237804"}}>{fmtFiyat(net)||"0"} ₺</span>
+                  </div>
+                  <div style={{fontSize:"11px",color:"#389e0d",borderTop:"1px dashed #b7eb8f",paddingTop:"6px"}}>
+                    Satış Bedeli + PLUS = {fmtFiyat(bed)||"0"} + {fmtFiyat(pls)||"0"}
+                  </div>
+                  <div style={{fontSize:"11px",color:T.t2,display:"flex",justifyContent:"space-between",marginTop:"6px"}}>
+                    <span>🧾 Fatura Toplamı (Bedel + KDV)</span>
+                    <span style={{fontWeight:600}}>{fmtFiyat(bed+kdv)||"0"} ₺</span>
+                  </div>
+                  <div style={{fontSize:"11px",color:T.t2,display:"flex",justifyContent:"space-between",marginTop:"2px"}}>
+                    <span>🏠 Alıcının Ödediği (Brüt)</span>
+                    <span style={{fontWeight:600}}>{fmtFiyat(brut)||"0"} ₺</span>
+                  </div>
+                </div>;
+              })()}
+            </>}
+
+            {parseFloat(listeFiyatiOneri||0)>0&&<div style={{fontSize:"11px",color:T.t3}}>Plan Liste Fiyatı (KDV Dahil): <strong>{fmtFiyat(listeFiyatiOneri)} ₺</strong></div>}
           </div>
 
-          {pickerIslem==="opsiyonla"&&<div style={{padding:"10px 12px",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffd591",fontSize:"12px",color:"#d46b08"}}>⚠ Opsiyon netleşmemiş bir pazarlıktır. Fiyat opsiyon süresinde değişebilir; satışa çevirirken tekrar doğrulanmalıdır.</div>}
+          {pickerIslem==="opsiyonla"&&<div style={{padding:"10px 12px",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffd591",fontSize:"12px",color:"#d46b08"}}>⚠ Opsiyon netleşmemiş bir pazarlıktır. Fiyat opsiyon süresinde değişebilir; satışa çevirirken Satış Bedeli + PLUS tekrar doğrulanmalıdır.</div>}
         </div>
         <div style={{padding:"12px 16px",borderTop:`1px solid ${T.border}`,background:"#fafafa",display:"flex",gap:"8px",justifyContent:"flex-end"}}>
           <button onClick={onClose} style={{padding:"8px 16px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>Vazgeç</button>
@@ -7812,17 +7880,17 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
   const selBlok=selProje?.bloklar?.find(b=>b.ad===selBlokAd);
   const selBolum=selProje?.bolumler?.find(b=>b.id===selBolumId);
 
-  // Proje özetleri (durum dağılımı)
+  // Proje özetleri (durum dağılımı) — sadece Müteahhit'e ait daireler (satış modülü kapsamı)
   const projeOzet=(proje)=>{
-    const b=proje.bolumler||[];
+    const b=(proje.bolumler||[]).filter(x=>x.sahiplik==="Müteahhit");
     const o={musait:0,opsiyonlu:0,satildi:0,kiralik:0};
     b.forEach(x=>{if(o[x.durum]!==undefined)o[x.durum]++;});
     return{...o,toplam:b.length};
   };
 
-  // Blok özet (bu bloğa ait daireler)
+  // Blok özet (bu bloğa ait Müteahhit daireleri)
   const blokOzet=(blokAd)=>{
-    const b=(selProje?.bolumler||[]).filter(x=>x.blok===blokAd);
+    const b=(selProje?.bolumler||[]).filter(x=>x.blok===blokAd&&x.sahiplik==="Müteahhit");
     const o={musait:0,opsiyonlu:0,satildi:0,kiralik:0};
     b.forEach(x=>{if(o[x.durum]!==undefined)o[x.durum]++;});
     return{...o,toplam:b.length};
@@ -7897,7 +7965,9 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     if(degisiklik.aliciFirmaId!==undefined)bDb.alici_firma_id=degisiklik.aliciFirmaId||null;
     if(degisiklik.aliciFirmaAd!==undefined)bDb.alici_firma_ad=degisiklik.aliciFirmaAd||"";
     if(degisiklik.sozlesmeTarihi!==undefined)bDb.sozlesme_tarihi=degisiklik.sozlesmeTarihi||null;
-    if(degisiklik.satisFiyati!==undefined)bDb.satis_fiyati=degisiklik.satisFiyati!==""&&degisiklik.satisFiyati!=null?Number(degisiklik.satisFiyati):null;
+    if(degisiklik.satisBedeli!==undefined)bDb.satis_bedeli=degisiklik.satisBedeli!==""&&degisiklik.satisBedeli!=null?Number(degisiklik.satisBedeli):null;
+    if(degisiklik.plus!==undefined)bDb.plus=degisiklik.plus!==""&&degisiklik.plus!=null?Number(degisiklik.plus):null;
+    if(degisiklik.kdvOrani!==undefined)bDb.kdv_orani=degisiklik.kdvOrani||null;
     if(degisiklik.paraBirimi!==undefined)bDb.para_birimi=degisiklik.paraBirimi||"TL";
     try{await sbPatch('bolumler',bolumId,bDb);}catch(e){console.warn("Bolum kayıt hatası:",e.message);}
   };
@@ -7921,28 +7991,36 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
       aliciFirmaAd:firma.ad,
       sozlesmeTarihi:new Date().toISOString().split("T")[0]
     };
-    if(satisVerisi.satisFiyati!==undefined&&satisVerisi.satisFiyati!==""){
-      degisiklik.satisFiyati=parseFloat(satisVerisi.satisFiyati)||0;
+    if(satisVerisi.satisBedeli!==undefined&&satisVerisi.satisBedeli!==""){
+      degisiklik.satisBedeli=parseFloat(satisVerisi.satisBedeli)||0;
     }
+    if(satisVerisi.plus!==undefined){
+      degisiklik.plus=parseFloat(satisVerisi.plus)||0;
+    }
+    if(satisVerisi.kdvOrani)degisiklik.kdvOrani=satisVerisi.kdvOrani;
     if(satisVerisi.paraBirimi)degisiklik.paraBirimi=satisVerisi.paraBirimi;
     await bolumGuncelle(selBolum.id,degisiklik);
     await firmayaProjeEkle(firma);
   };
 
   const musaitYap=async()=>{
-    if(!selBolum||!confirm("Daire müsait durumuna döndürülsün mü? Müşteri bağlantısı ve satış fiyatı kaldırılacak."))return;
-    await bolumGuncelle(selBolum.id,{durum:"musait",aliciFirmaId:"",aliciFirmaAd:"",sozlesmeTarihi:"",satisFiyati:0});
+    if(!selBolum||!confirm("Daire müsait durumuna döndürülsün mü? Müşteri bağlantısı ve satış bilgileri (Satış Bedeli, PLUS) kaldırılacak."))return;
+    await bolumGuncelle(selBolum.id,{durum:"musait",aliciFirmaId:"",aliciFirmaAd:"",sozlesmeTarihi:"",satisBedeli:0,plus:0});
   };
 
-  // Gerçekleşen satış fiyatını düzeltme (satış/opsiyondan sonra)
+  // Gerçekleşen satış fiyatını düzeltme (satış/opsiyondan sonra) — Satış Bedeli + PLUS ayrı ayrı
   const fiyatDuzelt=async()=>{
     if(!selBolum)return;
-    const mevcut=parseFloat(selBolum.satisFiyati)||0;
-    const yeni=prompt(`${selBolum.blok} Blok ${selBolum.no} — yeni satış fiyatı (KDV Dahil, TL):`,mevcut>0?String(mevcut):"");
-    if(yeni===null)return;
-    const temiz=String(yeni).replace(/[^0-9]/g,"");
-    if(!temiz||parseFloat(temiz)<=0){alert("Geçerli bir fiyat girin.");return;}
-    await bolumGuncelle(selBolum.id,{satisFiyati:parseFloat(temiz)});
+    const mevcutBed=parseFloat(selBolum.satisBedeli)||0;
+    const mevcutPlus=parseFloat(selBolum.plus)||0;
+    const yeniBed=prompt(`${selBolum.blok} Blok ${selBolum.no} — Satış Bedeli (KDV Hariç, Fatura Matrahı, TL):`,mevcutBed>0?String(mevcutBed):"");
+    if(yeniBed===null)return;
+    const temizBed=String(yeniBed).replace(/[^0-9]/g,"");
+    if(!temizBed||parseFloat(temizBed)<=0){alert("Geçerli bir satış bedeli girin.");return;}
+    const yeniPlus=prompt(`${selBolum.blok} Blok ${selBolum.no} — PLUS (TL, boş=0):`,mevcutPlus>0?String(mevcutPlus):"0");
+    if(yeniPlus===null)return;
+    const temizPlus=String(yeniPlus).replace(/[^0-9]/g,"");
+    await bolumGuncelle(selBolum.id,{satisBedeli:parseFloat(temizBed),plus:parseFloat(temizPlus)||0});
   };
 
   // Tam ekran toggle — parent'a bildir yok, sadece içeride gizle
@@ -7991,8 +8069,9 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
       // Opsiyonludan Satışa Çevir: müşteri zaten bağlı, direkt onay ekranına geç + mevcut fiyatı pre-fill
       const opsiyonluSatisaCevir=pickerIslem==="satildi"&&selBolum?.durum==="opsiyonlu"&&selBolum?.aliciFirmaId;
       const mevcutFirma=opsiyonluSatisaCevir?firmalar.find(f=>String(f.id)===String(selBolum.aliciFirmaId)):null;
-      const mevcutFiyat=opsiyonluSatisaCevir?(selBolum.satisFiyati||""):"";
-      return <MusteriPickerModal firmalar={firmalar} onSaveFirma={saveFirma} onSelect={musteriSec} onClose={()=>setPickerAcik(false)} baslik={pickerIslem==="opsiyonla"?"OPSİYONLA — MÜŞTERİ SEÇ":(opsiyonluSatisaCevir?"SATIŞA ÇEVİR — FİYAT ONAYI":"SATIŞ — MÜŞTERİ SEÇ")} pickerIslem={pickerIslem} listeFiyatiOneri={selBolum?.listeFiyatiKdvDahil||""} initialFirma={mevcutFirma} initialFiyat={mevcutFiyat}/>;
+      const mevcutSatisBed=opsiyonluSatisaCevir?(selBolum.satisBedeli||""):"";
+      const mevcutPlus=opsiyonluSatisaCevir?(selBolum.plus||""):"";
+      return <MusteriPickerModal firmalar={firmalar} onSaveFirma={saveFirma} onSelect={musteriSec} onClose={()=>setPickerAcik(false)} baslik={pickerIslem==="opsiyonla"?"OPSİYONLA — MÜŞTERİ SEÇ":(opsiyonluSatisaCevir?"SATIŞA ÇEVİR — FİYAT ONAYI":"SATIŞ — MÜŞTERİ SEÇ")} pickerIslem={pickerIslem} listeFiyatiOneri={selBolum?.listeFiyatiKdvDahil||""} initialFirma={mevcutFirma} initialSatisBedeli={mevcutSatisBed} initialPlus={mevcutPlus} bolum={selBolum}/>;
     })()}
 
     {/* ÜST BAR — proje adı + tam ekran toggle */}
@@ -8153,7 +8232,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
                 <div style={{fontSize:"12px",color:T.t2,marginBottom:"8px"}}>{b.brutM2?`${b.brutM2} m²`:"—"}</div>
                 {(()=>{
                   const lst=parseFloat(b.listeFiyatiKdvDahil)||0;
-                  const sat=parseFloat(b.satisFiyati)||0;
+                  const sat=(parseFloat(b.satisBedeli)||0)+(parseFloat(b.plus)||0);
                   const tutar=lst>0?lst:sat;
                   if(tutar<=0||tamEkran)return null;
                   return <div style={{fontSize:"13px",fontWeight:700,color:T.text,marginBottom:"6px"}}>{lst>0?tutar.toLocaleString("tr-TR")+" ₺":fmtPara(sat,b.paraBirimi)}</div>;
@@ -8189,20 +8268,22 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
             <div style={{gridColumn:"1 / -1"}}><div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase"}}>Cephe</div><div style={{fontSize:"14px",fontWeight:600,color:T.text}}>{selBolum.cephe||"—"}</div></div>
           </div>
 
-          {/* FİYAT KARTI — duruma göre: satıldı/opsiyonlu → satisFiyati, musait → listeFiyati */}
+          {/* FİYAT KARTI — duruma göre: satıldı/opsiyonlu → satisBedeli+plus (KDV Hariç), musait → listeFiyati */}
           {(()=>{
             const listeDahil=parseFloat(selBolum.listeFiyatiKdvDahil)||0;
-            const satFiyat=parseFloat(selBolum.satisFiyati)||0;
+            const satBed=parseFloat(selBolum.satisBedeli)||0;
+            const plusTl=parseFloat(selBolum.plus)||0;
+            const satFiyat=satBed+plusTl;
             const durumKapali=selBolum.durum==="satildi"||selBolum.durum==="opsiyonlu";
             if(durumKapali){
-              const baslik=selBolum.durum==="satildi"?"Gerçekleşen Satış Fiyatı":"Opsiyon Fiyatı";
+              const baslik=selBolum.durum==="satildi"?"Gerçekleşen Satış":"Opsiyon Bedeli";
               const arkaplan=selBolum.durum==="satildi"?"linear-gradient(135deg,#e6f4ff 0%,#bae7ff 100%)":"linear-gradient(135deg,#fff7e6 0%,#ffe7ba 100%)";
               const renk=selBolum.durum==="satildi"?"#0050b3":"#d46b08";
               return<div style={{padding:"14px",background:arkaplan,borderRadius:T.r,marginBottom:"14px",textAlign:"center",position:"relative"}}>
                 <div style={{fontSize:"11px",color:renk,textTransform:"uppercase",letterSpacing:"0.5px",fontWeight:600}}>{baslik}</div>
-                <div style={{fontSize:"26px",fontWeight:700,color:renk}}>{satFiyat>0?satFiyat.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺":"—"}</div>
-                <div style={{fontSize:"10px",color:renk,opacity:0.75,marginTop:"2px"}}>KDV Dahil{listeDahil>0?` • Plan: ${listeDahil.toLocaleString("tr-TR",{maximumFractionDigits:0})} ₺`:""}</div>
-                {!tamEkran&&<button onClick={fiyatDuzelt} title="Satış fiyatını düzelt" style={{position:"absolute",top:"8px",right:"8px",padding:"4px 10px",borderRadius:"4px",border:`1px solid ${renk}66`,background:"#fff",color:renk,fontSize:"11px",fontWeight:600,cursor:"pointer"}}>Fiyat Düzelt</button>}
+                <div style={{fontSize:"26px",fontWeight:700,color:renk}} title={plusTl>0?`Satış Bedeli ${satBed.toLocaleString("tr-TR")} ₺ + PLUS ${plusTl.toLocaleString("tr-TR")} ₺`:""}>{satFiyat>0?satFiyat.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺":"—"}</div>
+                <div style={{fontSize:"10px",color:renk,opacity:0.75,marginTop:"2px"}}>KDV Hariç Net{plusTl>0?` (Bedel ${satBed.toLocaleString("tr-TR")} + PLUS ${plusTl.toLocaleString("tr-TR")})`:""}{listeDahil>0?` • Plan: ${listeDahil.toLocaleString("tr-TR",{maximumFractionDigits:0})} ₺`:""}</div>
+                {!tamEkran&&<button onClick={fiyatDuzelt} title="Satış Bedeli + PLUS düzenle" style={{position:"absolute",top:"8px",right:"8px",padding:"4px 10px",borderRadius:"4px",border:`1px solid ${renk}66`,background:"#fff",color:renk,fontSize:"11px",fontWeight:600,cursor:"pointer"}}>Fiyat Düzelt</button>}
               </div>;
             }
             if(listeDahil>0)return<div style={{padding:"14px",background:"linear-gradient(135deg,#f6ffed 0%,#d9f7be 100%)",borderRadius:T.r,marginBottom:"14px",textAlign:"center"}}>
