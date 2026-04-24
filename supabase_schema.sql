@@ -261,7 +261,7 @@ CREATE TABLE projeler (
   tahmini_teslim TEXT DEFAULT '',
   fiili_teslim TEXT DEFAULT '',
   toplam_m2 TEXT DEFAULT '',
-  -- ortak_alan_m2 artık bloklar JSONB içinde her blok objesinde tutulur (ortakAlanM2)
+  -- ortak_alan_m2, ongorulen_m2_kdv_* alanları "bloklar" tablosunda her blok satırında tutulur (aşağıda)
   kat_sayisi TEXT DEFAULT '',
   toplam_bolum TEXT DEFAULT '',
   arsa_m2 TEXT DEFAULT '',
@@ -271,8 +271,7 @@ CREATE TABLE projeler (
   arsa_sahibi_pay TEXT DEFAULT '',
   muteahhit_pay TEXT DEFAULT '',
   aciklama TEXT DEFAULT '',
-  bloklar JSONB DEFAULT '[]',
-  bolumler JSONB DEFAULT '[]',
+  -- bloklar ve bolumler AYRI tablolarda tutulur (aşağıda) — JSONB'den normalize edildi
   firma_baglantilari JSONB DEFAULT '[]',
   tum_dosyalar JSONB DEFAULT '[]',
   dosya_kategorileri JSONB DEFAULT '[]',
@@ -284,6 +283,50 @@ CREATE TABLE projeler (
   proje_turleri JSONB DEFAULT '[]',
   proje_durumlari JSONB DEFAULT '[]',
   created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2.14 BLOKLAR (projeler.bloklar JSONB'den normalize edildi — proje başına çoklu blok satırı)
+CREATE TABLE bloklar (
+  id BIGSERIAL PRIMARY KEY,
+  proje_id BIGINT NOT NULL REFERENCES projeler(id) ON DELETE CASCADE,
+  ad TEXT NOT NULL,
+  ortak_alan_m2 NUMERIC,
+  ongorulen_m2_kdv_haric NUMERIC,
+  ongorulen_m2_kdv_dahil NUMERIC,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2.15 BÖLÜMLER (Daireler, dükkanlar vb. — projeler.bolumler JSONB'den normalize edildi)
+CREATE TABLE bolumler (
+  id BIGSERIAL PRIMARY KEY,
+  proje_id BIGINT NOT NULL REFERENCES projeler(id) ON DELETE CASCADE,
+  tipi TEXT DEFAULT 'Daire',
+  blok TEXT,
+  no TEXT,
+  kat TEXT,
+  brut_m2 NUMERIC,
+  net_m2 NUMERIC,
+  oda_sayisi TEXT,
+  cephe TEXT,
+  durum TEXT DEFAULT 'musait',
+  sahiplik TEXT,
+  para_birimi TEXT DEFAULT 'TL',
+  sozlesme_tarihi DATE,
+  alici_firma_id BIGINT REFERENCES firmalar(id) ON DELETE SET NULL,
+  alici_firma_ad TEXT,
+  notlar TEXT,
+  gorseller JSONB DEFAULT '[]'::jsonb,
+  kdv_orani TEXT,
+  kat_serefiyesi_tl NUMERIC DEFAULT 0,
+  cephe_serefiyesi_tl NUMERIC DEFAULT 0,
+  liste_fiyati_kdv_haric NUMERIC,
+  liste_fiyati_kdv_dahil NUMERIC,
+  -- KDV çift bedel kurgusu (2026-04-24)
+  satis_bedeli NUMERIC,  -- KDV hariç fatura matrahı (resmi)
+  plus NUMERIC,          -- Ek bileşen
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- SATINALMA SİPARİŞLERİ
