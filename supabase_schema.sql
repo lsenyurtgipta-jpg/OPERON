@@ -31,6 +31,8 @@ CREATE TABLE firmalar (
   aciklama TEXT DEFAULT '',
   turler JSONB DEFAULT '[]',
   para_birimi TEXT DEFAULT 'TL',
+  firma_kisi_tipi TEXT DEFAULT 'tuzel',
+  vergi_dairesi_il TEXT DEFAULT '',
   vergi_dairesi TEXT DEFAULT '',
   vergi_no TEXT DEFAULT '',
   tc_kimlik_no TEXT DEFAULT '',
@@ -51,11 +53,18 @@ CREATE TABLE firmalar (
   iban TEXT DEFAULT '',
   aktif BOOLEAN DEFAULT TRUE,
   ilgilendigi_projeler JSONB DEFAULT '[]',
+  -- Potansiyel müşteri CRM alanları (2026-04-24)
+  ilgi_seviyesi TEXT DEFAULT '',        -- "yuksek" | "orta" | "dusuk"
+  son_temas_tarihi TEXT DEFAULT '',     -- YYYY-MM-DD
+  kaynak_kanal TEXT DEFAULT '',         -- "Tavsiye" | "Sosyal Medya" | "Tabela" | vs.
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Migration (mevcut tabloya ekle):
+-- Mevcut tabloya eklenecek alanlar (migration):
 -- ALTER TABLE firmalar ADD COLUMN IF NOT EXISTS ilgilendigi_projeler JSONB DEFAULT '[]'::jsonb;
+-- ALTER TABLE firmalar ADD COLUMN IF NOT EXISTS ilgi_seviyesi TEXT DEFAULT '';
+-- ALTER TABLE firmalar ADD COLUMN IF NOT EXISTS son_temas_tarihi TEXT DEFAULT '';
+-- ALTER TABLE firmalar ADD COLUMN IF NOT EXISTS kaynak_kanal TEXT DEFAULT '';
 
 -- 2.2 KİŞİLER
 CREATE TABLE kisiler (
