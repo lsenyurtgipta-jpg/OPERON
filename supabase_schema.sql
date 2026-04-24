@@ -282,6 +282,12 @@ CREATE TABLE projeler (
   dosya_turleri JSONB DEFAULT '[]',
   proje_turleri JSONB DEFAULT '[]',
   proje_durumlari JSONB DEFAULT '[]',
+  aktif BOOLEAN DEFAULT TRUE,
+  -- Fiyatlandırma alanları (MALİYET > Fiyatlandırma sekmesi)
+  ongorulen_m2_kdv_haric NUMERIC,
+  ongorulen_m2_kdv_dahil NUMERIC,
+  kar_marji_yuzde NUMERIC,
+  varsayilan_kdv_orani TEXT DEFAULT '20',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
