@@ -7167,32 +7167,17 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px",marginBottom:"14px"}}>
                 <div style={{padding:"12px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#fafafa"}}>
                   <div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",fontWeight:600,marginBottom:"6px"}}>Hesaplanan Brüt m² (Sistem)</div>
-                  <div style={{display:"flex",alignItems:"baseline",gap:"6px",marginBottom:"2px"}}>
-                    <span style={{fontSize:"10px",color:T.t3,minWidth:"34px",fontWeight:600}}>Dahil</span>
-                    <span style={{fontSize:"16px",fontWeight:700,color:"#722ed1"}}>{ozet.m2MaliyetKdvDahil>0?ozet.m2MaliyetKdvDahil.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺":"—"}</span>
-                  </div>
-                  <div style={{display:"flex",alignItems:"baseline",gap:"6px"}}>
-                    <span style={{fontSize:"10px",color:T.t3,minWidth:"34px",fontWeight:600}}>Hariç</span>
-                    <span style={{fontSize:"13px",fontWeight:600,color:"#722ed1",opacity:0.7}}>{ozet.m2Maliyet>0?ozet.m2Maliyet.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺":"—"}</span>
-                  </div>
+                  <div style={{fontSize:"18px",fontWeight:700,color:"#722ed1"}}>{ozet.m2Maliyet>0?ozet.m2Maliyet.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺":"—"}</div>
                 </div>
                 <div style={{padding:"12px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#fafafa"}}>
                   <div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",fontWeight:600,marginBottom:"6px"}}>Hesaplanan Net m² (Müteahhit Payı)</div>
-                  <div style={{display:"flex",alignItems:"baseline",gap:"6px",marginBottom:"2px"}}>
-                    <span style={{fontSize:"10px",color:T.t3,minWidth:"34px",fontWeight:600}}>Dahil</span>
-                    <span style={{fontSize:"16px",fontWeight:700,color:"#ff4d4f"}}>{ozet.m2MaliyetNetKdvDahil>0?ozet.m2MaliyetNetKdvDahil.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺":"—"}</span>
-                  </div>
-                  <div style={{display:"flex",alignItems:"baseline",gap:"6px"}}>
-                    <span style={{fontSize:"10px",color:T.t3,minWidth:"34px",fontWeight:600}}>Hariç</span>
-                    <span style={{fontSize:"13px",fontWeight:600,color:"#ff4d4f",opacity:0.7}}>{ozet.m2MaliyetNet>0?ozet.m2MaliyetNet.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺":"—"}</span>
-                  </div>
+                  <div style={{fontSize:"18px",fontWeight:700,color:"#ff4d4f"}}>{ozet.m2MaliyetNet>0?ozet.m2MaliyetNet.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺":"—"}</div>
                 </div>
                 <div style={{padding:"12px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#f6ffed"}}>
                   <div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",fontWeight:600,marginBottom:"6px"}}>Ortalama m² Satış Fiyatı (Blok Ağırlıklı)</div>
                   {(()=>{
                     const kar=parseFloat(fiyatForm.karMarjiYuzde)||0;
-                    const kdv=parseFloat(fiyatForm.varsayilanKdvOrani)||0;
-                    let toplamHaric=0, toplamDahil=0, toplamM2=0;
+                    let toplamHaric=0, toplamM2=0;
                     (selProje.bloklar||[]).forEach(bl=>{
                       const bf=blokFiyatForm[bl.id];
                       const ongH=parseFloat(bf?.ongorulenM2KdvHaric);
@@ -7200,24 +7185,12 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
                       const m2=blokM2Harita[bl.ad]||0;
                       if(m2<=0) return;
                       const sH=ongH*(1+kar/100);
-                      const sD=sH*(1+kdv/100);
                       toplamHaric+=sH*m2;
-                      toplamDahil+=sD*m2;
                       toplamM2+=m2;
                     });
                     if(toplamM2<=0)return<div style={{fontSize:"13px",color:T.t3,paddingTop:"6px"}}>—<div style={{fontSize:"10px",color:T.t3,marginTop:"4px",fontWeight:400}}>Bloklara öngörülen m² giriniz</div></div>;
                     const ortHaric=toplamHaric/toplamM2;
-                    const ortDahil=toplamDahil/toplamM2;
-                    return<>
-                      <div style={{display:"flex",alignItems:"baseline",gap:"6px",marginBottom:"2px"}}>
-                        <span style={{fontSize:"10px",color:T.t3,minWidth:"34px",fontWeight:600}}>Dahil</span>
-                        <span style={{fontSize:"16px",fontWeight:700,color:"#52c41a"}}>{ortDahil.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺"}</span>
-                      </div>
-                      <div style={{display:"flex",alignItems:"baseline",gap:"6px"}}>
-                        <span style={{fontSize:"10px",color:T.t3,minWidth:"34px",fontWeight:600}}>Hariç</span>
-                        <span style={{fontSize:"13px",fontWeight:600,color:"#52c41a",opacity:0.7}}>{ortHaric.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺"}</span>
-                      </div>
-                    </>;
+                    return <div style={{fontSize:"18px",fontWeight:700,color:"#52c41a"}}>{ortHaric.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺"}</div>;
                   })()}
                 </div>
               </div>
@@ -7270,34 +7243,16 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
                       {!hasOverride&&<span style={{fontSize:"10px",color:"#fa8c16",fontStyle:"italic",fontWeight:600}}>⚠ öngörülen girilmedi</span>}
                     </div>
                     <div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",fontWeight:600,marginBottom:"4px"}}>Hesaplanan Net m²</div>
-                    <div style={{display:"flex",alignItems:"baseline",gap:"6px",marginBottom:"2px"}}>
-                      <span style={{fontSize:"10px",color:T.t3,minWidth:"34px",fontWeight:600}}>Dahil</span>
-                      <span style={{fontSize:"14px",fontWeight:700,color:"#ff4d4f"}}>{blM2MaliyetNetDahil>0?blM2MaliyetNetDahil.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺":"—"}</span>
-                    </div>
-                    <div style={{display:"flex",alignItems:"baseline",gap:"6px",marginBottom:"10px"}}>
-                      <span style={{fontSize:"10px",color:T.t3,minWidth:"34px",fontWeight:600}}>Hariç</span>
-                      <span style={{fontSize:"12px",fontWeight:600,color:"#ff4d4f",opacity:0.7}}>{blM2MaliyetNet>0?blM2MaliyetNet.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺":"—"}</span>
-                    </div>
-                    <div style={{fontSize:"10px",color:T.t2,fontWeight:600,marginBottom:"3px"}}>Öngörülen m² (KDV Hariç)</div>
-                    <input type="text" value={f._ongHEdit?(f.ongorulenM2KdvHaric||""):fmtInt(f.ongorulenM2KdvHaric)} onChange={e=>blokFiyatHaricChange(bl.id,e.target.value)} onFocus={()=>setBlokFlag(bl.id,"_ongHEdit",true)} onBlur={()=>setBlokFlag(bl.id,"_ongHEdit",false)} placeholder="0" style={{width:"100%",padding:"6px 8px",border:`1px solid ${T.bDark}`,borderRadius:"4px",fontSize:"12px",boxSizing:"border-box",outline:"none",marginBottom:"6px"}}/>
-                    <div style={{fontSize:"10px",color:T.t2,fontWeight:600,marginBottom:"3px"}}>Öngörülen m² (KDV Dahil)</div>
-                    <input type="text" value={f._ongDEdit?(f.ongorulenM2KdvDahil||""):fmtInt(f.ongorulenM2KdvDahil)} onChange={e=>blokFiyatDahilChange(bl.id,e.target.value)} onFocus={()=>setBlokFlag(bl.id,"_ongDEdit",true)} onBlur={()=>setBlokFlag(bl.id,"_ongDEdit",false)} placeholder="0" style={{width:"100%",padding:"6px 8px",border:`1px solid ${T.bDark}`,borderRadius:"4px",fontSize:"12px",boxSizing:"border-box",outline:"none",marginBottom:"8px"}}/>
+                    <div style={{fontSize:"15px",fontWeight:700,color:"#ff4d4f",marginBottom:"10px"}}>{blM2MaliyetNet>0?blM2MaliyetNet.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺":"—"}</div>
+                    <div style={{fontSize:"10px",color:T.t2,fontWeight:600,marginBottom:"3px"}}>Öngörülen m²</div>
+                    <input type="text" value={f._ongHEdit?(f.ongorulenM2KdvHaric||""):fmtInt(f.ongorulenM2KdvHaric)} onChange={e=>blokFiyatHaricChange(bl.id,e.target.value)} onFocus={()=>setBlokFlag(bl.id,"_ongHEdit",true)} onBlur={()=>setBlokFlag(bl.id,"_ongHEdit",false)} placeholder="0" style={{width:"100%",padding:"6px 8px",border:`1px solid ${T.bDark}`,borderRadius:"4px",fontSize:"12px",boxSizing:"border-box",outline:"none",marginBottom:"8px"}}/>
                     {(()=>{
                       const kar=parseFloat(fiyatForm.karMarjiYuzde)||0;
-                      const kdv=parseFloat(fiyatForm.varsayilanKdvOrani)||0;
                       if(isNaN(etkinHaric)||etkinHaric<=0)return null;
                       const sHaric=etkinHaric*(1+kar/100);
-                      const sDahil=sHaric*(1+kdv/100);
                       return <div style={{marginTop:"8px",marginBottom:"8px",padding:"8px",borderRadius:"4px",background:"#f6ffed",border:"1px solid #b7eb8f"}}>
                         <div style={{fontSize:"9px",color:T.t3,fontWeight:600,textTransform:"uppercase",marginBottom:"4px"}}>m² Satış Fiyatı</div>
-                        <div style={{display:"flex",alignItems:"baseline",gap:"6px",marginBottom:"1px"}}>
-                          <span style={{fontSize:"9px",color:T.t3,minWidth:"30px",fontWeight:600}}>Dahil</span>
-                          <span style={{fontSize:"13px",fontWeight:700,color:"#52c41a"}}>{sDahil.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺"}</span>
-                        </div>
-                        <div style={{display:"flex",alignItems:"baseline",gap:"6px"}}>
-                          <span style={{fontSize:"9px",color:T.t3,minWidth:"30px",fontWeight:600}}>Hariç</span>
-                          <span style={{fontSize:"11px",fontWeight:600,color:"#52c41a",opacity:0.7}}>{sHaric.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺"}</span>
-                        </div>
+                        <div style={{fontSize:"14px",fontWeight:700,color:"#52c41a"}}>{sHaric.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺"}</div>
                       </div>;
                     })()}
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:"6px"}}>
