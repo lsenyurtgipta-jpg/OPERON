@@ -6584,6 +6584,11 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
   };
   const setDaireFlag=(boId,alan,v)=>setDaireFiyatForm(p=>({...p,[boId]:{...(p[boId]||{}),[alan]:v}}));
   const fmtInt=(v)=>{const n=parseFloat(v||0);return n>0?n.toLocaleString("tr-TR",{maximumFractionDigits:0}):"";};
+  // Liste Fiyatı tek input (KDV Dahil, pazarlık payı eklenmiş son müşteri fiyatı)
+  const daireListeChange=(boId,v)=>{
+    const cleaned=v.replace(/[^0-9]/g,"");
+    setDaireFiyatForm(p=>({...p,[boId]:{...(p[boId]||{}),listeFiyatiKdvDahil:cleaned}}));
+  };
   const daireFiyatKaydet=async(boId)=>{
     const f=daireFiyatForm[boId];if(!f)return;
     const bo=(selProje?.bolumler||[]).find(b=>b.id===boId);
@@ -7275,8 +7280,8 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
                 <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"4px"}}>Satılmayan Daireler — Liste Fiyatı ({satilmayan.length} daire)</div>
                 <div style={{fontSize:"11px",color:T.t3,marginBottom:"12px"}}>Daire maliyet = brüt m² × etkin öngörülen m². Üretim S.F. = Maliyet × (1 + kâr marjı %). Hesap S.F. = Üretim + şerefiyeler. Liste fiyatı manuel girilir (pazarlık payı dahil).</div>
                 <div style={{overflowX:"auto"}}>
-                  <div style={{display:"grid",gridTemplateColumns:"60px 50px 40px 90px 55px 70px 90px 90px 80px 80px 90px 95px 95px 55px",gap:"4px",fontSize:"10px",fontWeight:700,color:T.t3,textTransform:"uppercase",padding:"6px 4px",borderBottom:`2px solid ${T.border}`,alignItems:"end",minWidth:"1025px"}}>
-                    <div>Blok</div><div>No</div><div>Kat</div><div>Cephe</div><div>Oda</div><div style={{textAlign:"right"}}>Brüt m²</div><div style={{textAlign:"right"}}>Daire Maliyet</div><div style={{textAlign:"right"}}>Üretim S.F.</div><div>Kat Şfye</div><div>Cephe Şfye</div><div style={{textAlign:"right"}}>Hesap S.F.</div><div>Liste Hariç</div><div>Liste Dahil</div><div>KDV</div>
+                  <div style={{display:"grid",gridTemplateColumns:"60px 50px 40px 80px 50px 60px 80px 95px 50px 105px 85px 85px 105px 50px 110px 110px",gap:"4px",fontSize:"12px",fontWeight:700,color:T.t3,textTransform:"uppercase",padding:"6px 4px",borderBottom:`2px solid ${T.border}`,alignItems:"end",minWidth:"1215px",textAlign:"center"}}>
+                    <div>Blok</div><div>No</div><div>Kat</div><div>Cephe</div><div>Oda</div><div>Brüt m²</div><div>Öngörülen m²</div><div>Daire Maliyet</div><div>Kar %</div><div>Satış Fiyatı</div><div>Kat Şfye</div><div>Cephe Şfye</div><div>Toplam Satış</div><div>KDV</div><div>KDV Dahil Satış</div><div>Liste Fiyatı</div>
                   </div>
                   {satilmayan.sort((a,b)=>(a.blok||"").localeCompare(b.blok||"")||(a.kat||0)-(b.kat||0)||(a.no||"").localeCompare(b.no||"")).map(bo=>{
                     const f=daireFiyatForm[bo.id]||{};
@@ -7291,21 +7296,26 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
                     const cepheSrf=parseFloat(f.cepheSerefiyesiTl)||0;
                     const hesapSF=uretimSF+katSrf+cepheSrf;
                     const durumMeta=BOLUM_DURUMLARI.find(d=>d.id===bo.durum);
-                    return<div key={bo.id} style={{display:"grid",gridTemplateColumns:"60px 50px 40px 90px 55px 70px 90px 90px 80px 80px 90px 95px 95px 55px",gap:"4px",fontSize:"11px",padding:"5px 4px",borderBottom:`1px solid ${T.border}`,alignItems:"center",minWidth:"1025px"}}>
-                      <div style={{fontWeight:600,color:T.text}}>{bo.blok}</div>
-                      <div style={{fontWeight:600,color:T.text}}>{bo.no}{durumMeta&&durumMeta.id!=="musait"&&<span style={{marginLeft:"3px",padding:"1px 4px",borderRadius:"3px",background:durumMeta.bg,color:durumMeta.color,fontSize:"9px",fontWeight:700}}>{durumMeta.label.substring(0,3)}</span>}</div>
-                      <div style={{color:T.t2}}>{bo.kat}</div>
-                      <div style={{color:T.t2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={bo.cephe||""}>{bo.cephe||"—"}</div>
-                      <div style={{color:T.t2,fontWeight:600}}>{bo.odaSayisi||"—"}</div>
-                      <div style={{textAlign:"right",color:T.t2}}>{brutM2>0?brutM2.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                    const autoKdv=daireKdvHesapla(bo.netM2);
+                    const autoKdvNum=parseInt(autoKdv);
+                    const kdvDahilSatis=hesapSF*(1+autoKdvNum/100);
+                    return<div key={bo.id} style={{display:"grid",gridTemplateColumns:"60px 50px 40px 80px 50px 60px 80px 95px 50px 105px 85px 85px 105px 50px 110px 110px",gap:"4px",fontSize:"13px",padding:"5px 4px",borderBottom:`1px solid ${T.border}`,alignItems:"center",minWidth:"1215px"}}>
+                      <div style={{fontWeight:600,color:T.text,textAlign:"center"}}>{bo.blok}</div>
+                      <div style={{fontWeight:600,color:T.text,textAlign:"center"}}>{bo.no}{durumMeta&&durumMeta.id!=="musait"&&<span style={{marginLeft:"3px",padding:"1px 4px",borderRadius:"3px",background:durumMeta.bg,color:durumMeta.color,fontSize:"11px",fontWeight:700}}>{durumMeta.label.substring(0,3)}</span>}</div>
+                      <div style={{color:T.t2,textAlign:"center"}}>{bo.kat}</div>
+                      <div style={{color:T.t2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textAlign:"center"}} title={bo.cephe||""}>{bo.cephe||"—"}</div>
+                      <div style={{color:T.t2,fontWeight:600,textAlign:"center"}}>{bo.odaSayisi||"—"}</div>
+                      <div style={{textAlign:"center",color:T.t2}}>{brutM2>0?brutM2.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                      <div style={{textAlign:"right",color:"#8c8c8c",fontWeight:600}} title="Blok bazlı öngörülen m² maliyet">{!isNaN(etkinOng)?etkinOng.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
                       <div style={{textAlign:"right",color:"#722ed1",fontWeight:600}}>{daireMaliyet>0?daireMaliyet.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                      <div style={{textAlign:"center",color:"#fa8c16",fontWeight:600}} title="Proje kâr marjı">%{karMarji||0}</div>
                       <div style={{textAlign:"right",color:"#1677ff",fontWeight:600}}>{uretimSF>0?uretimSF.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
-                      <input type="text" value={f._katEdit?(f.katSerefiyesiTl||""):fmtInt(f.katSerefiyesiTl)} onChange={e=>daireSerefiyeChange(bo.id,"katSerefiyesiTl",e.target.value)} onFocus={()=>setDaireFlag(bo.id,"_katEdit",true)} onBlur={()=>{setDaireFlag(bo.id,"_katEdit",false);daireFiyatKaydet(bo.id);}} placeholder="0" style={{padding:"4px 6px",border:`1px solid ${saved?"#52c41a":T.bDark}`,borderRadius:"3px",fontSize:"11px",boxSizing:"border-box",outline:"none",width:"100%",textAlign:"right",transition:"border-color .3s"}}/>
-                      <input type="text" value={f._cepheEdit?(f.cepheSerefiyesiTl||""):fmtInt(f.cepheSerefiyesiTl)} onChange={e=>daireSerefiyeChange(bo.id,"cepheSerefiyesiTl",e.target.value)} onFocus={()=>setDaireFlag(bo.id,"_cepheEdit",true)} onBlur={()=>{setDaireFlag(bo.id,"_cepheEdit",false);daireFiyatKaydet(bo.id);}} placeholder="0" style={{padding:"4px 6px",border:`1px solid ${saved?"#52c41a":T.bDark}`,borderRadius:"3px",fontSize:"11px",boxSizing:"border-box",outline:"none",width:"100%",textAlign:"right",transition:"border-color .3s"}}/>
+                      <input type="text" value={f._katEdit?(f.katSerefiyesiTl||""):fmtInt(f.katSerefiyesiTl)} onChange={e=>daireSerefiyeChange(bo.id,"katSerefiyesiTl",e.target.value)} onFocus={()=>setDaireFlag(bo.id,"_katEdit",true)} onBlur={()=>{setDaireFlag(bo.id,"_katEdit",false);daireFiyatKaydet(bo.id);}} placeholder="0" style={{padding:"4px 6px",border:`1px solid ${saved?"#52c41a":T.bDark}`,borderRadius:"3px",fontSize:"13px",boxSizing:"border-box",outline:"none",width:"100%",textAlign:"right",transition:"border-color .3s"}}/>
+                      <input type="text" value={f._cepheEdit?(f.cepheSerefiyesiTl||""):fmtInt(f.cepheSerefiyesiTl)} onChange={e=>daireSerefiyeChange(bo.id,"cepheSerefiyesiTl",e.target.value)} onFocus={()=>setDaireFlag(bo.id,"_cepheEdit",true)} onBlur={()=>{setDaireFlag(bo.id,"_cepheEdit",false);daireFiyatKaydet(bo.id);}} placeholder="0" style={{padding:"4px 6px",border:`1px solid ${saved?"#52c41a":T.bDark}`,borderRadius:"3px",fontSize:"13px",boxSizing:"border-box",outline:"none",width:"100%",textAlign:"right",transition:"border-color .3s"}}/>
                       <div style={{textAlign:"right",color:"#52c41a",fontWeight:700}}>{hesapSF>0?hesapSF.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
-                      <input type="text" value={f._listeHEdit?(f.listeFiyatiKdvHaric||""):fmtInt(f.listeFiyatiKdvHaric)} onChange={e=>daireListeHaricChange(bo.id,e.target.value)} onFocus={()=>setDaireFlag(bo.id,"_listeHEdit",true)} onBlur={()=>{setDaireFlag(bo.id,"_listeHEdit",false);daireFiyatKaydet(bo.id);}} placeholder="—" style={{padding:"4px 6px",border:`1px solid ${saved?"#52c41a":T.bDark}`,borderRadius:"3px",fontSize:"11px",boxSizing:"border-box",outline:"none",width:"100%",textAlign:"right",transition:"border-color .3s"}}/>
-                      <input type="text" value={f._listeDEdit?(f.listeFiyatiKdvDahil||""):fmtInt(f.listeFiyatiKdvDahil)} onChange={e=>daireListeDahilChange(bo.id,e.target.value)} onFocus={()=>setDaireFlag(bo.id,"_listeDEdit",true)} onBlur={()=>{setDaireFlag(bo.id,"_listeDEdit",false);daireFiyatKaydet(bo.id);}} placeholder="—" style={{padding:"4px 6px",border:`1px solid ${saved?"#52c41a":T.bDark}`,borderRadius:"3px",fontSize:"11px",boxSizing:"border-box",outline:"none",width:"100%",textAlign:"right",transition:"border-color .3s"}}/>
-                      {(()=>{const autoKdv=daireKdvHesapla(bo.netM2);const net=parseFloat(bo.netM2);const hasNet=!isNaN(net);return <div title={hasNet?`Net ${net.toLocaleString("tr-TR",{maximumFractionDigits:2})} m² → %${autoKdv} (yönetmelik: <150→%10, ≥150→%20)`:"Net m² girilmemiş — varsayılan %10"} style={{padding:"4px 2px",borderRadius:"3px",fontSize:"11px",textAlign:"center",fontWeight:700,background:autoKdv==="20"?"#fff1f0":"#f6ffed",color:autoKdv==="20"?"#cf1322":"#389e0d",border:`1px solid ${autoKdv==="20"?"#ffa39e":"#b7eb8f"}`}}>%{autoKdv}</div>;})()}
+                      <div title={!isNaN(parseFloat(bo.netM2))?`Net ${parseFloat(bo.netM2).toLocaleString("tr-TR",{maximumFractionDigits:2})} m² → %${autoKdv} (yönetmelik: <150→%10, ≥150→%20)`:"Net m² girilmemiş — varsayılan %10"} style={{padding:"4px 2px",borderRadius:"3px",fontSize:"13px",textAlign:"center",fontWeight:700,background:autoKdv==="20"?"#fff1f0":"#f6ffed",color:autoKdv==="20"?"#cf1322":"#389e0d",border:`1px solid ${autoKdv==="20"?"#ffa39e":"#b7eb8f"}`}}>%{autoKdv}</div>
+                      <div style={{textAlign:"right",color:"#389e0d",fontWeight:700}}>{kdvDahilSatis>0?kdvDahilSatis.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                      <input type="text" value={f._listeEdit?(f.listeFiyatiKdvDahil||""):fmtInt(f.listeFiyatiKdvDahil)} onChange={e=>daireListeChange(bo.id,e.target.value)} onFocus={()=>setDaireFlag(bo.id,"_listeEdit",true)} onBlur={()=>{setDaireFlag(bo.id,"_listeEdit",false);daireFiyatKaydet(bo.id);}} placeholder="—" title="Pazarlık payı dahil son müşteri fiyatı (KDV Dahil)" style={{padding:"4px 6px",border:`1px solid ${saved?"#52c41a":"#d48806"}`,borderRadius:"3px",fontSize:"13px",fontWeight:700,color:"#d48806",boxSizing:"border-box",outline:"none",width:"100%",textAlign:"right",background:"#fffbe6",transition:"border-color .3s"}}/>
                     </div>;
                   })}
                 </div>
