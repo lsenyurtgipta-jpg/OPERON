@@ -74,7 +74,9 @@ const phoneDigits=(v)=>(v||"").replace(/\D/g,"").length;
 const phoneOk=(v)=>{const l=phoneDigits(v);return l===0||l===11;};
 const phoneErr=(v)=>{const l=phoneDigits(v);if(l===0||l===11)return"";return l<11?`${11-l} hane eksik`:"Fazla hane";};
 
-const FIRMA_TURLERI=[{id:"alici",label:"Alıcı",color:"#1677ff",bg:"#e6f4ff",icon:"🏠",kod:"120"},{id:"tedarikci",label:"Tedarikçi",color:"#52c41a",bg:"#f6ffed",icon:"📦",kod:"320"},{id:"taseron",label:"Taşeron",color:"#fa8c16",bg:"#fff7e6",icon:"👷",kod:"321"},{id:"resmi",label:"Resmi Kurum",color:"#f5222d",bg:"#fff1f0",icon:"🏛️",kod:"322"}];
+const FIRMA_TURLERI=[{id:"potansiyel",label:"Potansiyel",color:"#fa8c16",bg:"#fff7e6",icon:"👤",kod:"119"},{id:"alici",label:"Alıcı",color:"#1677ff",bg:"#e6f4ff",icon:"🏠",kod:"120"},{id:"tedarikci",label:"Tedarikçi",color:"#52c41a",bg:"#f6ffed",icon:"📦",kod:"320"},{id:"taseron",label:"Taşeron",color:"#fa8c16",bg:"#fff7e6",icon:"👷",kod:"321"},{id:"resmi",label:"Resmi Kurum",color:"#f5222d",bg:"#fff1f0",icon:"🏛️",kod:"322"}];
+const ILGI_SEVIYELERI=[{id:"yuksek",label:"Yüksek",color:"#ff4d4f",bg:"#fff1f0"},{id:"orta",label:"Orta",color:"#fa8c16",bg:"#fff7e6"},{id:"dusuk",label:"Düşük",color:"#8c8c8c",bg:"#f5f5f5"}];
+const KAYNAK_KANALLARI=["Tavsiye","Sosyal Medya","Tabela / Dış Mekân","Web Sitesi","Sahibinden","Aracı / Emlakçı","Referans","Telefon","Diğer"];
 const PARA_BIRIMLERI=[{id:"TL",label:"₺ Türk Lirası (TL)",kod:"1",symbol:"₺"},{id:"USD",label:"$ Amerikan Doları (USD)",kod:"2",symbol:"$"},{id:"EUR",label:"€ Euro (EUR)",kod:"3",symbol:"€"}];
 /* ========== MALZEME SABİTLERİ ========== */
 const MLZ_TIPLER=[{id:"M",label:"Mamül",color:"#52c41a",bg:"#f6ffed",icon:"✅"},{id:"H",label:"Hizmet",color:"#f5222d",bg:"#fff1f0",icon:"🔧"},{id:"R",label:"Hammadde",color:"#1677ff",bg:"#e6f4ff",icon:"📦"},{id:"Y",label:"Yarı Mamül",color:"#fa8c16",bg:"#fff7e6",icon:"🔄"}];
@@ -977,6 +979,36 @@ const FirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,projele
     setTimeout(()=>setSaved(false),2000);
   };
 
+  // Potansiyel → Alıcı promote — zorunlu alan validasyonu
+  const aliciValidasyon=()=>{
+    const eksik=[];
+    if(!form.ad.trim())eksik.push(form.firmaKisiTipi==="sahis"?"Ad Soyad":"Ünvan");
+    if(!form.telefon||!phoneOk(form.telefon))eksik.push("Telefon (11 hane)");
+    if(!form.adres||!form.adres.trim())eksik.push("Adres");
+    if(!form.il||!form.il.trim())eksik.push("İl");
+    if(form.firmaKisiTipi==="sahis"){
+      if(!form.tcKimlikNo||!/^\d{11}$/.test(form.tcKimlikNo))eksik.push("TC Kimlik No (11 hane)");
+    }else{
+      if(!form.vergiNo||!/^\d{10}$/.test(form.vergiNo))eksik.push("Vergi No (10 hane)");
+      if(!form.vergiDairesi||!form.vergiDairesi.trim())eksik.push("Vergi Dairesi");
+    }
+    return eksik;
+  };
+  const aliciyaDonustur=()=>{
+    const eksik=aliciValidasyon();
+    if(eksik.length>0){
+      alert("Alıcıya dönüştürmek için eksik/hatalı zorunlu alanlar:\n\n• "+eksik.join("\n• ")+"\n\nLütfen bu bilgileri tamamlayıp tekrar deneyin.");
+      return;
+    }
+    if(!confirm(`"${form.ad}" müşterisini ALICI statüsüne yükseltmek istiyor musunuz?\n\nPotansiyel rolü korunacak (izlenebilirlik için).`))return;
+    const yeniTurler=[...(form.turler||[]),"alici"];
+    const yeniForm={...form,turler:yeniTurler};
+    u("turler",yeniTurler);
+    onSave(yeniForm);
+    alert("✓ Müşteri alıcı statüsüne geçirildi. Şimdi satış işlemine dönebilirsiniz.");
+  };
+  const sadecePotansiyel=(form.turler||[]).includes("potansiyel")&&!(form.turler||[]).includes("alici");
+
   // Satış ilişkileri (sadece alıcı firmalar için)
   const isAlici=(form.turler||[]).includes("alici");
   const opsiyonluDaireler=useMemo(()=>{
@@ -1038,6 +1070,7 @@ const FirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,projele
 
           {/* ÜST BANT — Sınıflandırma */}
           <div style={{display:"flex",justifyContent:"flex-end",alignItems:"center",gap:"12px",padding:"10px 16px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`}}>
+            {sadecePotansiyel&&<button onClick={aliciyaDonustur} title="Potansiyel müşteriyi Alıcı statüsüne yükselt (zorunlu alanlar kontrol edilir)" style={{padding:"6px 14px",borderRadius:T.r,border:"1px solid #52c41a",background:"#f6ffed",color:"#389e0d",fontSize:"12px",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:"6px"}}>✓ Alıcıya Dönüştür</button>}
             {form.turler.map(t=><Badge key={t} type={t}/>)}
             <PBadge pb={form.paraBirimi}/>
             {form.createdAt&&<span style={{fontSize:"12px",color:T.t3,marginLeft:"4px"}}>📅 {fmtDate(form.createdAt)}</span>}
@@ -3859,6 +3892,9 @@ const firmaToLocal = (f) => ({
   bankaAdi: f.banka_adi||"", iban: f.iban||"",
   aktif: f.aktif!==false,
   ilgilendigiProjeler: f.ilgilendigi_projeler||[],
+  ilgiSeviyesi: f.ilgi_seviyesi||"",
+  sonTemasTarihi: f.son_temas_tarihi||"",
+  kaynakKanal: f.kaynak_kanal||"",
   kisiler: [], notlar: [], belgeler: [], subeler: [], bankalar: [], iletisimler: [], adresler: [],
   createdAt: f.created_at ? f.created_at.split("T")[0] : new Date().toISOString().split("T")[0]
 });
@@ -3872,7 +3908,10 @@ const firmaToDb = (f) => ({
   web_adresi: f.webAdresi, eposta: f.eposta,
   mahalle: f.mahalle, adres: f.adres, il: f.il, ilce: f.ilce, posta_kodu: f.postaKodu||"",
   banka_adi: f.bankaAdi, iban: f.iban, aktif: f.aktif!==false,
-  ilgilendigi_projeler: f.ilgilendigiProjeler||[]
+  ilgilendigi_projeler: f.ilgilendigiProjeler||[],
+  ilgi_seviyesi: f.ilgiSeviyesi||"",
+  son_temas_tarihi: f.sonTemasTarihi||"",
+  kaynak_kanal: f.kaynakKanal||""
 });
 const kisiToLocal = (k) => ({
   id: k.id, firmaId: k.firma_id, cinsiyet: k.cinsiyet||"", ad: k.ad||"",
@@ -7456,11 +7495,33 @@ const DosyaKategoriYonetim=({dosyaKategorileri,setDosyaKategorileri})=>{
 /* ========== SATIŞ SUNUM MODÜLÜ ========== */
 
 /* ---- MÜŞTERİ PICKER MODAL ---- */
-const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTERİ SEÇ"})=>{
+const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTERİ SEÇ",pickerIslem="satildi",listeFiyatiOneri="",initialFirma=null,initialFiyat=""})=>{
   const[src,setSrc]=useState("");
-  const[mode,setMode]=useState("list"); // list | yeni
-  const[yeniForm,setYeniForm]=useState({ad:"",telefon:"",eposta:"",kanal:"",not:""});
-  const aliciFirmalar=useMemo(()=>firmalar.filter(f=>(f.turler||[]).includes("alici")),[firmalar]);
+  const[mode,setMode]=useState(initialFirma?"onay":"list"); // list | yeni | onay
+  const[yeniForm,setYeniForm]=useState({ad:"",telefon:"",eposta:"",kanal:"",ilgiSeviyesi:"orta",sonTemasTarihi:new Date().toISOString().split("T")[0],not:""});
+  const[secilenFirma,setSecilenFirma]=useState(initialFirma||null);
+  const[satisFiyati,setSatisFiyati]=useState(initialFiyat?String(initialFiyat):"");
+  const[fiyatEdit,setFiyatEdit]=useState(false);
+  const[kaydediyor,setKaydediyor]=useState(false);
+  const fmtFiyat=(v)=>{const n=parseFloat(v||0);return n>0?n.toLocaleString("tr-TR",{maximumFractionDigits:0}):"";};
+  const firmaSeciminiOnayla=(firma)=>{
+    setSecilenFirma(firma);
+    // Opsiyondan satışa geçişte kullanıcı doğrulasın, otomatik doldurmaya dikkat
+    setSatisFiyati("");
+    setMode("onay");
+  };
+  const listedenDoldur=()=>{
+    const temiz=String(listeFiyatiOneri||"").replace(/[^0-9]/g,"");
+    setSatisFiyati(temiz);
+  };
+  const onayla=()=>{
+    if(pickerIslem==="satildi"){
+      if(!satisFiyati||parseFloat(satisFiyati)<=0){alert("Satış fiyatı zorunludur.");return;}
+    }
+    onSelect(secilenFirma,{satisFiyati:satisFiyati||"",paraBirimi:"TL"});
+    onClose();
+  };
+  const aliciFirmalar=useMemo(()=>firmalar.filter(f=>(f.turler||[]).includes("alici")||(f.turler||[]).includes("potansiyel")),[firmalar]);
   const filtered=useMemo(()=>{
     const q=nTR(src);
     return aliciFirmalar.filter(f=>
@@ -7471,7 +7532,8 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
   },[aliciFirmalar,src]);
 
   const getNextKod=()=>{
-    const pre="120.1.";
+    // Yeni potansiyel müşteri kodu: 119.1.XXXXX
+    const pre="119.1.";
     const ex=firmalar.filter(f=>(f.firmaKodu||"").startsWith(pre)).map(f=>{
       const n=parseInt((f.firmaKodu||"").split(".")[2],10);
       return isNaN(n)?0:n;
@@ -7480,16 +7542,29 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
   };
 
   const kaydetVeSec=async()=>{
+    if(kaydediyor)return;
     if(!yeniForm.ad.trim()){alert("Müşteri adı zorunludur!");return;}
     if(yeniForm.telefon&&!phoneOk(yeniForm.telefon)){alert("Telefon 11 hane olmalı veya boş!");return;}
+    // Telefon duplicate kontrolü
+    if(yeniForm.telefon){
+      const ayni=firmalar.find(f=>f.telefon===yeniForm.telefon);
+      if(ayni){
+        const devam=confirm(`Bu telefon zaten kayıtlı:\n\n${ayni.ad} (${ayni.firmaKodu})\n\nMevcut kaydı seçmek ister misiniz? ("Hayır" seçerseniz yeni kayıt oluşturulur.)`);
+        if(devam){firmaSeciminiOnayla(ayni);return;}
+      }
+    }
+    setKaydediyor(true);
     const yeniFirma={
       id:Date.now(),firmaKodu:getNextKod(),ad:yeniForm.ad.trim(),kisaAd:"",aciklama:yeniForm.not||"",
-      turler:["alici"],paraBirimi:"TL",firmaKisiTipi:"sahis",
+      turler:["potansiyel"],paraBirimi:"TL",firmaKisiTipi:"sahis",
       vergiDairesiIl:"",vergiDairesi:"",vergiNo:"",tcKimlikNo:"",sicilNo:"",kategori:"",
       telefon:yeniForm.telefon||"",sabitTelefon:"",telefon2:"",webAdresi:"",eposta:yeniForm.eposta||"",
       mahalle:"",adres:"",il:"",ilce:"",postaKodu:"",
       bankaAdi:"",iban:"",aktif:true,
       ilgilendigiProjeler:[],
+      ilgiSeviyesi:yeniForm.ilgiSeviyesi||"orta",
+      sonTemasTarihi:yeniForm.sonTemasTarihi||new Date().toISOString().split("T")[0],
+      kaynakKanal:yeniForm.kanal||"",
       kisiler:[],notlar:yeniForm.not?[{id:Date.now(),tarih:new Date().toISOString().split("T")[0],yazar:"Admin",metin:`[${yeniForm.kanal||"Kanal?"}] ${yeniForm.not}`}]:[],
       belgeler:[],subeler:[],bankalar:[],iletisimler:[],adresler:[],
       createdAt:new Date().toISOString().split("T")[0],
@@ -7497,10 +7572,11 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
     };
     try{
       await onSaveFirma(yeniFirma);
-      onSelect(yeniFirma);
-      onClose();
+      firmaSeciminiOnayla(yeniFirma);
     }catch(e){
       alert("Müşteri kaydedilemedi: "+e.message);
+    }finally{
+      setKaydediyor(false);
     }
   };
 
@@ -7519,43 +7595,89 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
         <div style={{flex:1,overflow:"auto"}}>
           {filtered.length===0
             ?<div style={{padding:"40px",textAlign:"center",color:T.t3,fontSize:"13px"}}>{aliciFirmalar.length===0?"Henüz alıcı müşteri kaydı yok":"Sonuç bulunamadı"}</div>
-            :filtered.map(f=><div key={f.id} onClick={()=>{onSelect(f);onClose();}} style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`,cursor:"pointer",display:"flex",alignItems:"center",gap:"12px"}}
+            :filtered.map(f=>{
+              const turler=f.turler||[];
+              const alici=turler.includes("alici");
+              const potansiyel=turler.includes("potansiyel");
+              const tur=alici?FIRMA_TURLERI.find(x=>x.id==="alici"):FIRMA_TURLERI.find(x=>x.id==="potansiyel");
+              return <div key={f.id} onClick={()=>firmaSeciminiOnayla(f)} style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`,cursor:"pointer",display:"flex",alignItems:"center",gap:"12px"}}
                 onMouseEnter={e=>e.currentTarget.style.background=T.pBg} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
-                <div style={{width:"36px",height:"36px",borderRadius:"50%",background:T.pBg,color:T.primary,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:600,fontSize:"14px"}}>{(f.ad||"?").charAt(0).toUpperCase()}</div>
+                <div style={{width:"36px",height:"36px",borderRadius:"50%",background:tur?tur.bg:T.pBg,color:tur?tur.color:T.primary,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:600,fontSize:"14px"}}>{(f.ad||"?").charAt(0).toUpperCase()}</div>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:"14px",fontWeight:500,color:T.text}}>{f.ad}</div>
+                  <div style={{fontSize:"14px",fontWeight:500,color:T.text,display:"flex",alignItems:"center",gap:"8px"}}>
+                    <span>{f.ad}</span>
+                    {tur&&<span style={{fontSize:"10px",padding:"1px 6px",borderRadius:"8px",background:tur.bg,color:tur.color,fontWeight:700,border:`1px solid ${tur.color}44`}}>{tur.label}</span>}
+                  </div>
                   <div style={{fontSize:"11px",color:T.t3,fontFamily:"monospace"}}>{f.firmaKodu} {f.telefon?`• ${f.telefon}`:""}</div>
                 </div>
                 {(f.ilgilendigiProjeler||[]).length>0&&<span style={{fontSize:"10px",padding:"2px 6px",borderRadius:"3px",background:"#fff7e6",color:"#fa8c16",fontWeight:600}}>{(f.ilgilendigiProjeler||[]).length} proje</span>}
-              </div>)
+              </div>;
+            })
           }
         </div>
         <div style={{padding:"12px 16px",borderTop:`1px solid ${T.border}`,background:"#fafafa"}}>
-          <button onClick={()=>setMode("yeni")} style={{width:"100%",padding:"10px",borderRadius:T.r,border:`1px dashed ${T.primary}`,background:"#fff",color:T.primary,fontSize:"14px",fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px"}}><Plus size={16}/> Yeni Müşteri Ekle</button>
+          <button onClick={()=>setMode("yeni")} style={{width:"100%",padding:"10px",borderRadius:T.r,border:`1px dashed ${T.primary}`,background:"#fff",color:T.primary,fontSize:"14px",fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px"}}><Plus size={16}/> Yeni Potansiyel Müşteri Ekle</button>
+          <div style={{fontSize:"10px",color:T.t3,textAlign:"center",marginTop:"6px"}}>Yeni eklenenler otomatik "Potansiyel" olarak kaydedilir. Satışa çevirirken Alıcı bilgileri tamamlanmalı.</div>
         </div>
       </>:<>
         <div style={{padding:"16px 20px",flex:1,overflow:"auto",display:"flex",flexDirection:"column",gap:"12px"}}>
           <div><label style={lS}>Ad Soyad <span style={{color:T.err}}>*</span></label><input style={iS} value={yeniForm.ad} onChange={e=>setYeniForm(p=>({...p,ad:toTitleCase(e.target.value)}))} placeholder="Örn. Ahmet Yılmaz" autoFocus onFocus={foc} onBlur={blr}/></div>
           <div><label style={lS}>Telefon</label><input style={iS} value={yeniForm.telefon} onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,11);setYeniForm(p=>({...p,telefon:v}));}} placeholder="05XXXXXXXXX" onFocus={foc} onBlur={blr}/></div>
           <div><label style={lS}>E-posta <span style={{color:T.t3,fontSize:"11px"}}>(opsiyonel)</span></label><input style={iS} type="email" value={yeniForm.eposta} onChange={e=>setYeniForm(p=>({...p,eposta:e.target.value}))} placeholder="ornek@mail.com" onFocus={foc} onBlur={blr}/></div>
-          <div><label style={lS}>Temas Kanalı</label>
+          <div><label style={lS}>Bize Nasıl Ulaştınız?</label>
             <select style={iS} value={yeniForm.kanal} onChange={e=>setYeniForm(p=>({...p,kanal:e.target.value}))}>
               <option value="">—</option>
-              <option value="Telefon">Telefon</option>
-              <option value="Tabela">Tabela / Dış Mekân</option>
-              <option value="Instagram">Instagram / Sosyal Medya</option>
-              <option value="Web Sitesi">Web Sitesi</option>
-              <option value="Sahibinden">Sahibinden</option>
-              <option value="Aracı / Emlakçı">Aracı / Emlakçı</option>
-              <option value="Referans">Referans</option>
-              <option value="Diğer">Diğer</option>
+              {KAYNAK_KANALLARI.map(k=><option key={k} value={k}>{k}</option>)}
             </select>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"}}>
+            <div><label style={lS}>İlgi Seviyesi</label>
+              <select style={iS} value={yeniForm.ilgiSeviyesi} onChange={e=>setYeniForm(p=>({...p,ilgiSeviyesi:e.target.value}))}>
+                {ILGI_SEVIYELERI.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+            </div>
+            <div><label style={lS}>Son Temas Tarihi</label>
+              <input type="date" style={iS} value={yeniForm.sonTemasTarihi} onChange={e=>setYeniForm(p=>({...p,sonTemasTarihi:e.target.value}))}/>
+            </div>
           </div>
           <div><label style={lS}>Not</label><textarea style={{...iS,height:"60px",resize:"vertical"}} value={yeniForm.not} onChange={e=>setYeniForm(p=>({...p,not:e.target.value}))} placeholder="İlk temas notu..." onFocus={foc} onBlur={blr}/></div>
         </div>
         <div style={{padding:"12px 16px",borderTop:`1px solid ${T.border}`,background:"#fafafa",display:"flex",gap:"8px",justifyContent:"flex-end"}}>
           <button onClick={()=>setMode("list")} style={{padding:"8px 16px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>← Listeye Dön</button>
-          <button onClick={kaydetVeSec} style={{padding:"8px 20px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>Kaydet ve Seç</button>
+          <button onClick={kaydetVeSec} disabled={kaydediyor} style={{padding:"8px 20px",borderRadius:T.r,border:"none",background:kaydediyor?"#8c8c8c":T.primary,color:"#fff",fontSize:"13px",fontWeight:600,cursor:kaydediyor?"not-allowed":"pointer"}}>{kaydediyor?"Kaydediliyor...":"Kaydet ve Seç"}</button>
+        </div>
+      </>}
+
+      {mode==="onay"&&secilenFirma&&<>
+        <div style={{padding:"16px 20px",flex:1,overflow:"auto",display:"flex",flexDirection:"column",gap:"14px"}}>
+          <div style={{padding:"12px 14px",borderRadius:T.r,background:T.pBg,border:`1px solid ${T.primary}33`,display:"flex",alignItems:"center",gap:"12px"}}>
+            <div style={{width:"40px",height:"40px",borderRadius:"50%",background:"#fff",color:T.primary,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:"16px"}}>{(secilenFirma.ad||"?").charAt(0).toUpperCase()}</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:"10px",color:T.t3,fontWeight:600,textTransform:"uppercase"}}>Seçilen Müşteri</div>
+              <div style={{fontSize:"15px",fontWeight:600,color:T.text}}>{secilenFirma.ad}</div>
+              <div style={{fontSize:"11px",color:T.t3,fontFamily:"monospace"}}>{secilenFirma.firmaKodu} {secilenFirma.telefon?`• ${secilenFirma.telefon}`:""}</div>
+            </div>
+            <button onClick={()=>{setMode("list");setSecilenFirma(null);setSatisFiyati("");}} style={{padding:"6px 12px",borderRadius:"4px",border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"12px",cursor:"pointer"}}>Değiştir</button>
+          </div>
+
+          <div>
+            <label style={{...lS,fontSize:"12px",fontWeight:600,marginBottom:"6px",color:T.text}}>
+              {pickerIslem==="satildi"?"Satış Fiyatı (KDV Dahil, TL)":"Opsiyon Fiyatı (KDV Dahil, TL)"}
+              {pickerIslem==="satildi"&&<span style={{color:T.err,marginLeft:"4px"}}>*</span>}
+              {pickerIslem==="opsiyonla"&&<span style={{color:T.t3,fontSize:"11px",marginLeft:"6px",fontWeight:400}}>(opsiyonel)</span>}
+            </label>
+            <div style={{display:"flex",gap:"8px",alignItems:"stretch"}}>
+              <input type="text" value={fiyatEdit?satisFiyati:fmtFiyat(satisFiyati)} onChange={e=>setSatisFiyati(e.target.value.replace(/[^0-9]/g,""))} onFocus={()=>setFiyatEdit(true)} onBlur={()=>setFiyatEdit(false)} placeholder={listeFiyatiOneri?`Liste: ${fmtFiyat(listeFiyatiOneri)} ₺`:"0"} autoFocus style={{flex:1,padding:"10px 12px",border:`1px solid ${T.bDark}`,borderRadius:T.r,fontSize:"16px",fontWeight:700,color:"#d48806",outline:"none",textAlign:"right",background:"#fffbe6"}}/>
+              {parseFloat(listeFiyatiOneri||0)>0&&<button onClick={listedenDoldur} title="Plan (liste) fiyatını kopyala" style={{padding:"0 14px",borderRadius:T.r,border:`1px solid ${T.primary}`,background:"#fff",color:T.primary,fontSize:"12px",fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>Listeden Doldur</button>}
+            </div>
+            {parseFloat(listeFiyatiOneri||0)>0&&<div style={{fontSize:"11px",color:T.t3,marginTop:"4px"}}>Plan liste fiyatı: <strong>{fmtFiyat(listeFiyatiOneri)} ₺</strong> — pazarlık sonrası gerçek fiyatı girin.</div>}
+          </div>
+
+          {pickerIslem==="opsiyonla"&&<div style={{padding:"10px 12px",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffd591",fontSize:"12px",color:"#d46b08"}}>⚠ Opsiyon netleşmemiş bir pazarlıktır. Fiyat opsiyon süresinde değişebilir; satışa çevirirken tekrar doğrulanmalıdır.</div>}
+        </div>
+        <div style={{padding:"12px 16px",borderTop:`1px solid ${T.border}`,background:"#fafafa",display:"flex",gap:"8px",justifyContent:"flex-end"}}>
+          <button onClick={onClose} style={{padding:"8px 16px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>Vazgeç</button>
+          <button onClick={onayla} style={{padding:"8px 20px",borderRadius:T.r,border:"none",background:pickerIslem==="satildi"?"#1677ff":"#fa8c16",color:"#fff",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>{pickerIslem==="satildi"?"Satışı Onayla":"Opsiyonu Onayla"}</button>
         </div>
       </>}
     </div>
@@ -7636,15 +7758,13 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     return{...o,toplam:b.length};
   };
 
-  // Bloğun daireleri
+  // Bloğun daireleri — sadece Müteahhit'e ait, doğal sayısal sıralama (A-1, A-2, ..., A-10)
   const blokBolumler=useMemo(()=>{
     if(!selProje||!selBlokAd)return[];
-    return(selProje.bolumler||[]).filter(b=>b.blok===selBlokAd).sort((a,b)=>{
-      const na=parseInt(a.no||"0",10)||0;
-      const nb=parseInt(b.no||"0",10)||0;
-      if(na!==nb)return na-nb;
-      return(a.no||"").localeCompare(b.no||"","tr");
-    });
+    const numKey=(no)=>{const m=String(no||"").match(/(\d+)/);return m?parseInt(m[1],10):0;};
+    return(selProje.bolumler||[])
+      .filter(b=>b.blok===selBlokAd&&b.sahiplik==="Müteahhit")
+      .sort((a,b)=>numKey(a.no)-numKey(b.no)||(a.no||"").localeCompare(b.no||"","tr"));
   },[selProje,selBlokAd]);
 
   // Durum rengi
@@ -7696,10 +7816,20 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
   // Daire güncelle (tek bölüm değişikliği → saveProje)
   const bolumGuncelle=async(bolumId,degisiklik)=>{
     if(!selProje)return;
-    const yeniBolumler=(selProje.bolumler||[]).map(b=>b.id===bolumId?{...b,...degisiklik}:b);
-    const yeniProje={...selProje,bolumler:yeniBolumler};
-    setProjeler(prev=>prev.map(p=>p.id===yeniProje.id?yeniProje:p));
-    try{await saveProje(yeniProje);}catch(e){console.warn("Proje kayıt hatası:",e.message);}
+    // Önce state'i güncelle (optimistic)
+    setProjeler(prev=>prev.map(p=>p.id!==selProje.id?p:{
+      ...p,
+      bolumler:(p.bolumler||[]).map(b=>b.id===bolumId?{...b,...degisiklik}:b)
+    }));
+    // Sadece değişen alanları PATCH ile yolla (ID ve bolumler tablosu korunur)
+    const bDb={};
+    if(degisiklik.durum!==undefined)bDb.durum=degisiklik.durum;
+    if(degisiklik.aliciFirmaId!==undefined)bDb.alici_firma_id=degisiklik.aliciFirmaId||null;
+    if(degisiklik.aliciFirmaAd!==undefined)bDb.alici_firma_ad=degisiklik.aliciFirmaAd||"";
+    if(degisiklik.sozlesmeTarihi!==undefined)bDb.sozlesme_tarihi=degisiklik.sozlesmeTarihi||null;
+    if(degisiklik.satisFiyati!==undefined)bDb.satis_fiyati=degisiklik.satisFiyati!==""&&degisiklik.satisFiyati!=null?Number(degisiklik.satisFiyati):null;
+    if(degisiklik.paraBirimi!==undefined)bDb.para_birimi=degisiklik.paraBirimi||"TL";
+    try{await sbPatch('bolumler',bolumId,bDb);}catch(e){console.warn("Bolum kayıt hatası:",e.message);}
   };
 
   // Firma'nın ilgilendiği projelere bu projeyi ekle
@@ -7711,8 +7841,8 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     try{await saveFirma(yeniFirma);}catch(e){console.warn("Firma güncelleme:",e.message);}
   };
 
-  // Opsiyonlama veya satış
-  const musteriSec=async(firma)=>{
+  // Opsiyonlama veya satış — satış verisi opsiyonel 2. parametreden gelir
+  const musteriSec=async(firma,satisVerisi={})=>{
     if(!selBolum)return;
     const yeniDurum=pickerIslem==="opsiyonla"?"opsiyonlu":"satildi";
     const degisiklik={
@@ -7721,13 +7851,28 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
       aliciFirmaAd:firma.ad,
       sozlesmeTarihi:new Date().toISOString().split("T")[0]
     };
+    if(satisVerisi.satisFiyati!==undefined&&satisVerisi.satisFiyati!==""){
+      degisiklik.satisFiyati=parseFloat(satisVerisi.satisFiyati)||0;
+    }
+    if(satisVerisi.paraBirimi)degisiklik.paraBirimi=satisVerisi.paraBirimi;
     await bolumGuncelle(selBolum.id,degisiklik);
     await firmayaProjeEkle(firma);
   };
 
   const musaitYap=async()=>{
-    if(!selBolum||!confirm("Daire müsait durumuna döndürülsün mü? Müşteri bağlantısı kaldırılacak."))return;
-    await bolumGuncelle(selBolum.id,{durum:"musait",aliciFirmaId:"",aliciFirmaAd:"",sozlesmeTarihi:""});
+    if(!selBolum||!confirm("Daire müsait durumuna döndürülsün mü? Müşteri bağlantısı ve satış fiyatı kaldırılacak."))return;
+    await bolumGuncelle(selBolum.id,{durum:"musait",aliciFirmaId:"",aliciFirmaAd:"",sozlesmeTarihi:"",satisFiyati:0});
+  };
+
+  // Gerçekleşen satış fiyatını düzeltme (satış/opsiyondan sonra)
+  const fiyatDuzelt=async()=>{
+    if(!selBolum)return;
+    const mevcut=parseFloat(selBolum.satisFiyati)||0;
+    const yeni=prompt(`${selBolum.blok} Blok ${selBolum.no} — yeni satış fiyatı (KDV Dahil, TL):`,mevcut>0?String(mevcut):"");
+    if(yeni===null)return;
+    const temiz=String(yeni).replace(/[^0-9]/g,"");
+    if(!temiz||parseFloat(temiz)<=0){alert("Geçerli bir fiyat girin.");return;}
+    await bolumGuncelle(selBolum.id,{satisFiyati:parseFloat(temiz)});
   };
 
   // Tam ekran toggle — parent'a bildir yok, sadece içeride gizle
@@ -7772,7 +7917,13 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
 
   // TAM EKRAN overlay (position:fixed)
   const content=<div style={tamEkran?{position:"fixed",inset:0,background:"#fff",zIndex:900,overflow:"auto",padding:"24px"}:{}}>
-    {pickerAcik&&<MusteriPickerModal firmalar={firmalar} onSaveFirma={saveFirma} onSelect={musteriSec} onClose={()=>setPickerAcik(false)} baslik={pickerIslem==="opsiyonla"?"OPSİYONLA — MÜŞTERİ SEÇ":"SATIŞ — MÜŞTERİ SEÇ"}/>}
+    {pickerAcik&&(()=>{
+      // Opsiyonludan Satışa Çevir: müşteri zaten bağlı, direkt onay ekranına geç + mevcut fiyatı pre-fill
+      const opsiyonluSatisaCevir=pickerIslem==="satildi"&&selBolum?.durum==="opsiyonlu"&&selBolum?.aliciFirmaId;
+      const mevcutFirma=opsiyonluSatisaCevir?firmalar.find(f=>String(f.id)===String(selBolum.aliciFirmaId)):null;
+      const mevcutFiyat=opsiyonluSatisaCevir?(selBolum.satisFiyati||""):"";
+      return <MusteriPickerModal firmalar={firmalar} onSaveFirma={saveFirma} onSelect={musteriSec} onClose={()=>setPickerAcik(false)} baslik={pickerIslem==="opsiyonla"?"OPSİYONLA — MÜŞTERİ SEÇ":(opsiyonluSatisaCevir?"SATIŞA ÇEVİR — FİYAT ONAYI":"SATIŞ — MÜŞTERİ SEÇ")} pickerIslem={pickerIslem} listeFiyatiOneri={selBolum?.listeFiyatiKdvDahil||""} initialFirma={mevcutFirma} initialFiyat={mevcutFiyat}/>;
+    })()}
 
     {/* ÜST BAR — proje adı + tam ekran toggle */}
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"16px",paddingBottom:"12px",borderBottom:`1px solid ${T.border}`}}>
@@ -7919,12 +8070,13 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
         </div>
         {blokBolumler.length===0
           ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",border:`1px dashed ${T.border}`,borderRadius:T.rl}}>Bu blokta daire tanımı yok.</div>
-          :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:"12px"}}>
+          :<div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:"12px"}}>
             {blokBolumler.map(b=>{
               const d=durumRenk(b.durum);
               const sec=selBolumId===b.id;
-              return <div key={b.id} onClick={()=>setSelBolumId(b.id)} style={{background:d.bg,border:`2px solid ${sec?d.color:(d.color+"55")}`,borderRadius:T.rl,padding:"14px",cursor:"pointer",transition:"all .15s",position:"relative",transform:sec?"scale(1.02)":"scale(1)",boxShadow:sec?T.shM:"none"}}
-                onMouseEnter={e=>{if(!sec)e.currentTarget.style.transform="scale(1.02)";}} onMouseLeave={e=>{if(!sec)e.currentTarget.style.transform="scale(1)";}}>
+              const satildi=b.durum==="satildi";
+              return <div key={b.id} onClick={()=>setSelBolumId(b.id)} style={{background:satildi?"#f5f5f5":d.bg,border:`2px solid ${sec?d.color:(satildi?"#d9d9d9":d.color+"55")}`,borderRadius:T.rl,padding:"14px",cursor:"pointer",transition:"all .15s",position:"relative",transform:sec?"scale(1.02)":"scale(1)",boxShadow:sec?T.shM:"none",opacity:satildi?0.55:1,filter:satildi?"grayscale(0.6)":"none"}}
+                onMouseEnter={e=>{if(!sec&&!satildi)e.currentTarget.style.transform="scale(1.02)";}} onMouseLeave={e=>{if(!sec)e.currentTarget.style.transform="scale(1)";}}>
                 <div style={{fontSize:"11px",color:T.t3,marginBottom:"4px",fontWeight:500}}>Daire No</div>
                 <div style={{fontSize:"22px",fontWeight:700,color:d.color,marginBottom:"8px"}}>{b.no||"—"}</div>
                 <div style={{fontSize:"12px",color:T.t2,marginBottom:"2px"}}>{b.odaSayisi||"—"}{b.kat?` • K:${b.kat}`:""}</div>
@@ -7967,19 +8119,26 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
             <div style={{gridColumn:"1 / -1"}}><div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase"}}>Cephe</div><div style={{fontSize:"14px",fontWeight:600,color:T.text}}>{selBolum.cephe||"—"}</div></div>
           </div>
 
-          {/* FİYAT — Liste Fiyatı (yönetici belirler, salt okunur) */}
+          {/* FİYAT KARTI — duruma göre: satıldı/opsiyonlu → satisFiyati, musait → listeFiyati */}
           {(()=>{
             const listeDahil=parseFloat(selBolum.listeFiyatiKdvDahil)||0;
-            const listeHaric=parseFloat(selBolum.listeFiyatiKdvHaric)||0;
             const satFiyat=parseFloat(selBolum.satisFiyati)||0;
-            if(listeDahil>0)return<div style={{padding:"14px",background:"linear-gradient(135deg,#e6f4ff 0%,#bae7ff 100%)",borderRadius:T.r,marginBottom:"14px",textAlign:"center"}}>
-              <div style={{fontSize:"11px",color:"#0050b3",textTransform:"uppercase",letterSpacing:"0.5px",fontWeight:600}}>Liste Fiyatı</div>
-              <div style={{fontSize:"26px",fontWeight:700,color:"#0050b3"}}>{listeDahil.toLocaleString("tr-TR")+" ₺"}</div>
-              <div style={{fontSize:"10px",color:"#0050b3",opacity:0.75,marginTop:"2px"}}>{(()=>{const n=parseFloat(selBolum.netM2);const k=!isNaN(n)&&n>=150?"20":"10";return `KDV Dahil (%${k})`;})()}{listeHaric>0?` • Hariç: ${listeHaric.toLocaleString("tr-TR")} ₺`:""}</div>
-            </div>;
-            if(satFiyat>0)return<div style={{padding:"14px",background:"linear-gradient(135deg,#e6f4ff 0%,#bae7ff 100%)",borderRadius:T.r,marginBottom:"14px",textAlign:"center"}}>
-              <div style={{fontSize:"11px",color:"#0050b3",textTransform:"uppercase",letterSpacing:"0.5px",fontWeight:600}}>Satış Fiyatı</div>
-              <div style={{fontSize:"26px",fontWeight:700,color:"#0050b3"}}>{fmtPara(selBolum.satisFiyati,selBolum.paraBirimi)}</div>
+            const durumKapali=selBolum.durum==="satildi"||selBolum.durum==="opsiyonlu";
+            if(durumKapali){
+              const baslik=selBolum.durum==="satildi"?"Gerçekleşen Satış Fiyatı":"Opsiyon Fiyatı";
+              const arkaplan=selBolum.durum==="satildi"?"linear-gradient(135deg,#e6f4ff 0%,#bae7ff 100%)":"linear-gradient(135deg,#fff7e6 0%,#ffe7ba 100%)";
+              const renk=selBolum.durum==="satildi"?"#0050b3":"#d46b08";
+              return<div style={{padding:"14px",background:arkaplan,borderRadius:T.r,marginBottom:"14px",textAlign:"center",position:"relative"}}>
+                <div style={{fontSize:"11px",color:renk,textTransform:"uppercase",letterSpacing:"0.5px",fontWeight:600}}>{baslik}</div>
+                <div style={{fontSize:"26px",fontWeight:700,color:renk}}>{satFiyat>0?satFiyat.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺":"—"}</div>
+                <div style={{fontSize:"10px",color:renk,opacity:0.75,marginTop:"2px"}}>KDV Dahil{listeDahil>0?` • Plan: ${listeDahil.toLocaleString("tr-TR",{maximumFractionDigits:0})} ₺`:""}</div>
+                {!tamEkran&&<button onClick={fiyatDuzelt} title="Satış fiyatını düzelt" style={{position:"absolute",top:"8px",right:"8px",padding:"4px 10px",borderRadius:"4px",border:`1px solid ${renk}66`,background:"#fff",color:renk,fontSize:"11px",fontWeight:600,cursor:"pointer"}}>Fiyat Düzelt</button>}
+              </div>;
+            }
+            if(listeDahil>0)return<div style={{padding:"14px",background:"linear-gradient(135deg,#f6ffed 0%,#d9f7be 100%)",borderRadius:T.r,marginBottom:"14px",textAlign:"center"}}>
+              <div style={{fontSize:"11px",color:"#389e0d",textTransform:"uppercase",letterSpacing:"0.5px",fontWeight:600}}>Liste Fiyatı (Plan)</div>
+              <div style={{fontSize:"26px",fontWeight:700,color:"#389e0d"}}>{listeDahil.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺"}</div>
+              <div style={{fontSize:"10px",color:"#389e0d",opacity:0.75,marginTop:"2px"}}>{(()=>{const n=parseFloat(selBolum.netM2);const k=!isNaN(n)&&n>=150?"20":"10";return `KDV Dahil (%${k})`;})()}</div>
             </div>;
             return null;
           })()}
@@ -7997,10 +8156,23 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
               <button onClick={()=>{setPickerIslem("opsiyonla");setPickerAcik(true);}} style={{padding:"12px",borderRadius:T.r,border:"none",background:"#fa8c16",color:"#fff",fontSize:"14px",fontWeight:600,cursor:"pointer"}}>🟡 Opsiyonla</button>
               <button onClick={()=>{setPickerIslem("satildi");setPickerAcik(true);}} style={{padding:"12px",borderRadius:T.r,border:"none",background:"#1677ff",color:"#fff",fontSize:"14px",fontWeight:600,cursor:"pointer"}}>🔵 Satıldı İşaretle</button>
             </>}
-            {selBolum.durum==="opsiyonlu"&&<>
-              <button onClick={()=>{setPickerIslem("satildi");setPickerAcik(true);}} style={{padding:"12px",borderRadius:T.r,border:"none",background:"#1677ff",color:"#fff",fontSize:"14px",fontWeight:600,cursor:"pointer"}}>🔵 Satışa Çevir</button>
-              <button onClick={musaitYap} style={{padding:"10px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>Müsait Yap</button>
-            </>}
+            {selBolum.durum==="opsiyonlu"&&(()=>{
+              const mevcutFirma=firmalar.find(f=>String(f.id)===String(selBolum.aliciFirmaId));
+              const aliciMi=(mevcutFirma?.turler||[]).includes("alici");
+              return <>
+                {aliciMi
+                  ?<button onClick={()=>{setPickerIslem("satildi");setPickerAcik(true);}} style={{padding:"12px",borderRadius:T.r,border:"none",background:"#1677ff",color:"#fff",fontSize:"14px",fontWeight:600,cursor:"pointer"}}>🔵 Satışa Çevir</button>
+                  :<>
+                    <button disabled style={{padding:"12px",borderRadius:T.r,border:"none",background:"#d9d9d9",color:"#fff",fontSize:"14px",fontWeight:600,cursor:"not-allowed"}}>🔵 Satışa Çevir</button>
+                    <div style={{padding:"10px 12px",background:"#fff7e6",border:"1px solid #ffd591",borderRadius:T.r,fontSize:"11px",color:"#d46b08",lineHeight:1.5}}>
+                      ⚠ <strong>Müşteri potansiyel statüsünde.</strong> Satışa çevirmek için müşteriyi önce <strong>Alıcı</strong>'ya dönüştürüp TC/VKN, adres ve telefon gibi zorunlu bilgileri tamamlamalısınız.
+                    </div>
+                    <button onClick={()=>goToFirma&&goToFirma(selBolum.aliciFirmaId)} style={{padding:"10px",borderRadius:T.r,border:"1px solid #52c41a",background:"#f6ffed",color:"#389e0d",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>Firma Kartına Git →</button>
+                  </>
+                }
+                <button onClick={musaitYap} style={{padding:"10px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>Müsait Yap</button>
+              </>;
+            })()}
             {selBolum.durum==="satildi"&&<button onClick={musaitYap} style={{padding:"10px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>Müsait Yap (Satışı iptal)</button>}
           </div>
 
