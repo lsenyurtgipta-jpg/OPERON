@@ -7261,52 +7261,131 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
               </div>
             </div>
 
-            {/* BLOK BAZLI ÖNGÖRÜLEN m² OVERRIDE */}
-            {(selProje.bloklar||[]).length>0&&<div style={{padding:"16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff",marginBottom:"16px"}}>
-              <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"4px"}}>Blok Bazında Öngörülen m² Maliyet</div>
-              <div style={{fontSize:"11px",color:T.t3,marginBottom:"12px"}}>Her blok için ayrı öngörülen m² girilir — blok maliyetleri farklı olduğu için zorunludur.</div>
-              <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(3,(selProje.bloklar||[]).length)},1fr)`,gap:"12px"}}>
-                {(selProje.bloklar||[]).map(bl=>{
-                  const blBrutM2=blokM2Harita[bl.ad]||0;
-                  const blMaliyet=ozet.blokMaliyet[bl.ad]||0;
-                  const blMaliyetDahil=ozet.blokMaliyetKdvDahil[bl.ad]||0;
-                  const blMutM2=ozet.muteahhitOran>0?blBrutM2*ozet.muteahhitOran:blBrutM2;
-                  const blM2MaliyetNet=blMutM2>0?blMaliyet/blMutM2:0;
-                  const blM2MaliyetNetDahil=blMutM2>0?blMaliyetDahil/blMutM2:0;
-                  const f=blokFiyatForm[bl.id]||{ongorulenM2KdvHaric:"",ongorulenM2KdvDahil:""};
-                  const saved=blokFiyatSaved[bl.id];
-                  const ong=parseFloat(f.ongorulenM2KdvHaric);
-                  const hasOverride=f.ongorulenM2KdvHaric!==""&&!isNaN(ong);
-                  const etkinHaric=hasOverride?ong:NaN;
-                  const sapma=!isNaN(etkinHaric)&&blM2MaliyetNet>0?etkinHaric-blM2MaliyetNet:null;
-                  const sapmaY=sapma!=null&&blM2MaliyetNet>0?(sapma/blM2MaliyetNet*100):null;
-                  const sapmaCol=sapmaY==null?T.t3:Math.abs(sapmaY)<5?T.ok:Math.abs(sapmaY)<15?T.warn:T.err;
-                  return<div key={bl.id} style={{padding:"12px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#fafafa"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
-                      <div style={{fontSize:"13px",fontWeight:700,color:T.text}}>{bl.ad} BLOK</div>
-                      {!hasOverride&&<span style={{fontSize:"10px",color:"#fa8c16",fontStyle:"italic",fontWeight:600}}>⚠ öngörülen girilmedi</span>}
-                    </div>
-                    <div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",fontWeight:600,marginBottom:"4px"}}>Hesaplanan Net m²</div>
-                    <div style={{fontSize:"15px",fontWeight:700,color:"#ff4d4f",marginBottom:"10px"}}>{blM2MaliyetNet>0?blM2MaliyetNet.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺":"—"}</div>
-                    <div style={{fontSize:"10px",color:T.t2,fontWeight:600,marginBottom:"3px"}}>Öngörülen m²</div>
-                    <input type="text" value={f._ongHEdit?(f.ongorulenM2KdvHaric||""):fmtInt(f.ongorulenM2KdvHaric)} onChange={e=>blokFiyatHaricChange(bl.id,e.target.value)} onFocus={()=>setBlokFlag(bl.id,"_ongHEdit",true)} onBlur={()=>setBlokFlag(bl.id,"_ongHEdit",false)} placeholder="0" style={{width:"100%",padding:"6px 8px",border:`1px solid ${T.bDark}`,borderRadius:"4px",fontSize:"12px",boxSizing:"border-box",outline:"none",marginBottom:"8px"}}/>
-                    {(()=>{
-                      const kar=parseFloat(fiyatForm.karMarjiYuzde)||0;
-                      if(isNaN(etkinHaric)||etkinHaric<=0)return null;
-                      const sHaric=etkinHaric*(1+kar/100);
-                      return <div style={{marginTop:"8px",marginBottom:"8px",padding:"8px",borderRadius:"4px",background:"#f6ffed",border:"1px solid #b7eb8f"}}>
-                        <div style={{fontSize:"9px",color:T.t3,fontWeight:600,textTransform:"uppercase",marginBottom:"4px"}}>m² Satış Fiyatı</div>
-                        <div style={{fontSize:"14px",fontWeight:700,color:"#52c41a"}}>{sHaric.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺"}</div>
-                      </div>;
-                    })()}
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:"6px"}}>
-                      <div style={{fontSize:"11px",color:sapmaCol,fontWeight:600}}>
-                        {sapma==null?"—":"Sapma: "+(sapma>=0?"+":"")+sapma.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺ (%"+(sapmaY>=0?"+":"")+sapmaY.toFixed(0)+")"}
+            {/* BLOK BAZLI ÖNGÖRÜLEN m² OVERRIDE + PROJE KÂRLILIĞI ÖZETİ — YAN YANA */}
+            {(selProje.bloklar||[]).length>0&&<div style={{display:"grid",gridTemplateColumns:"3fr 2fr",gap:"16px",marginBottom:"16px"}}>
+              {/* SOL: BLOK BAZLI ÖNGÖRÜLEN m² */}
+              <div style={{padding:"16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff"}}>
+                <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"4px"}}>Blok Bazında Öngörülen m² Maliyet</div>
+                <div style={{fontSize:"11px",color:T.t3,marginBottom:"12px"}}>Her blok için ayrı öngörülen m² girilir — blok maliyetleri farklı olduğu için zorunludur.</div>
+                <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(3,(selProje.bloklar||[]).length)},1fr)`,gap:"12px"}}>
+                  {(selProje.bloklar||[]).map(bl=>{
+                    const blBrutM2=blokM2Harita[bl.ad]||0;
+                    const blMaliyet=ozet.blokMaliyet[bl.ad]||0;
+                    const blMaliyetDahil=ozet.blokMaliyetKdvDahil[bl.ad]||0;
+                    const blMutM2=ozet.muteahhitOran>0?blBrutM2*ozet.muteahhitOran:blBrutM2;
+                    const blM2MaliyetNet=blMutM2>0?blMaliyet/blMutM2:0;
+                    const blM2MaliyetNetDahil=blMutM2>0?blMaliyetDahil/blMutM2:0;
+                    const f=blokFiyatForm[bl.id]||{ongorulenM2KdvHaric:"",ongorulenM2KdvDahil:""};
+                    const saved=blokFiyatSaved[bl.id];
+                    const ong=parseFloat(f.ongorulenM2KdvHaric);
+                    const hasOverride=f.ongorulenM2KdvHaric!==""&&!isNaN(ong);
+                    const etkinHaric=hasOverride?ong:NaN;
+                    const sapma=!isNaN(etkinHaric)&&blM2MaliyetNet>0?etkinHaric-blM2MaliyetNet:null;
+                    const sapmaY=sapma!=null&&blM2MaliyetNet>0?(sapma/blM2MaliyetNet*100):null;
+                    const sapmaCol=sapmaY==null?T.t3:Math.abs(sapmaY)<5?T.ok:Math.abs(sapmaY)<15?T.warn:T.err;
+                    return<div key={bl.id} style={{padding:"12px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#fafafa"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
+                        <div style={{fontSize:"13px",fontWeight:700,color:T.text}}>{bl.ad} BLOK</div>
+                        {!hasOverride&&<span style={{fontSize:"10px",color:"#fa8c16",fontStyle:"italic",fontWeight:600}}>⚠ öngörülen girilmedi</span>}
                       </div>
-                      <button onClick={()=>blokFiyatKaydet(bl.id)} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={28}/></button>
+                      <div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",fontWeight:600,marginBottom:"4px"}}>Hesaplanan Net m²</div>
+                      <div style={{fontSize:"15px",fontWeight:700,color:"#ff4d4f",marginBottom:"10px"}}>{blM2MaliyetNet>0?blM2MaliyetNet.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺":"—"}</div>
+                      <div style={{fontSize:"10px",color:T.t2,fontWeight:600,marginBottom:"3px"}}>Öngörülen m²</div>
+                      <input type="text" value={f._ongHEdit?(f.ongorulenM2KdvHaric||""):fmtInt(f.ongorulenM2KdvHaric)} onChange={e=>blokFiyatHaricChange(bl.id,e.target.value)} onFocus={()=>setBlokFlag(bl.id,"_ongHEdit",true)} onBlur={()=>setBlokFlag(bl.id,"_ongHEdit",false)} placeholder="0" style={{width:"100%",padding:"6px 8px",border:`1px solid ${T.bDark}`,borderRadius:"4px",fontSize:"12px",boxSizing:"border-box",outline:"none",marginBottom:"8px"}}/>
+                      {(()=>{
+                        const kar=parseFloat(fiyatForm.karMarjiYuzde)||0;
+                        if(isNaN(etkinHaric)||etkinHaric<=0)return null;
+                        const sHaric=etkinHaric*(1+kar/100);
+                        return <div style={{marginTop:"8px",marginBottom:"8px",padding:"8px",borderRadius:"4px",background:"#f6ffed",border:"1px solid #b7eb8f"}}>
+                          <div style={{fontSize:"9px",color:T.t3,fontWeight:600,textTransform:"uppercase",marginBottom:"4px"}}>m² Satış Fiyatı</div>
+                          <div style={{fontSize:"14px",fontWeight:700,color:"#52c41a"}}>{sHaric.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺"}</div>
+                        </div>;
+                      })()}
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:"6px"}}>
+                        <div style={{fontSize:"11px",color:sapmaCol,fontWeight:600}}>
+                          {sapma==null?"—":"Sapma: "+(sapma>=0?"+":"")+sapma.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺ (%"+(sapmaY>=0?"+":"")+sapmaY.toFixed(0)+")"}
+                        </div>
+                        <button onClick={()=>blokFiyatKaydet(bl.id)} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={28}/></button>
+                      </div>
+                    </div>;
+                  })}
+                </div>
+              </div>
+
+              {/* SAĞ: PROJE KÂRLILIĞI ÖZETİ */}
+              <div style={{padding:"16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff"}}>
+                <div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"4px"}}>Proje Kârlılığı Özeti</div>
+                <div style={{fontSize:"11px",color:T.t3,marginBottom:"12px"}}>Müteahhit daireleri üzerinden plan, gerçekleşen ve projeksiyon kârı (KDV hariç).</div>
+                {(()=>{
+                  const muteahhitDaireler=(selProje.bolumler||[]).filter(bo=>bo.tipi==="Daire"&&bo.sahiplik==="Müteahhit");
+                  const karMarji=parseFloat(fiyatForm.karMarjiYuzde||"0");
+                  let hesapSatisTop=0,kalanHesapSatisTop=0,gerceklesenTop=0,satilan=0;
+                  const toplam=muteahhitDaireler.length;
+                  muteahhitDaireler.forEach(bo=>{
+                    const blok=(selProje.bloklar||[]).find(bl=>bl.ad===bo.blok);
+                    const blokOng=blok&&blok.ongorulenM2KdvHaric!==""&&blok.ongorulenM2KdvHaric!=null?parseFloat(blok.ongorulenM2KdvHaric):NaN;
+                    const brutM2=parseFloat(bo.brutM2)||0;
+                    const f=daireFiyatForm[bo.id]||{};
+                    const katSrf=parseFloat(f.katSerefiyesiTl)||0;
+                    const cepheSrf=parseFloat(f.cepheSerefiyesiTl)||0;
+                    const daireMaliyet=!isNaN(blokOng)&&brutM2>0?brutM2*blokOng:0;
+                    const uretimSF=daireMaliyet*(1+karMarji/100);
+                    const hesapSF=uretimSF+katSrf+cepheSrf;
+                    hesapSatisTop+=hesapSF;
+                    if(bo.durum==="satildi"){satilan++;gerceklesenTop+=parseFloat(bo.satisFiyati)||0;}
+                    else kalanHesapSatisTop+=hesapSF;
+                  });
+                  const butce=ozet.planlananTop||0;
+                  const beklenenKar=hesapSatisTop-butce;
+                  const projeksiyonKar=(gerceklesenTop+kalanHesapSatisTop)-butce;
+                  const beklenenKarPct=butce>0?(beklenenKar/butce)*100:null;
+                  const projeksiyonKarPct=butce>0?(projeksiyonKar/butce)*100:null;
+                  const fmtTL=v=>(v||0).toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺";
+                  const fmtPct=p=>p==null?"":" (%"+(p>=0?"+":"")+p.toFixed(1)+")";
+                  const karCol=v=>v>=0?"#237804":"#ff4d4f";
+                  return <>
+                    {/* GRUP 1 — PLAN */}
+                    <div style={{padding:"10px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#fafafa",marginBottom:"10px"}}>
+                      <div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",fontWeight:700,marginBottom:"8px",letterSpacing:"0.3px"}}>Plan — Tüm Daireler ({toplam})</div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"5px"}}>
+                        <span style={{fontSize:"11px",color:T.t2}}>Planlı Satış (KDV Hariç)</span>
+                        <span style={{fontSize:"14px",fontWeight:600,color:"#1677ff"}}>{fmtTL(hesapSatisTop)}</span>
+                      </div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"5px"}}>
+                        <span style={{fontSize:"11px",color:T.t2}}>Planlanan Bütçe</span>
+                        <span style={{fontSize:"14px",fontWeight:600,color:"#fa8c16"}}>{fmtTL(butce)}</span>
+                      </div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",borderTop:`1px dashed ${T.border}`,paddingTop:"6px",marginTop:"4px"}}>
+                        <span style={{fontSize:"14px",fontWeight:700,color:T.text}}>Beklenen Kâr<span style={{fontSize:"13px",fontWeight:600,color:karCol(beklenenKar),marginLeft:"4px"}}>{fmtPct(beklenenKarPct)}</span></span>
+                        <span style={{fontSize:"18px",fontWeight:700,color:karCol(beklenenKar)}}>{fmtTL(beklenenKar)}</span>
+                      </div>
                     </div>
-                  </div>;
-                })}
+                    {/* GRUP 2 — GERÇEKLEŞEN */}
+                    <div style={{padding:"10px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#fafafa",marginBottom:"10px"}}>
+                      <div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",fontWeight:700,marginBottom:"8px",letterSpacing:"0.3px"}}>Gerçekleşen — Satılmış Daireler</div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"5px"}}>
+                        <span style={{fontSize:"11px",color:T.t2}}>Satılan / Toplam</span>
+                        <span style={{fontSize:"14px",fontWeight:600,color:T.text}}>{satilan} / {toplam}</span>
+                      </div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+                        <span style={{fontSize:"11px",color:T.t2}}>Gerçekleşen Satış</span>
+                        <span style={{fontSize:"14px",fontWeight:600,color:"#1677ff"}}>{fmtTL(gerceklesenTop)}</span>
+                      </div>
+                    </div>
+                    {/* GRUP 3 — KALAN + PROJEKSİYON */}
+                    <div style={{padding:"10px",borderRadius:"6px",border:`1px solid ${T.border}`,background:"#fafafa"}}>
+                      <div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase",fontWeight:700,marginBottom:"8px",letterSpacing:"0.3px"}}>Kalan — Satılmamış Daireler ({toplam-satilan})</div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"5px"}}>
+                        <span style={{fontSize:"11px",color:T.t2}}>Kalan Planlı Satış (KDV Hariç)</span>
+                        <span style={{fontSize:"14px",fontWeight:600,color:"#1677ff"}}>{fmtTL(kalanHesapSatisTop)}</span>
+                      </div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",borderTop:`1px dashed ${T.border}`,paddingTop:"6px",marginTop:"4px"}}>
+                        <span style={{fontSize:"14px",fontWeight:700,color:T.text}}>Projeksiyon Nihai Kâr<span style={{fontSize:"13px",fontWeight:600,color:karCol(projeksiyonKar),marginLeft:"4px"}}>{fmtPct(projeksiyonKarPct)}</span></span>
+                        <span style={{fontSize:"18px",fontWeight:700,color:karCol(projeksiyonKar)}}>{fmtTL(projeksiyonKar)}</span>
+                      </div>
+                    </div>
+                  </>;
+                })()}
               </div>
             </div>}
 
