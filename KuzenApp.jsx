@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { Plus, Trash2, Pencil, Save, Download, Upload, Search, ChevronDown, ChevronUp, X, FileText, Image, Folder, Building2, Package, ClipboardList, ShoppingCart, Receipt, LayoutDashboard, FolderOpen, ChevronRight, Settings, User, LogOut, Eye, Copy, Filter, MoreVertical, Check, AlertCircle, Info, ArrowLeft, RefreshCw, ExternalLink, Calendar, MapPin, Phone, Mail, Hash, Layers, HardHat, FileCheck, SquarePlus, MoveLeft, Map, SquarePen, Grid2x2Plus, FileSpreadsheet, FolderPlus, ArrowDownFromLine } from "lucide-react";
+import { Plus, Trash2, Pencil, Save, Download, Upload, Search, ChevronDown, ChevronUp, X, FileText, Image, Folder, Building2, Package, ClipboardList, ShoppingCart, Receipt, LayoutDashboard, FolderOpen, ChevronRight, Settings, User, LogOut, Eye, Copy, Filter, MoreVertical, Check, AlertCircle, Info, ArrowLeft, RefreshCw, ExternalLink, Calendar, MapPin, Phone, Mail, Hash, Layers, HardHat, FileCheck, SquarePlus, MoveLeft, Map, SquarePen, Grid2x2Plus, FileSpreadsheet, FolderPlus, ArrowDownFromLine, HousePlus } from "lucide-react";
 import operonLogo from "./assets/operon-logo.png";
 import excelIcon from "./assets/icons8-excel-48.png";
 
@@ -4937,7 +4937,7 @@ const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[],anlasmaYontemi
 };
 
 /* --- Proje Kartı (Form + Sekmeler) --- */
-const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,goToFirma,malzemeler=[],bagimsizBolumKartiAc})=>{
+const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,goToFirma,malzemeler=[],bagimsizBolumKartiAc,tumMuteahhitDairelerineKartAc})=>{
   const emptyProje={
     id:null,projeKodu:"",ad:"",kisaAd:"",tur:"",durum:"",aktif:true,
     il:"",ilce:"",mahalle:"",adres:"",ada:"",parsel:"",
@@ -5347,6 +5347,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
               </div>
               <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
                 <button onClick={()=>addBolumToBlok(blokAd)} title="Bölüm Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
+                <button onClick={()=>{if(tumMuteahhitDairelerineKartAc)tumMuteahhitDairelerineKartAc(blokAd,blokBolumler);}} title="Tüm Müteahhit Dairelerine BB Kart Aç (toplu)" style={{padding:"0",border:"none",background:"transparent",color:"#b37feb",cursor:"pointer",display:"flex",alignItems:"center"}}><HousePlus size={30}/></button>
                 <button onClick={()=>{
                   const yeniAd=prompt("Blok adını düzenleyin:",blokAd);
                   if(!yeniAd||!yeniAd.trim()||yeniAd.trim()===blokAd)return;
@@ -8352,7 +8353,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
 };
 
 /* --- Projeler Liste Sayfası --- */
-const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategorileri,setDosyaKategorileri,setPage,goToFirma,setEditMode,malzemeler=[],bagimsizBolumKartiAc})=>{
+const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategorileri,setDosyaKategorileri,setPage,goToFirma,setEditMode,malzemeler=[],bagimsizBolumKartiAc,tumMuteahhitDairelerineKartAc})=>{
   const[secili,setSecili]=useState(null);
   const[ara,setAra]=useState("");
   const[durumFil,setDurumFil]=useState("hepsi");
@@ -8360,10 +8361,10 @@ const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategoriler
   const[mainTab,setMainTab]=useState("projeler");
   const[aktifFil,setAktifFil]=useState("aktif");
 
-  if(secili==="yeni") return <ProjeKarti proje={null} isNew={true} onSave={async p=>{await onSave(p);setSecili(p.id);}} onBack={()=>{setSecili(null);setEditMode?.(false);}} firmalar={firmalar} setPage={setPage} goToFirma={goToFirma} malzemeler={malzemeler} bagimsizBolumKartiAc={bagimsizBolumKartiAc}/>;
+  if(secili==="yeni") return <ProjeKarti proje={null} isNew={true} onSave={async p=>{await onSave(p);setSecili(p.id);}} onBack={()=>{setSecili(null);setEditMode?.(false);}} firmalar={firmalar} setPage={setPage} goToFirma={goToFirma} malzemeler={malzemeler} bagimsizBolumKartiAc={bagimsizBolumKartiAc} tumMuteahhitDairelerineKartAc={tumMuteahhitDairelerineKartAc}/>;
   if(secili) {
     const p=projeler.find(x=>x.id===secili);
-    if(p) return <ProjeKarti proje={p} isNew={false} onSave={onSave} onDel={(id)=>{onDel(id);setSecili(null);setEditMode?.(false);}} onBack={()=>{setSecili(null);setEditMode?.(false);}} firmalar={firmalar} setPage={setPage} goToFirma={goToFirma} malzemeler={malzemeler} bagimsizBolumKartiAc={bagimsizBolumKartiAc}/>;
+    if(p) return <ProjeKarti proje={p} isNew={false} onSave={onSave} onDel={(id)=>{onDel(id);setSecili(null);setEditMode?.(false);}} onBack={()=>{setSecili(null);setEditMode?.(false);}} firmalar={firmalar} setPage={setPage} goToFirma={goToFirma} malzemeler={malzemeler} bagimsizBolumKartiAc={bagimsizBolumKartiAc} tumMuteahhitDairelerineKartAc={tumMuteahhitDairelerineKartAc}/>;
   }
 
   const mainTabs=[
@@ -8750,6 +8751,49 @@ export default function App(){
     if(!confirm("Bu malzemeyi silmek istediğinize emin misiniz?")) return;
     try { await sbDel('malzemeler', id); await loadAll(); }
     catch(e) { setMalzemeler(prev=>prev.filter(m=>m.id!==id)); }
+  };
+
+  /* ---- TOPLU BB KART AÇMA (blok bazlı) ---- */
+  const tumMuteahhitDairelerineKartAc = async (blokAd, blokBolumler) => {
+    const muteahhitler = (blokBolumler||[]).filter(b => b.sahiplik === "Müteahhit");
+    if(muteahhitler.length === 0){
+      alert(`${blokAd}\n\nBu blokta Müteahhit dairesi yok.`);
+      return;
+    }
+    const kartYok = muteahhitler.filter(b => !malzemeler.find(m => m.bolumId === b.id));
+    if(kartYok.length === 0){
+      alert(`${blokAd}\n\nTüm Müteahhit daireleri (${muteahhitler.length}) için kart zaten var.`);
+      return;
+    }
+    const ok = confirm(
+      `${blokAd}\n\n` +
+      `Müteahhit dairesi: ${muteahhitler.length}\n` +
+      `Kart yok: ${kartYok.length}\n\n` +
+      `${kartYok.length} adet Bağımsız Bölüm kartı oluşturulacak.\n` +
+      `Bu işlem ${kartYok.length * 0.3 | 0}-${kartYok.length * 0.5 | 0} saniye sürebilir.\n\n` +
+      `Onaylıyor musunuz?`
+    );
+    if(!ok) return;
+
+    let basarili = 0;
+    for(let i = 0; i < kartYok.length; i++){
+      const b = kartYok[i];
+      try {
+        const result = await bagimsizBolumKartiAc(b, {skipConfirm: true});
+        if(!result) throw new Error("Kart oluşturulmadı (sebep belirsiz, console'a bakın)");
+        basarili++;
+      } catch(e) {
+        alert(
+          `❌ İŞLEM DURDURULDU\n\n` +
+          `${basarili}/${kartYok.length} kart başarıyla oluşturuldu.\n\n` +
+          `Hata yapan daire: ${b.blok || ''} ${b.no || ''}\n` +
+          `Sebep: ${e.message || 'bilinmiyor'}\n\n` +
+          `Sorunu çözüp tekrar deneyin — başarılı olanlar tekrar denenmez (tekillik kontrolü var).`
+        );
+        return;
+      }
+    }
+    alert(`✅ ${basarili} adet Bağımsız Bölüm kartı oluşturuldu.\n\n${blokAd} bloğu tamamen kart bağlı.`);
   };
 
   /* ---- BAĞIMSIZ BÖLÜM MALZEME KARTI OLUŞTUR ----
@@ -9239,7 +9283,7 @@ export default function App(){
         {page==="dashboard"&&<DashPage firmalar={firmalar} malzemeler={malzemeler} teklifler={teklifler} setPage={setPage}/>}
         {page==="firmalar"&&<FirmalarPage firmalar={firmalar} setFirmalar={setFirmalar} onSave={saveFirma} onDel={delFirma} addNote={addNote} initialFirmaId={goToId} onClearInitial={()=>setGoToId(null)} projeler={projeler} setPage={setPage} setEditMode={setEditMode}/>}
         {page==="malzemeler"&&<MalzemelerPage malzemeler={malzemeler} setMalzemeler={setMalzemeler} onSaveMalzeme={saveMalzeme} onDelMalzeme={delMalzeme} firmalar={firmalar} altKategoriler={altKategoriler} setAltKategoriler={setAltKategoriler} altGruplar={altGruplar} setAltGruplar={setAltGruplar} teklifler={teklifler} setTeklifler={setTeklifler} onSaveKat={saveKat} onDelKat={delKat} onSaveAltGrp={saveAltGrp} onDelAltGrp={delAltGrp} onSaveTeklif={saveTeklif} onDelTeklif={delTeklif} projeler={projeler} setEditMode={setEditMode}/>}
-        {page==="projeler"&&<ProjelerPage projeler={projeler} setProjeler={setProjeler} onSave={saveProje} onDel={delProje} firmalar={firmalar} dosyaKategorileri={dosyaKategorileri} setDosyaKategorileri={setDosyaKategorileri} setPage={setPage} goToFirma={goToFirma} setEditMode={setEditMode} malzemeler={malzemeler} bagimsizBolumKartiAc={bagimsizBolumKartiAc}/>}
+        {page==="projeler"&&<ProjelerPage projeler={projeler} setProjeler={setProjeler} onSave={saveProje} onDel={delProje} firmalar={firmalar} dosyaKategorileri={dosyaKategorileri} setDosyaKategorileri={setDosyaKategorileri} setPage={setPage} goToFirma={goToFirma} setEditMode={setEditMode} malzemeler={malzemeler} bagimsizBolumKartiAc={bagimsizBolumKartiAc} tumMuteahhitDairelerineKartAc={tumMuteahhitDairelerineKartAc}/>}
         {page==="teklifler"&&<AlinanTekliflerYonetim teklifler={teklifler} setTeklifler={setTeklifler} onSave={saveTeklif} onDel={delTeklif} malzemeler={malzemeler} firmalar={firmalar} projeler={projeler} onSpOlustur={spOlusturTeklifden}/>}
         {page==="teklif_verme"&&<div style={{padding:"80px",textAlign:"center",color:T.t3,fontSize:"16px",border:`1px dashed ${T.border}`,borderRadius:T.rl}}><div style={{fontSize:"32px",marginBottom:"12px"}}>📋</div>Teklif Verme modülü hazırlanıyor...</div>}
         {page==="satinalma"&&<SatinalmaSiparisleriPage siparisler={siparisler} setSiparisler={setSiparisler} onSave={saveSiparis} onDel={delSiparis} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler} butceKalemleri={butceKalemleri} faturalar={faturalar}/>}
