@@ -5347,7 +5347,11 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
               </div>
               <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
                 <button onClick={()=>addBolumToBlok(blokAd)} title="Bölüm Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
-                <button onClick={()=>{if(tumMuteahhitDairelerineKartAc)tumMuteahhitDairelerineKartAc(blokAd,blokBolumler);}} title="Tüm Müteahhit Dairelerine BB Kart Aç (toplu)" style={{padding:"0",border:"none",background:"transparent",color:"#b37feb",cursor:"pointer",display:"flex",alignItems:"center"}}><HousePlus size={30}/></button>
+                {(()=>{
+                  const muteahhitlerKartYok = blokBolumler.filter(b => b.sahiplik==="Müteahhit" && !(malzemeler||[]).find(m => m.bolumId===b.id));
+                  if(muteahhitlerKartYok.length === 0) return null; // Tüm Müteahhit dairelerinde kart var → buton gizle
+                  return <button onClick={()=>{if(tumMuteahhitDairelerineKartAc)tumMuteahhitDairelerineKartAc(blokAd,blokBolumler);}} title={`Tüm Müteahhit Dairelerine BB Kart Aç (${muteahhitlerKartYok.length} açık)`} style={{padding:"0",border:"none",background:"transparent",color:"#b37feb",cursor:"pointer",display:"flex",alignItems:"center"}}><HousePlus size={30}/></button>;
+                })()}
                 <button onClick={()=>{
                   const yeniAd=prompt("Blok adını düzenleyin:",blokAd);
                   if(!yeniAd||!yeniAd.trim()||yeniAd.trim()===blokAd)return;
