@@ -118,6 +118,9 @@ CREATE TABLE malzemeler (
   durum TEXT DEFAULT 'aktif',
   hesaplama_sablonu TEXT,
   omurga_proje_turleri JSONB DEFAULT '[]',
+  -- Daire-Malzeme entegrasyonu (2026-04-25): Bağımsız bölüm malzeme kartı bu alanla bolume bağlanır
+  bolum_id BIGINT REFERENCES bolumler(id) ON DELETE SET NULL,
+  CONSTRAINT malzemeler_bolum_id_unique UNIQUE (bolum_id),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

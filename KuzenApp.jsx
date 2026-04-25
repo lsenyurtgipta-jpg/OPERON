@@ -79,7 +79,7 @@ const ILGI_SEVIYELERI=[{id:"yuksek",label:"Yüksek",color:"#ff4d4f",bg:"#fff1f0"
 const KAYNAK_KANALLARI=["Tavsiye","Sosyal Medya","Tabela / Dış Mekân","Web Sitesi","Sahibinden","Aracı / Emlakçı","Referans","Telefon","Diğer"];
 const PARA_BIRIMLERI=[{id:"TL",label:"₺ Türk Lirası (TL)",kod:"1",symbol:"₺"},{id:"USD",label:"$ Amerikan Doları (USD)",kod:"2",symbol:"$"},{id:"EUR",label:"€ Euro (EUR)",kod:"3",symbol:"€"}];
 /* ========== MALZEME SABİTLERİ ========== */
-const MLZ_TIPLER=[{id:"M",label:"Mamül",color:"#52c41a",bg:"#f6ffed",icon:"✅"},{id:"H",label:"Hizmet",color:"#f5222d",bg:"#fff1f0",icon:"🔧"},{id:"R",label:"Hammadde",color:"#1677ff",bg:"#e6f4ff",icon:"📦"},{id:"Y",label:"Yarı Mamül",color:"#fa8c16",bg:"#fff7e6",icon:"🔄"}];
+const MLZ_TIPLER=[{id:"M",label:"Mamül",color:"#52c41a",bg:"#f6ffed",icon:"✅"},{id:"H",label:"Hizmet",color:"#f5222d",bg:"#fff1f0",icon:"🔧"},{id:"R",label:"Hammadde",color:"#1677ff",bg:"#e6f4ff",icon:"📦"},{id:"Y",label:"Yarı Mamül",color:"#fa8c16",bg:"#fff7e6",icon:"🔄"},{id:"B",label:"Bağımsız Bölüm",color:"#722ed1",bg:"#f9f0ff",icon:"🏠"}];
 const MLZ_BIRIMLER=["kg","ton","gr","m³","m²","m","adet","takım","paket","torba","lt","kova","rulo","levha","sefer","saat","gün","ay","götürü","daire"];
 const KDV_ORANLARI=[{id:"0",label:"%0"},{id:"1",label:"%1"},{id:"10",label:"%10"},{id:"20",label:"%20"}];
 const PROJE_TURLERI_OMURGA=[{id:"konut",label:"Konut",icon:"🏘️",color:"#1677ff",bg:"#e6f4ff"},{id:"ticari",label:"Ticari",icon:"🏢",color:"#fa8c16",bg:"#fff7e6"},{id:"karma",label:"Karma",icon:"🏙️",color:"#722ed1",bg:"#f9f0ff"},{id:"altyapi",label:"Altyapı",icon:"🏗️",color:"#52c41a",bg:"#f6ffed"}];
@@ -3941,6 +3941,7 @@ const malzemeToLocal = (m) => ({
   aciklama: m.aciklama||"", tedarikciId: m.tedarikci_id||null, durum: m.durum||"aktif",
   hesaplamaSablonu: m.hesaplama_sablonu||"",
   omurgaProjeTurleri: m.omurga_proje_turleri||[],
+  bolumId: m.bolum_id||null,
   resimler: [], notlar: [],
   createdAt: m.created_at ? m.created_at.split("T")[0] : new Date().toISOString().split("T")[0]
 });
@@ -3952,7 +3953,8 @@ const malzemeToDb = (m) => ({
   marka: m.marka, model: m.model, aciklama: m.aciklama,
   tedarikci_id: m.tedarikciId||null, durum: m.durum,
   hesaplama_sablonu: m.hesaplamaSablonu||null,
-  omurga_proje_turleri: m.omurgaProjeTurleri||[]
+  omurga_proje_turleri: m.omurgaProjeTurleri||[],
+  bolum_id: m.bolumId||null
 });
 const katToLocal = (k) => ({ id: k.id, kod: k.kod, ad: k.ad });
 const altGrpToLocal = (g) => ({
@@ -4935,7 +4937,7 @@ const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[],anlasmaYontemi
 };
 
 /* --- Proje Kartı (Form + Sekmeler) --- */
-const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,goToFirma})=>{
+const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,goToFirma,malzemeler=[],bagimsizBolumKartiAc})=>{
   const emptyProje={
     id:null,projeKodu:"",ad:"",kisaAd:"",tur:"",durum:"",aktif:true,
     il:"",ilce:"",mahalle:"",adres:"",ada:"",parsel:"",
@@ -5374,8 +5376,8 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
             {/* TABLO */}
             {(()=>{
               const hasAnlasma=!!(form.anlasmaYontemi);
-              const cols=hasAnlasma?"60px 60px 70px 90px 90px 100px 100px 120px 100px 100px":"60px 60px 70px 90px 90px 100px 100px 120px 100px";
-              const headers=hasAnlasma?["No","Kat","Tip","Brüt m²","Net m²","Oda","Cephe","Fiyat","Durum","Sahiplik"]:["No","Kat","Tip","Brüt m²","Net m²","Oda","Cephe","Fiyat","Durum"];
+              const cols=hasAnlasma?"60px 60px 70px 90px 90px 100px 100px 120px 100px 100px 150px":"60px 60px 70px 90px 90px 100px 100px 120px 100px";
+              const headers=hasAnlasma?["No","Kat","Tip","Brüt m²","Net m²","Oda","Cephe","Gerçekleşen Satış","Durum","Sahiplik","BB Kart"]:["No","Kat","Tip","Brüt m²","Net m²","Oda","Cephe","Gerçekleşen Satış","Durum"];
               return blokBolumler.length===0
                 ?<div style={{padding:"30px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>Bu blokta henüz bölüm yok.</div>
                 :<>
@@ -5398,6 +5400,18 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
                       <div style={{fontSize:"13px",fontWeight:600,color:T.text}} title="Satış Bedeli + PLUS (KDV Hariç)">{(()=>{const n=(parseFloat(b.satisBedeli)||0)+(parseFloat(b.plus)||0);return n>0?n.toLocaleString("tr-TR")+" "+pb.symbol:"—";})()}</div>
                       <div><span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"12px",color:ds.color,background:ds.bg,border:`1px solid ${ds.color}33`,whiteSpace:"nowrap"}}>{ds.label}</span></div>
                       {hasAnlasma&&<div><span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"12px",fontWeight:600,whiteSpace:"nowrap",color:b.sahiplik==="Arsa Sahibi"?"#d4880f":b.sahiplik==="Müteahhit"?"#1677ff":"#999",background:b.sahiplik==="Arsa Sahibi"?"#fff7e6":b.sahiplik==="Müteahhit"?"#e6f4ff":"#f5f5f5",border:`1px solid ${b.sahiplik==="Arsa Sahibi"?"#d4880f33":b.sahiplik==="Müteahhit"?"#1677ff33":"#ddd"}`}}>{b.sahiplik||"—"}</span></div>}
+                      {hasAnlasma&&<div onClick={(e)=>e.stopPropagation()} style={{textAlign:"center"}}>
+                        {b.sahiplik!=="Müteahhit"
+                          ?<span style={{color:"#bbb",fontSize:"13px"}}>—</span>
+                          :(()=>{
+                            const kart=(malzemeler||[]).find(m=>m.bolumId===b.id);
+                            if(kart){
+                              return <span title={`${kart.malzemeKodu}\n${kart.ad}`} style={{display:"inline-block",padding:"2px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:600,color:"#722ed1",background:"#f9f0ff",border:"1px solid #722ed133",cursor:"default",fontFamily:"monospace",maxWidth:"140px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>🔗 {kart.malzemeKodu}</span>;
+                            }
+                            return <button onClick={async()=>{if(bagimsizBolumKartiAc)await bagimsizBolumKartiAc(b);}} title="Bağımsız Bölüm Kartı Oluştur" style={{padding:"3px 10px",borderRadius:"4px",border:"1px dashed #722ed1",background:"#fff",color:"#722ed1",fontSize:"12px",fontWeight:600,cursor:"pointer"}}>➕ Aç</button>;
+                          })()
+                        }
+                      </div>}
                     </div>;
                   })}
                   {/* ALT TOPLAM */}
@@ -5410,6 +5424,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
                     <div></div><div></div>
                     <div style={{fontSize:"16px",fontWeight:700,color:"#fff"}}>{(()=>{const t=blokBolumler.reduce((s,b)=>s+(parseFloat(b.satisBedeli)||0)+(parseFloat(b.plus)||0),0);return t>0?t.toLocaleString("tr-TR"):"—";})()}</div>
                     <div></div>
+                    {hasAnlasma&&<div></div>}
                     {hasAnlasma&&<div></div>}
                   </div>
                   {/* ORTAK ALAN + BRÜT TOPLAMI */}
@@ -8337,7 +8352,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
 };
 
 /* --- Projeler Liste Sayfası --- */
-const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategorileri,setDosyaKategorileri,setPage,goToFirma,setEditMode})=>{
+const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategorileri,setDosyaKategorileri,setPage,goToFirma,setEditMode,malzemeler=[],bagimsizBolumKartiAc})=>{
   const[secili,setSecili]=useState(null);
   const[ara,setAra]=useState("");
   const[durumFil,setDurumFil]=useState("hepsi");
@@ -8345,10 +8360,10 @@ const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategoriler
   const[mainTab,setMainTab]=useState("projeler");
   const[aktifFil,setAktifFil]=useState("aktif");
 
-  if(secili==="yeni") return <ProjeKarti proje={null} isNew={true} onSave={async p=>{await onSave(p);setSecili(p.id);}} onBack={()=>{setSecili(null);setEditMode?.(false);}} firmalar={firmalar} setPage={setPage} goToFirma={goToFirma}/>;
+  if(secili==="yeni") return <ProjeKarti proje={null} isNew={true} onSave={async p=>{await onSave(p);setSecili(p.id);}} onBack={()=>{setSecili(null);setEditMode?.(false);}} firmalar={firmalar} setPage={setPage} goToFirma={goToFirma} malzemeler={malzemeler} bagimsizBolumKartiAc={bagimsizBolumKartiAc}/>;
   if(secili) {
     const p=projeler.find(x=>x.id===secili);
-    if(p) return <ProjeKarti proje={p} isNew={false} onSave={onSave} onDel={(id)=>{onDel(id);setSecili(null);setEditMode?.(false);}} onBack={()=>{setSecili(null);setEditMode?.(false);}} firmalar={firmalar} setPage={setPage} goToFirma={goToFirma}/>;
+    if(p) return <ProjeKarti proje={p} isNew={false} onSave={onSave} onDel={(id)=>{onDel(id);setSecili(null);setEditMode?.(false);}} onBack={()=>{setSecili(null);setEditMode?.(false);}} firmalar={firmalar} setPage={setPage} goToFirma={goToFirma} malzemeler={malzemeler} bagimsizBolumKartiAc={bagimsizBolumKartiAc}/>;
   }
 
   const mainTabs=[
@@ -8737,6 +8752,72 @@ export default function App(){
     catch(e) { setMalzemeler(prev=>prev.filter(m=>m.id!==id)); }
   };
 
+  /* ---- BAĞIMSIZ BÖLÜM MALZEME KARTI OLUŞTUR ----
+     İki UI da çağırır: PROJE detayı blok tablosu + MALZEMELER wizard'ı.
+     opts.skipConfirm = true → onay atlanır (wizard kendi önizlemesini gösterirse) */
+  const bagimsizBolumKartiAc = async (bolum, opts={}) => {
+    if(!bolum||!bolum.id){alert("Geçersiz daire."); return null;}
+    // 1) Tekillik kontrolü — bu bolume zaten kart bağlı mı?
+    const mevcut = malzemeler.find(m=>m.bolumId===bolum.id);
+    if(mevcut){
+      alert(`Bu daire için zaten malzeme kartı var:\n\n${mevcut.malzemeKodu}\n${mevcut.ad}`);
+      return mevcut;
+    }
+    // 2) Proje bul (bolum.projeId yoksa bolumler dizisinden geri lookup)
+    const proje = projeler.find(p=>(p.bolumler||[]).some(b=>b.id===bolum.id));
+    if(!proje){alert("Daire bağlı olduğu proje bulunamadı."); return null;}
+    // 3) Kod + ad üret — bolum.blok genelde "A Blok" formatında, koddan "Blok" kelimesini temizle
+    const blokKisa = (bolum.blok||"-").replace(/\s*blok\s*/i,"").trim() || "-";
+    const blokAdTam = blokKisa==="-" ? "" : (`${blokKisa} Blok`); // ad için "A Blok" tekrarını önle
+    const kod = `${proje.projeKodu||proje.id}.${blokKisa}.${bolum.no||"-"}.B`;
+    const ad  = `${proje.ad}${blokAdTam?` · ${blokAdTam}`:""} · Daire ${bolum.no||""}`;
+    // 4) Onay penceresi
+    if(!opts.skipConfirm){
+      const ok = confirm(
+        `Bu daire için yeni Bağımsız Bölüm kartı oluşturulacak:\n\n`+
+        `Kod: ${kod}\nAd: ${ad}\n\nOnaylıyor musunuz?`
+      );
+      if(!ok) return null;
+    }
+    // 5) Kategori "Bağımsız Bölüm" var mı? Yoksa otomatik oluştur
+    let kat = (altKategoriler||[]).find(k=>k.ad==="Bağımsız Bölüm");
+    if(!kat){
+      try{
+        const [savedKat] = await sbPost('kategoriler', {kod:"BB", ad:"Bağımsız Bölüm"});
+        kat = {id:savedKat.id, kod:"BB", ad:"Bağımsız Bölüm"};
+        setAltKategoriler(prev=>[...prev, kat]);
+      }catch(e){
+        console.warn("Kategori oluşturma hatası:", e.message);
+        kat = {kod:"BB", ad:"Bağımsız Bölüm"};
+      }
+    }
+    // KDV oranı bolum.netM2'den otomatik (<150 → %10, ≥150 → %20)
+    const kdv = (()=>{const n=parseFloat(bolum.netM2);return !isNaN(n)&&n>=150?"20":"10";})();
+    // 6) Yeni malzeme objesi
+    const yeni = {
+      malzemeKodu: kod, ad: ad, tip: "B",
+      grup: kat.kod, grupAd: kat.ad,
+      altGrup: "", altGrupAd: "",
+      birim: "daire", birimFiyat: 0, paraBirimi: "TL",
+      kdvOrani: kdv,
+      marka:"", model:"", aciklama: `Otomatik oluşturuldu — ${proje.ad}`,
+      tedarikciId: null, durum: "aktif",
+      hesaplamaSablonu: "", omurgaProjeTurleri: [],
+      bolumId: bolum.id
+    };
+    // 7) Supabase INSERT + state update
+    try{
+      const [saved] = await sbPost('malzemeler', malzemeToDb(yeni));
+      const local = malzemeToLocal(saved);
+      setMalzemeler(prev=>[...prev, local]);
+      return local;
+    }catch(e){
+      alert(`Malzeme kartı oluşturulamadı:\n${e.message}`);
+      console.error("bagimsizBolumKartiAc INSERT hatası:", e);
+      return null;
+    }
+  };
+
   /* ---- KATEGORİ KAYDET ---- */
   const saveKat = async (kat) => {
     if(katSavingRef.current){console.warn("Kategori kayıt işlemi devam ediyor, çift çağrı engellendi");return;}
@@ -9010,13 +9091,34 @@ export default function App(){
           form.bloklar = (savedBloklar||[]).map(blokToLocal);
         }
       } catch(e) { console.warn("Bloklar sync hatası:", e.message); }
-      // Bolumler sync (delete all + reinsert)
+      // Bolumler sync (DIFF-BASED — bolum ID'leri korunur, malzeme bağları kopmaz)
       try {
-        await sbReq(`bolumler?proje_id=eq.${form.id}`, {method:'DELETE', headers:{'Prefer':'count=none'}});
-        if(form.bolumler && form.bolumler.length > 0) {
-          const bolumDbRows = form.bolumler.map(b => bolumToDb(b, form.id));
-          const savedBolumler = await sbPost('bolumler', bolumDbRows);
-          form.bolumler = (savedBolumler||[]).map(bolumToLocal);
+        // 1) DB'deki mevcut bolum ID'lerini oku
+        const dbBolumler = await sbReq(`bolumler?proje_id=eq.${form.id}&select=id`);
+        const dbIds = new Set((dbBolumler||[]).map(b=>b.id));
+        const stateBolumler = form.bolumler||[];
+        const stateIds = new Set(stateBolumler.map(b=>b.id));
+        // 2) SİL — DB'de var ama state'te yok (kullanıcı sildi). Batch DELETE (id IN ...)
+        const silinecek = [...dbIds].filter(id=>!stateIds.has(id));
+        if(silinecek.length>0){
+          try { await sbReq(`bolumler?id=in.(${silinecek.join(',')})`, {method:'DELETE', headers:{'Prefer':'count=none'}}); }
+          catch(e){ console.warn("Bolum batch silme hatası:", e.message); }
+        }
+        // 3) EKLE — state'te var ama DB'de yok (yeni eklenen). Batch INSERT
+        const yeniler = stateBolumler.filter(b=>!dbIds.has(b.id));
+        if(yeniler.length>0){
+          try {
+            const yeniDbRows = yeniler.map(b=>bolumToDb(b, form.id));
+            const savedYeniler = await sbPost('bolumler', yeniDbRows);
+            // Yeni gerçek ID'leri state'e geri yaz (sırayla eşleşme)
+            yeniler.forEach((b,i)=>{ if(savedYeniler && savedYeniler[i]) b.id = savedYeniler[i].id; });
+          } catch(e){ console.warn("Bolum batch ekleme hatası:", e.message); }
+        }
+        // 4) GÜNCELLE — her ikisinde de var (mevcut daireler). Tek tek PATCH (PostgREST batch update yok)
+        const mevcutlar = stateBolumler.filter(b=>dbIds.has(b.id));
+        for(const b of mevcutlar){
+          try { await sbPatch('bolumler', b.id, bolumToDb(b, form.id)); }
+          catch(e){ console.warn(`Bolum güncelleme hatası (id=${b.id}):`, e.message); }
         }
       } catch(e) { console.warn("Bolumler sync hatası:", e.message); }
       setProjeler(prev => {
@@ -9137,7 +9239,7 @@ export default function App(){
         {page==="dashboard"&&<DashPage firmalar={firmalar} malzemeler={malzemeler} teklifler={teklifler} setPage={setPage}/>}
         {page==="firmalar"&&<FirmalarPage firmalar={firmalar} setFirmalar={setFirmalar} onSave={saveFirma} onDel={delFirma} addNote={addNote} initialFirmaId={goToId} onClearInitial={()=>setGoToId(null)} projeler={projeler} setPage={setPage} setEditMode={setEditMode}/>}
         {page==="malzemeler"&&<MalzemelerPage malzemeler={malzemeler} setMalzemeler={setMalzemeler} onSaveMalzeme={saveMalzeme} onDelMalzeme={delMalzeme} firmalar={firmalar} altKategoriler={altKategoriler} setAltKategoriler={setAltKategoriler} altGruplar={altGruplar} setAltGruplar={setAltGruplar} teklifler={teklifler} setTeklifler={setTeklifler} onSaveKat={saveKat} onDelKat={delKat} onSaveAltGrp={saveAltGrp} onDelAltGrp={delAltGrp} onSaveTeklif={saveTeklif} onDelTeklif={delTeklif} projeler={projeler} setEditMode={setEditMode}/>}
-        {page==="projeler"&&<ProjelerPage projeler={projeler} setProjeler={setProjeler} onSave={saveProje} onDel={delProje} firmalar={firmalar} dosyaKategorileri={dosyaKategorileri} setDosyaKategorileri={setDosyaKategorileri} setPage={setPage} goToFirma={goToFirma} setEditMode={setEditMode}/>}
+        {page==="projeler"&&<ProjelerPage projeler={projeler} setProjeler={setProjeler} onSave={saveProje} onDel={delProje} firmalar={firmalar} dosyaKategorileri={dosyaKategorileri} setDosyaKategorileri={setDosyaKategorileri} setPage={setPage} goToFirma={goToFirma} setEditMode={setEditMode} malzemeler={malzemeler} bagimsizBolumKartiAc={bagimsizBolumKartiAc}/>}
         {page==="teklifler"&&<AlinanTekliflerYonetim teklifler={teklifler} setTeklifler={setTeklifler} onSave={saveTeklif} onDel={delTeklif} malzemeler={malzemeler} firmalar={firmalar} projeler={projeler} onSpOlustur={spOlusturTeklifden}/>}
         {page==="teklif_verme"&&<div style={{padding:"80px",textAlign:"center",color:T.t3,fontSize:"16px",border:`1px dashed ${T.border}`,borderRadius:T.rl}}><div style={{fontSize:"32px",marginBottom:"12px"}}>📋</div>Teklif Verme modülü hazırlanıyor...</div>}
         {page==="satinalma"&&<SatinalmaSiparisleriPage siparisler={siparisler} setSiparisler={setSiparisler} onSave={saveSiparis} onDel={delSiparis} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler} butceKalemleri={butceKalemleri} faturalar={faturalar}/>}
