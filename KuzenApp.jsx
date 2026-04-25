@@ -5381,7 +5381,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
             {/* TABLO */}
             {(()=>{
               const hasAnlasma=!!(form.anlasmaYontemi);
-              const cols=hasAnlasma?"60px 60px 70px 90px 90px 100px 100px 120px 100px 100px 150px":"60px 60px 70px 90px 90px 100px 100px 120px 100px";
+              const cols=hasAnlasma?"60px 60px 70px 90px 90px 100px 100px 120px 100px 100px 200px":"60px 60px 70px 90px 90px 100px 100px 120px 100px";
               const headers=hasAnlasma?["No","Kat","Tip","Brüt m²","Net m²","Oda","Cephe","Gerçekleşen Satış","Durum","Sahiplik","BB Kart"]:["No","Kat","Tip","Brüt m²","Net m²","Oda","Cephe","Gerçekleşen Satış","Durum"];
               return blokBolumler.length===0
                 ?<div style={{padding:"30px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>Bu blokta henüz bölüm yok.</div>
@@ -5411,9 +5411,9 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
                           :(()=>{
                             const kart=(malzemeler||[]).find(m=>m.bolumId===b.id);
                             if(kart){
-                              return <span title={`${kart.malzemeKodu}\n${kart.ad}`} style={{display:"inline-block",padding:"2px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:600,color:"#722ed1",background:"#f9f0ff",border:"1px solid #722ed133",cursor:"default",fontFamily:"monospace",maxWidth:"140px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>🔗 {kart.malzemeKodu}</span>;
+                              return <span title={`${kart.malzemeKodu}\n${kart.ad}`} style={{display:"inline-block",height:"30px",lineHeight:"28px",padding:"0 14px",borderRadius:"4px",fontSize:"13px",fontWeight:600,color:"#722ed1",background:"#f9f0ff",border:"1px solid #722ed133",cursor:"default",fontFamily:"monospace",maxWidth:"190px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",boxSizing:"border-box"}}>🔗 {kart.malzemeKodu}</span>;
                             }
-                            return <button onClick={async()=>{if(bagimsizBolumKartiAc)await bagimsizBolumKartiAc(b);}} title="Bağımsız Bölüm Kartı Oluştur" style={{padding:"3px 10px",borderRadius:"4px",border:"1px dashed #722ed1",background:"#fff",color:"#722ed1",fontSize:"12px",fontWeight:600,cursor:"pointer"}}>➕ Aç</button>;
+                            return <button onClick={async()=>{if(bagimsizBolumKartiAc)await bagimsizBolumKartiAc(b);}} title="Bağımsız Bölüm Kartı Oluştur" style={{height:"30px",lineHeight:"28px",padding:"0 14px",borderRadius:"4px",border:"1px dashed #722ed1",background:"#fff",color:"#722ed1",fontSize:"13px",fontWeight:600,cursor:"pointer",boxSizing:"border-box"}}>➕ Aç</button>;
                           })()
                         }
                       </div>}
