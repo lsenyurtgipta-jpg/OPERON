@@ -783,7 +783,7 @@ const SortBtn=({label,sortState,onSort,sortKey})=>{
 };
 
 const Sidebar=({page,setPage,open,editMode=false})=>{
-  const[openGroups,setOpenGroups]=useState({siparisler:true,faturalar:true});
+  const[openGroups,setOpenGroups]=useState({siparisler:true,faturalar:true,satis:true});
   const toggleGroup=(g)=>setOpenGroups(p=>({...p,[g]:!p[g]}));
   const[uyariHedef,setUyariHedef]=useState(null);
   const sayfaDegistir=(hedef)=>{if(editMode){setUyariHedef(hedef);return;}setPage(hedef);};
@@ -804,7 +804,10 @@ const Sidebar=({page,setPage,open,editMode=false})=>{
       {id:"satis_fatura",label:"Satış Faturaları"},
     ]},
     {id:"maliyet",label:"MALİYET"},
-    {id:"satis_sunum",label:"SATIŞ"},
+    {type:"group",groupId:"satis",label:"SATIŞ",children:[
+      {id:"satis_sunum",label:"Satış Sunumu"},
+      {id:"satis_rapor",label:"Satış Raporu"},
+    ]},
   ];
 
   const SB={
@@ -7886,6 +7889,141 @@ const GorselSlider=({gorseller=[],yukseklik="380px",otomatik=true,placeholderIco
   </div>;
 };
 
+/* ---- SATIŞ RAPORU PAGE ---- */
+const SatisRaporPage=({projeler})=>{
+  const[durumFiltre,setDurumFiltre]=useState("tumu"); // tumu | musait | opsiyonlu | satildi
+  const[arama,setArama]=useState("");
+
+  // Tüm projelerden Müteahhit'e ait bölümler — proje adı + bölüm bilgileri
+  const tumBolumler=useMemo(()=>{
+    const out=[];
+    (projeler||[]).forEach(p=>{
+      (p.bolumler||[]).forEach(b=>{
+        if(b.sahiplik!=="Müteahhit")return;
+        out.push({...b,projeId:p.id,projeAd:p.ad});
+      });
+    });
+    // Sıralama: Proje → Blok → No (doğal numerik)
+    const numKey=(no)=>{const m=String(no||"").match(/(\d+)/);return m?parseInt(m[1],10):0;};
+    return out.sort((a,b)=>{
+      const pc=(a.projeAd||"").localeCompare(b.projeAd||"","tr");
+      if(pc!==0)return pc;
+      const bc=(a.blok||"").localeCompare(b.blok||"","tr");
+      if(bc!==0)return bc;
+      return numKey(a.no)-numKey(b.no)||(a.no||"").localeCompare(b.no||"","tr");
+    });
+  },[projeler]);
+
+  // Durum sayıları (filtre kartları için — tüm Müteahhit bölümlerinden)
+  const durumOzet=useMemo(()=>{
+    const o={tumu:tumBolumler.length,musait:0,opsiyonlu:0,satildi:0};
+    tumBolumler.forEach(b=>{if(o[b.durum]!==undefined)o[b.durum]++;});
+    return o;
+  },[tumBolumler]);
+
+  // Görünür satırlar — durum filtresi + arama
+  const gorunur=useMemo(()=>{
+    const q=nTR(arama);
+    return tumBolumler.filter(b=>{
+      if(durumFiltre!=="tumu"&&b.durum!==durumFiltre)return false;
+      if(!q)return true;
+      const hay=nTR(`${b.projeAd||""} ${b.blok||""} ${b.no||""} ${b.tipi||""} ${b.odaSayisi||""} ${b.cephe||""}`);
+      return hay.includes(q);
+    });
+  },[tumBolumler,durumFiltre,arama]);
+
+  // Görünür toplamlar
+  const topBrut=gorunur.reduce((s,b)=>s+(parseFloat(b.brutM2)||0),0);
+  const topListe=gorunur.reduce((s,b)=>s+(parseFloat(b.listeFiyatiKdvDahil)||0),0);
+  const fiyatsizSayi=gorunur.filter(b=>!(parseFloat(b.listeFiyatiKdvDahil)>0)).length;
+
+  // Filtre kartı
+  const Kart=({id,label,sayi,toplam,renk,bg})=>{
+    const aktif=durumFiltre===id;
+    return <button onClick={()=>setDurumFiltre(id)} style={{
+      display:"flex",alignItems:"center",gap:"10px",padding:"0 16px",height:"40px",
+      borderRadius:"6px",border:`1px solid ${aktif?renk:"transparent"}`,
+      background:aktif?bg:"#384248",cursor:"pointer",
+      transition:"all .15s"
+    }}>
+      <span style={{color:aktif?renk:"#8799a3",fontSize:"13px",fontWeight:600}}>{label}:</span>
+      <span style={{color:aktif?renk:"#fff",fontWeight:700,fontSize:"15px"}}>{sayi}</span>
+      {toplam>0&&<span style={{color:aktif?renk:"#8799a3",fontSize:"13px"}}>— {toplam.toLocaleString("tr-TR")} ₺</span>}
+    </button>;
+  };
+
+  // Tablo grid: Proje | Tip | Blok | No | Kat | Brüt m² | Oda | Cephe | Durum | Liste Fiyatı
+  const cols="2fr 90px 70px 70px 60px 90px 90px 100px 110px 150px";
+
+  return <div>
+    {/* BAŞLIK */}
+    <div style={{marginBottom:"16px"}}>
+      <h2 style={{fontSize:"20px",fontWeight:600,color:T.text,margin:0}}>Satış Raporu</h2>
+      <p style={{color:T.t2,fontSize:"14px",margin:"4px 0 0"}}>Müteahhit'e ait tüm bölümler — durum filtresi ve liste fiyatı toplamı</p>
+    </div>
+
+    {/* FİLTRE KARTLARI + ARAMA */}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px",flexWrap:"wrap",gap:"12px"}}>
+      <div style={{display:"flex",gap:"10px",flexWrap:"wrap"}}>
+        <Kart id="tumu" label="Tümü" sayi={durumOzet.tumu} toplam={durumFiltre==="tumu"?topListe:0} renk="#fff" bg="#1f2a30"/>
+        <Kart id="musait" label="Müsait" sayi={durumOzet.musait} toplam={durumFiltre==="musait"?topListe:0} renk="#52c41a" bg="#f6ffed"/>
+        <Kart id="opsiyonlu" label="Opsiyonlu" sayi={durumOzet.opsiyonlu} toplam={durumFiltre==="opsiyonlu"?topListe:0} renk="#fa8c16" bg="#fff7e6"/>
+        <Kart id="satildi" label="Satıldı" sayi={durumOzet.satildi} toplam={durumFiltre==="satildi"?topListe:0} renk="#1677ff" bg="#e6f4ff"/>
+      </div>
+      <input style={{...iS,width:"260px"}} value={arama} onChange={e=>setArama(e.target.value)} placeholder="🔎 Proje, blok, no, tip, oda, cephe..." onFocus={foc} onBlur={blr}/>
+    </div>
+
+    {/* UYARI — fiyatı girilmemiş daire varsa */}
+    {fiyatsizSayi>0&&<div style={{padding:"8px 14px",borderRadius:T.r,background:"#fff7e6",border:`1px solid #fa8c1644`,color:"#d4880f",fontSize:"12px",marginBottom:"10px",display:"flex",alignItems:"center",gap:"8px"}}>
+      ⚠️ Görünen listede <strong>{fiyatsizSayi}</strong> bölümün liste fiyatı henüz girilmemiş — toplama dahil edilmedi (Maliyet → Fiyatlandırma sekmesinden girilir).
+    </div>}
+
+    {/* TABLO */}
+    <div style={{background:"#fff",border:`1px solid ${T.border}`,borderRadius:T.rl,overflow:"hidden"}}>
+      {/* Başlık */}
+      <div style={{display:"grid",gridTemplateColumns:cols,background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"10px 14px",gap:"10px"}}>
+        {["Proje Adı","Tip","Blok","No","Kat","Brüt m²","Oda","Cephe","Durum","Liste Fiyatı"].map((h,i)=>
+          <div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px",textAlign:i>=5&&i<=6?"right":(i===9?"right":"left")}}>{h}</div>
+        )}
+      </div>
+      {/* Satırlar */}
+      {gorunur.length===0
+        ?<div style={{padding:"40px",textAlign:"center",color:T.t3,fontSize:"14px"}}>Bu kritere uyan bölüm yok.</div>
+        :gorunur.map((b,idx)=>{
+          const ds=BOLUM_DURUMLARI.find(d=>d.id===b.durum)||{color:"#8c8c8c",bg:"#fafafa",label:b.durum||"—"};
+          const lf=parseFloat(b.listeFiyatiKdvDahil)||0;
+          return <div key={`${b.projeId}_${b.id}`} style={{display:"grid",gridTemplateColumns:cols,padding:"10px 14px",gap:"10px",alignItems:"center",borderBottom:idx<gorunur.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa"}}>
+            <div style={{fontSize:"13px",color:T.text,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.projeAd}>{b.projeAd||"—"}</div>
+            <div style={{fontSize:"13px",color:T.t2}}>{b.tipi||"—"}</div>
+            <div style={{fontSize:"13px",color:T.text,fontWeight:600}}>{b.blok||"—"}</div>
+            <div style={{fontSize:"13px",color:T.text,fontWeight:600}}>{b.no||"—"}</div>
+            <div style={{fontSize:"13px",color:T.text}}>{b.kat||"—"}</div>
+            <div style={{fontSize:"13px",color:T.text,textAlign:"right"}}>{b.brutM2?Number(b.brutM2).toLocaleString("tr-TR"):"—"}</div>
+            <div style={{fontSize:"13px",color:T.t2,textAlign:"right"}}>{b.odaSayisi||"—"}</div>
+            <div style={{fontSize:"13px",color:T.t2}}>{b.cephe||"—"}</div>
+            <div><span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"12px",color:ds.color,background:ds.bg,border:`1px solid ${ds.color}33`,whiteSpace:"nowrap"}}>{ds.label}</span></div>
+            <div style={{fontSize:"13px",fontWeight:600,color:lf>0?T.text:T.t3,textAlign:"right"}}>{lf>0?lf.toLocaleString("tr-TR")+" ₺":"—"}</div>
+          </div>;
+        })
+      }
+      {/* TOPLAM SATIRI */}
+      {gorunur.length>0&&<div style={{display:"grid",gridTemplateColumns:cols,padding:"10px 14px",gap:"10px",alignItems:"center",background:"#384248",borderTop:`2px solid ${T.border}`}}>
+        <div style={{fontSize:"14px",fontWeight:700,color:"#fff"}}>Toplam ({gorunur.length} bölüm)</div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div style={{fontSize:"14px",fontWeight:700,color:"#fff",textAlign:"right"}}>{topBrut>0?topBrut.toLocaleString("tr-TR")+" m²":"—"}</div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div style={{fontSize:"15px",fontWeight:700,color:"#52c41a",textAlign:"right"}}>{topListe>0?topListe.toLocaleString("tr-TR")+" ₺":"—"}</div>
+      </div>}
+    </div>
+  </div>;
+};
+
+
 /* ---- SATIŞ SUNUM PAGE ---- */
 const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage,goToFirma})=>{
   const[selProjeId,setSelProjeId]=useState(null);
@@ -9294,6 +9432,7 @@ export default function App(){
         {page==="alis_fatura"&&<AlisFaturalariPage faturalar={faturalar} setFaturalar={setFaturalar} onSave={saveFatura} onDel={delFatura} siparisler={siparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler} butceKalemleri={butceKalemleri}/>}
         {page==="maliyet"&&<MaliyetPage projeler={projeler} setProjeler={setProjeler} malzemeler={malzemeler} faturalar={faturalar} siparisler={siparisler} firmalar={firmalar} butceKalemleri={butceKalemleri} saveButceKalemi={saveButceKalemi} delButceKalemi={delButceKalemi} bulkSaveButceKalemleri={bulkSaveButceKalemleri}/>}
         {page==="satis_sunum"&&<SatisSunumPage projeler={projeler} setProjeler={setProjeler} firmalar={firmalar} saveProje={saveProje} saveFirma={saveFirma} setPage={setPage} goToFirma={goToFirma}/>}
+        {page==="satis_rapor"&&<SatisRaporPage projeler={projeler}/>}
       </div>
     </div>
   </div>;
