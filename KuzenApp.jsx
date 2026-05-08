@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { Plus, Trash2, Pencil, Save, Download, Upload, Search, ChevronDown, ChevronUp, X, FileText, Image, Folder, Building2, Package, ClipboardList, ShoppingCart, Receipt, LayoutDashboard, FolderOpen, ChevronRight, Settings, User, LogOut, Eye, Copy, Filter, MoreVertical, Check, AlertCircle, Info, ArrowLeft, RefreshCw, ExternalLink, Calendar, MapPin, Phone, Mail, Hash, Layers, HardHat, FileCheck, SquarePlus, MoveLeft, Map, SquarePen, Grid2x2Plus, FileSpreadsheet, FolderPlus, ArrowDownFromLine, HousePlus } from "lucide-react";
+import { Plus, Trash2, Pencil, Save, Download, Upload, Search, ChevronDown, ChevronUp, X, FileText, Image, Folder, Building2, Package, ClipboardList, ShoppingCart, Receipt, LayoutDashboard, FolderOpen, ChevronRight, Settings, User, LogOut, Eye, Copy, Filter, MoreVertical, Check, AlertCircle, Info, ArrowLeft, RefreshCw, ExternalLink, Calendar, MapPin, Phone, Mail, Hash, Layers, HardHat, FileCheck, SquarePlus, MoveLeft, Map, SquarePen, Grid2x2Plus, FileSpreadsheet, FolderPlus, ArrowDownFromLine, HousePlus, Lock, Users, ShieldCheck } from "lucide-react";
+import bcrypt from "bcryptjs";
 import operonLogo from "./assets/operon-logo.png";
 import excelIcon from "./assets/icons8-excel-48.png";
 
@@ -782,7 +783,297 @@ const SortBtn=({label,sortState,onSort,sortKey})=>{
   </button>;
 };
 
-const Sidebar=({page,setPage,open,editMode=false})=>{
+/* ========== AUTH / SESSION ==========
+   Katman 1: frontend login gate.
+   - Şifreler bcryptjs ile hash'lenmiş halde Supabase'de tutulur.
+   - Session sessionStorage'da; 30 dk inaktivite sonrası otomatik çıkış.
+   - Bu katman frontend gate'idir; gerçek güvenlik (Katman 2) Supabase Auth + RLS ile gelecek. */
+const AUTH_KEY = "operon_auth";
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 dk
+
+const authGet = () => {
+  try {
+    const raw = sessionStorage.getItem(AUTH_KEY);
+    if(!raw) return null;
+    const obj = JSON.parse(raw);
+    if(!obj || !obj.exp || Date.now() > obj.exp) {
+      sessionStorage.removeItem(AUTH_KEY);
+      return null;
+    }
+    return obj;
+  } catch { return null; }
+};
+const authSet = (user) => {
+  const obj = { id:user.id, kullaniciAdi:user.kullanici_adi, rol:user.rol, exp: Date.now()+SESSION_TIMEOUT_MS };
+  sessionStorage.setItem(AUTH_KEY, JSON.stringify(obj));
+  return obj;
+};
+const authTouch = () => {
+  const cur = authGet();
+  if(!cur) return null;
+  cur.exp = Date.now()+SESSION_TIMEOUT_MS;
+  sessionStorage.setItem(AUTH_KEY, JSON.stringify(cur));
+  return cur;
+};
+const authClear = () => sessionStorage.removeItem(AUTH_KEY);
+
+const isAdmin = (user) => user && user.rol === "admin";
+
+/* ========== LOGIN PAGE ========== */
+const LoginPage = ({onLogin}) => {
+  const [kAdi, setKAdi] = useState("");
+  const [sifre, setSifre] = useState("");
+  const [hata, setHata] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setHata("");
+    if(!kAdi.trim() || !sifre) { setHata("Kullanıcı adı ve şifre zorunludur."); return; }
+    setBusy(true);
+    try {
+      const rows = await sbGet('kullanicilar', `kullanici_adi=eq.${encodeURIComponent(kAdi.trim())}`);
+      if(!rows || rows.length === 0) { setHata("Kullanıcı adı veya şifre hatalı."); setBusy(false); return; }
+      const u = rows[0];
+      if(!u.aktif) { setHata("Bu hesap pasif. Yöneticinize başvurun."); setBusy(false); return; }
+      const ok = bcrypt.compareSync(sifre, u.sifre_hash);
+      if(!ok) { setHata("Kullanıcı adı veya şifre hatalı."); setBusy(false); return; }
+      try { await sbPatch('kullanicilar', u.id, { son_giris: new Date().toISOString() }); } catch {}
+      onLogin(u);
+    } catch(err) {
+      setHata("Bağlantı hatası: " + (err.message || "bilinmiyor"));
+      setBusy(false);
+    }
+  };
+
+  return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",width:"100vw",background:"#384248",fontFamily:T.f}}>
+    <form onSubmit={submit} style={{background:"#fff",padding:"40px",borderRadius:"12px",boxShadow:"0 20px 60px rgba(0,0,0,0.3)",width:"400px",display:"flex",flexDirection:"column",gap:"16px"}}>
+      <div style={{textAlign:"center",marginBottom:"8px"}}>
+        <img src={operonLogo} alt="OPERON" style={{height:"48px",marginBottom:"8px"}}/>
+        <div style={{fontSize:"13px",color:T.t3}}>İnşaat Yönetim Sistemi</div>
+      </div>
+      <div>
+        <label style={{display:"block",fontSize:"13px",color:T.t2,marginBottom:"6px",fontWeight:500}}>Kullanıcı Adı</label>
+        <input value={kAdi} onChange={e=>setKAdi(e.target.value)} autoFocus disabled={busy}
+          style={{width:"100%",height:"40px",padding:"0 12px",borderRadius:T.r,border:`1px solid ${T.bDark}`,fontSize:"15px",boxSizing:"border-box"}}/>
+      </div>
+      <div>
+        <label style={{display:"block",fontSize:"13px",color:T.t2,marginBottom:"6px",fontWeight:500}}>Şifre</label>
+        <input type="password" value={sifre} onChange={e=>setSifre(e.target.value)} disabled={busy}
+          style={{width:"100%",height:"40px",padding:"0 12px",borderRadius:T.r,border:`1px solid ${T.bDark}`,fontSize:"15px",boxSizing:"border-box"}}/>
+      </div>
+      {hata && <div style={{padding:"10px 12px",background:"#fff1f0",border:`1px solid #ffa39e`,borderRadius:T.r,color:"#cf1322",fontSize:"13px"}}>{hata}</div>}
+      <button type="submit" disabled={busy} style={{height:"42px",border:"none",borderRadius:T.r,background:T.primary,color:"#fff",fontSize:"15px",fontWeight:600,cursor:busy?"wait":"pointer",marginTop:"8px",opacity:busy?0.6:1}}>
+        {busy ? "Giriş yapılıyor..." : "Giriş Yap"}
+      </button>
+    </form>
+  </div>;
+};
+
+/* ========== ŞİFRE DEĞİŞTİR PAGE ========== */
+const SifreDegistirPage = ({user, zorunlu=false, onDone, onCancel}) => {
+  const [eski, setEski] = useState("");
+  const [yeni, setYeni] = useState("");
+  const [yeni2, setYeni2] = useState("");
+  const [hata, setHata] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setHata("");
+    if(!eski || !yeni || !yeni2) { setHata("Tüm alanlar zorunludur."); return; }
+    if(yeni.length < 6) { setHata("Yeni şifre en az 6 karakter olmalıdır."); return; }
+    if(yeni !== yeni2) { setHata("Yeni şifreler eşleşmiyor."); return; }
+    if(eski === yeni) { setHata("Yeni şifre eskisi ile aynı olamaz."); return; }
+    setBusy(true);
+    try {
+      const rows = await sbGet('kullanicilar', `id=eq.${user.id}`);
+      if(!rows || rows.length === 0) { setHata("Kullanıcı bulunamadı."); setBusy(false); return; }
+      const u = rows[0];
+      if(!bcrypt.compareSync(eski, u.sifre_hash)) { setHata("Mevcut şifre yanlış."); setBusy(false); return; }
+      const yeniHash = bcrypt.hashSync(yeni, 10);
+      await sbPatch('kullanicilar', user.id, { sifre_hash: yeniHash, sifre_degistirildi: true });
+      onDone();
+    } catch(err) {
+      setHata("Hata: " + (err.message || "bilinmiyor"));
+      setBusy(false);
+    }
+  };
+
+  return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",width:"100vw",background:"#384248",fontFamily:T.f}}>
+    <form onSubmit={submit} style={{background:"#fff",padding:"40px",borderRadius:"12px",boxShadow:"0 20px 60px rgba(0,0,0,0.3)",width:"420px",display:"flex",flexDirection:"column",gap:"14px"}}>
+      <div style={{textAlign:"center",marginBottom:"8px"}}>
+        <Lock size={32} color={T.primary} style={{marginBottom:"8px"}}/>
+        <div style={{fontSize:"18px",fontWeight:600,color:T.text}}>{zorunlu ? "Şifre Değiştirmek Zorunlu" : "Şifre Değiştir"}</div>
+        {zorunlu && <div style={{fontSize:"13px",color:T.t3,marginTop:"4px"}}>Devam etmek için geçici şifrenizi değiştirin.</div>}
+        <div style={{fontSize:"12px",color:T.t3,marginTop:"6px"}}>Kullanıcı: <strong>{user.kullaniciAdi || user.kullanici_adi}</strong></div>
+      </div>
+      <div>
+        <label style={{display:"block",fontSize:"13px",color:T.t2,marginBottom:"6px",fontWeight:500}}>Mevcut Şifre</label>
+        <input type="password" value={eski} onChange={e=>setEski(e.target.value)} autoFocus disabled={busy}
+          style={{width:"100%",height:"40px",padding:"0 12px",borderRadius:T.r,border:`1px solid ${T.bDark}`,fontSize:"15px",boxSizing:"border-box"}}/>
+      </div>
+      <div>
+        <label style={{display:"block",fontSize:"13px",color:T.t2,marginBottom:"6px",fontWeight:500}}>Yeni Şifre (en az 6 karakter)</label>
+        <input type="password" value={yeni} onChange={e=>setYeni(e.target.value)} disabled={busy}
+          style={{width:"100%",height:"40px",padding:"0 12px",borderRadius:T.r,border:`1px solid ${T.bDark}`,fontSize:"15px",boxSizing:"border-box"}}/>
+      </div>
+      <div>
+        <label style={{display:"block",fontSize:"13px",color:T.t2,marginBottom:"6px",fontWeight:500}}>Yeni Şifre (Tekrar)</label>
+        <input type="password" value={yeni2} onChange={e=>setYeni2(e.target.value)} disabled={busy}
+          style={{width:"100%",height:"40px",padding:"0 12px",borderRadius:T.r,border:`1px solid ${T.bDark}`,fontSize:"15px",boxSizing:"border-box"}}/>
+      </div>
+      {hata && <div style={{padding:"10px 12px",background:"#fff1f0",border:`1px solid #ffa39e`,borderRadius:T.r,color:"#cf1322",fontSize:"13px"}}>{hata}</div>}
+      <div style={{display:"flex",gap:"10px",marginTop:"6px"}}>
+        {!zorunlu && <button type="button" onClick={onCancel} disabled={busy} style={{flex:1,height:"42px",border:`1px solid ${T.bDark}`,borderRadius:T.r,background:"#fff",color:T.t2,fontSize:"14px",cursor:"pointer"}}>Vazgeç</button>}
+        <button type="submit" disabled={busy} style={{flex:1,height:"42px",border:"none",borderRadius:T.r,background:T.primary,color:"#fff",fontSize:"15px",fontWeight:600,cursor:busy?"wait":"pointer",opacity:busy?0.6:1}}>
+          {busy ? "Kaydediliyor..." : "Şifreyi Değiştir"}
+        </button>
+      </div>
+    </form>
+  </div>;
+};
+
+/* ========== KULLANICILAR PAGE (admin only) ========== */
+const KullanicilarPage = ({currentUser}) => {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [yeniOpen, setYeniOpen] = useState(false);
+  const [yeni, setYeni] = useState({ kullanici_adi:"", sifre:"", rol:"data_entry" });
+  const [yeniHata, setYeniHata] = useState("");
+  const [yeniBusy, setYeniBusy] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const rows = await sbGet('kullanicilar', 'order=id.asc');
+      setUsers(rows || []);
+    } catch(e) { console.error("Kullanıcılar yüklenemedi:", e.message); }
+    setLoading(false);
+  };
+  useEffect(()=>{ load(); },[]);
+
+  const yeniKaydet = async () => {
+    setYeniHata("");
+    const k = yeni.kullanici_adi.trim();
+    if(!k || !yeni.sifre) { setYeniHata("Kullanıcı adı ve şifre zorunludur."); return; }
+    if(yeni.sifre.length < 6) { setYeniHata("Şifre en az 6 karakter olmalıdır."); return; }
+    if(users.some(u=>u.kullanici_adi.toLowerCase()===k.toLowerCase())) { setYeniHata("Bu kullanıcı adı zaten var."); return; }
+    setYeniBusy(true);
+    try {
+      const hash = bcrypt.hashSync(yeni.sifre, 10);
+      await sbPost('kullanicilar', { kullanici_adi:k, sifre_hash:hash, rol:yeni.rol, sifre_degistirildi:false, aktif:true });
+      setYeni({ kullanici_adi:"", sifre:"", rol:"data_entry" });
+      setYeniOpen(false);
+      await load();
+    } catch(e) { setYeniHata("Hata: " + e.message); }
+    setYeniBusy(false);
+  };
+
+  const sifreSifirla = async (u) => {
+    const yeniSifre = prompt(`${u.kullanici_adi} için yeni geçici şifre girin (en az 6 karakter):`, "degistir123");
+    if(!yeniSifre) return;
+    if(yeniSifre.length < 6) { alert("Şifre en az 6 karakter olmalıdır."); return; }
+    try {
+      const hash = bcrypt.hashSync(yeniSifre, 10);
+      await sbPatch('kullanicilar', u.id, { sifre_hash:hash, sifre_degistirildi:false });
+      alert(`✅ ${u.kullanici_adi} şifresi sıfırlandı.\nGeçici şifre: ${yeniSifre}\nKullanıcı bir sonraki girişte değiştirmek zorunda kalacak.`);
+      await load();
+    } catch(e) { alert("Hata: " + e.message); }
+  };
+
+  const aktiflikDegistir = async (u) => {
+    if(u.id === currentUser.id) { alert("Kendi hesabınızı pasifleştiremezsiniz."); return; }
+    const yeniDurum = !u.aktif;
+    if(!confirm(`${u.kullanici_adi} hesabı ${yeniDurum?"AKTİF":"PASİF"} yapılacak. Onaylıyor musunuz?`)) return;
+    try {
+      await sbPatch('kullanicilar', u.id, { aktif: yeniDurum });
+      await load();
+    } catch(e) { alert("Hata: " + e.message); }
+  };
+
+  if(loading) return <div style={{padding:"40px",textAlign:"center",color:T.t3}}>Yükleniyor...</div>;
+
+  return <div>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"24px"}}>
+      <div>
+        <h2 style={{margin:0,fontSize:"22px",color:T.text}}>Kullanıcı Yönetimi</h2>
+        <p style={{margin:"4px 0 0",color:T.t3,fontSize:"13px"}}>OPERON • Hesaplar ve roller</p>
+      </div>
+      <button onClick={()=>setYeniOpen(true)} style={{padding:"10px 18px",border:"none",borderRadius:T.r,background:T.primary,color:"#fff",fontSize:"14px",fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:"6px"}}>
+        <Plus size={16}/> Yeni Kullanıcı
+      </button>
+    </div>
+
+    <div style={{background:"#fff",border:`1px solid ${T.border}`,borderRadius:T.rl,overflow:"hidden",boxShadow:T.sh}}>
+      <table style={{width:"100%",borderCollapse:"collapse"}}>
+        <thead>
+          <tr style={{background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
+            <th style={{padding:"12px 16px",textAlign:"left",fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>Kullanıcı Adı</th>
+            <th style={{padding:"12px 16px",textAlign:"left",fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>Rol</th>
+            <th style={{padding:"12px 16px",textAlign:"left",fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>Durum</th>
+            <th style={{padding:"12px 16px",textAlign:"left",fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>Son Giriş</th>
+            <th style={{padding:"12px 16px",textAlign:"right",fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase"}}>İşlem</th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map(u => <tr key={u.id} style={{borderBottom:`1px solid ${T.border}`}}>
+            <td style={{padding:"12px 16px",fontSize:"14px",color:T.text}}>
+              <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+                {u.rol==="admin" ? <ShieldCheck size={16} color={T.primary}/> : <User size={16} color={T.t3}/>}
+                <strong>{u.kullanici_adi}</strong>
+                {u.id===currentUser.id && <span style={{fontSize:"11px",color:T.primary,background:T.pBg,padding:"2px 6px",borderRadius:"3px"}}>SİZ</span>}
+              </div>
+            </td>
+            <td style={{padding:"12px 16px",fontSize:"13px",color:T.t2}}>{u.rol==="admin" ? "Yönetici" : "Veri Girişi"}</td>
+            <td style={{padding:"12px 16px",fontSize:"13px"}}>
+              {u.aktif ? <span style={{color:"#52c41a"}}>● Aktif</span> : <span style={{color:"#8c8c8c"}}>● Pasif</span>}
+              {!u.sifre_degistirildi && <span style={{marginLeft:"8px",fontSize:"11px",color:"#fa8c16",background:"#fff7e6",padding:"2px 6px",borderRadius:"3px"}}>Şifre değişmemiş</span>}
+            </td>
+            <td style={{padding:"12px 16px",fontSize:"13px",color:T.t3}}>{u.son_giris ? new Date(u.son_giris).toLocaleString("tr-TR") : "—"}</td>
+            <td style={{padding:"12px 16px",textAlign:"right"}}>
+              <button onClick={()=>sifreSifirla(u)} style={{padding:"6px 10px",border:`1px solid ${T.bDark}`,borderRadius:"4px",background:"#fff",color:T.t2,fontSize:"12px",cursor:"pointer",marginRight:"6px"}}>Şifre Sıfırla</button>
+              <button onClick={()=>aktiflikDegistir(u)} disabled={u.id===currentUser.id} style={{padding:"6px 10px",border:`1px solid ${T.bDark}`,borderRadius:"4px",background:"#fff",color:u.id===currentUser.id?T.t3:T.t2,fontSize:"12px",cursor:u.id===currentUser.id?"not-allowed":"pointer",opacity:u.id===currentUser.id?0.5:1}}>{u.aktif?"Pasif Yap":"Aktif Yap"}</button>
+            </td>
+          </tr>)}
+        </tbody>
+      </table>
+    </div>
+
+    {yeniOpen && <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>!yeniBusy && setYeniOpen(false)}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",padding:"32px",borderRadius:"12px",width:"420px",display:"flex",flexDirection:"column",gap:"14px"}}>
+        <div style={{fontSize:"18px",fontWeight:600,color:T.text}}>Yeni Kullanıcı</div>
+        <div>
+          <label style={{display:"block",fontSize:"13px",color:T.t2,marginBottom:"6px",fontWeight:500}}>Kullanıcı Adı</label>
+          <input value={yeni.kullanici_adi} onChange={e=>setYeni({...yeni,kullanici_adi:e.target.value})} disabled={yeniBusy}
+            style={{width:"100%",height:"38px",padding:"0 12px",borderRadius:T.r,border:`1px solid ${T.bDark}`,fontSize:"14px",boxSizing:"border-box"}}/>
+        </div>
+        <div>
+          <label style={{display:"block",fontSize:"13px",color:T.t2,marginBottom:"6px",fontWeight:500}}>Geçici Şifre (en az 6 karakter)</label>
+          <input type="text" value={yeni.sifre} onChange={e=>setYeni({...yeni,sifre:e.target.value})} disabled={yeniBusy} placeholder="Kullanıcı ilk girişte değiştirecek"
+            style={{width:"100%",height:"38px",padding:"0 12px",borderRadius:T.r,border:`1px solid ${T.bDark}`,fontSize:"14px",boxSizing:"border-box"}}/>
+        </div>
+        <div>
+          <label style={{display:"block",fontSize:"13px",color:T.t2,marginBottom:"6px",fontWeight:500}}>Rol</label>
+          <select value={yeni.rol} onChange={e=>setYeni({...yeni,rol:e.target.value})} disabled={yeniBusy}
+            style={{width:"100%",height:"38px",padding:"0 12px",borderRadius:T.r,border:`1px solid ${T.bDark}`,fontSize:"14px",boxSizing:"border-box",background:"#fff"}}>
+            <option value="data_entry">Veri Girişi (silme yetkisi yok)</option>
+            <option value="admin">Yönetici (tam yetki)</option>
+          </select>
+        </div>
+        {yeniHata && <div style={{padding:"10px 12px",background:"#fff1f0",border:`1px solid #ffa39e`,borderRadius:T.r,color:"#cf1322",fontSize:"13px"}}>{yeniHata}</div>}
+        <div style={{display:"flex",gap:"10px",marginTop:"6px"}}>
+          <button onClick={()=>setYeniOpen(false)} disabled={yeniBusy} style={{flex:1,height:"40px",border:`1px solid ${T.bDark}`,borderRadius:T.r,background:"#fff",color:T.t2,fontSize:"14px",cursor:"pointer"}}>Vazgeç</button>
+          <button onClick={yeniKaydet} disabled={yeniBusy} style={{flex:1,height:"40px",border:"none",borderRadius:T.r,background:T.primary,color:"#fff",fontSize:"14px",fontWeight:600,cursor:yeniBusy?"wait":"pointer",opacity:yeniBusy?0.6:1}}>
+            {yeniBusy ? "Kaydediliyor..." : "Kaydet"}
+          </button>
+        </div>
+      </div>
+    </div>}
+  </div>;
+};
+
+const Sidebar=({page,setPage,open,editMode=false,currentUser=null})=>{
   const[openGroups,setOpenGroups]=useState({siparisler:true,faturalar:true,satis:true});
   const toggleGroup=(g)=>setOpenGroups(p=>({...p,[g]:!p[g]}));
   const[uyariHedef,setUyariHedef]=useState(null);
@@ -808,6 +1099,7 @@ const Sidebar=({page,setPage,open,editMode=false})=>{
       {id:"satis_sunum",label:"Satış Sunumu"},
       {id:"satis_rapor",label:"Satış Raporu"},
     ]},
+    ...(isAdmin(currentUser) ? [{id:"kullanicilar",label:"KULLANICILAR"}] : []),
   ];
 
   const SB={
@@ -8615,12 +8907,63 @@ const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategoriler
 };
 
 export default function App(){
+  const[currentUser,setCurrentUser]=useState(()=>authGet());
+  const[mustChangePwd,setMustChangePwd]=useState(false);
+  const[showSifreDegistir,setShowSifreDegistir]=useState(false);
   const[page,setPage]=useState("dashboard");
   const[editMode,setEditMode]=useState(false);
   const[goToId,setGoToId]=useState(null);
   const goToFirma=(firmaId)=>{setGoToId(firmaId);setPage("firmalar");};
   const[sbOpen,setSbOpen]=useState(true);
   const[loading,setLoading]=useState(true);
+
+  /* ---- AUTH HANDLERS ---- */
+  const handleLogin = useCallback(async (u) => {
+    const sess = authSet(u);
+    setCurrentUser(sess);
+    setMustChangePwd(!u.sifre_degistirildi);
+  }, []);
+  const handleLogout = useCallback(() => {
+    authClear();
+    setCurrentUser(null);
+    setMustChangePwd(false);
+    setShowSifreDegistir(false);
+    setPage("dashboard");
+  }, []);
+  const handleSifreDegisti = useCallback(() => {
+    setMustChangePwd(false);
+    setShowSifreDegistir(false);
+    alert("✅ Şifreniz başarıyla değiştirildi.");
+  }, []);
+
+  /* ---- INAKTİVİTE TIMEOUT (30 dk) ---- */
+  useEffect(() => {
+    if(!currentUser) return;
+    const refresh = () => {
+      const cur = authTouch();
+      if(!cur) { handleLogout(); alert("Oturum süreniz doldu. Tekrar giriş yapın."); }
+    };
+    const events = ["mousedown","keydown","scroll","touchstart"];
+    events.forEach(e => window.addEventListener(e, refresh));
+    const interval = setInterval(() => {
+      const cur = authGet();
+      if(!cur) { handleLogout(); alert("Oturum süreniz doldu. Tekrar giriş yapın."); }
+    }, 60 * 1000); // dakikada bir kontrol
+    return () => {
+      events.forEach(e => window.removeEventListener(e, refresh));
+      clearInterval(interval);
+    };
+  }, [currentUser, handleLogout]);
+
+  /* ---- ROLE GUARD: silme işlemleri ---- */
+  const guardSil = useCallback(() => {
+    if(!isAdmin(currentUser)) {
+      alert("Silme yetkiniz yok. Bu işlem sadece yönetici hesabıyla yapılabilir.");
+      return false;
+    }
+    return true;
+  }, [currentUser]);
+
   const firmaSavingRef=useRef(false);
   const malzemeSavingRef=useRef(false);
   const katSavingRef=useRef(false);
@@ -8858,6 +9201,7 @@ export default function App(){
   };
 
   const delFirma = async (id) => {
+    if(!guardSil()) return;
     if(!confirm("Bu firmayı silmek istediğinize emin misiniz?")) return;
     try { await sbDel('firmalar', id); await loadAll(); }
     catch(e) { setFirmalar(prev=>prev.filter(f=>f.id!==id)); }
@@ -8890,6 +9234,7 @@ export default function App(){
   };
 
   const delMalzeme = async (id) => {
+    if(!guardSil()) return;
     if(!confirm("Bu malzemeyi silmek istediğinize emin misiniz?")) return;
     try { await sbDel('malzemeler', id); await loadAll(); }
     catch(e) { setMalzemeler(prev=>prev.filter(m=>m.id!==id)); }
@@ -9018,6 +9363,7 @@ export default function App(){
     }
   };
   const delKat = async (id) => {
+    if(!guardSil()) return;
     try { await sbDel('kategoriler', id); }
     catch(e) {}
     setAltKategoriler(prev=>prev.filter(a=>a.id!==id));
@@ -9037,6 +9383,7 @@ export default function App(){
     }
   };
   const delAltGrp = async (id) => {
+    if(!guardSil()) return;
     try { await sbDel('alt_gruplar', id); }
     catch(e) {}
     setAltGruplar(prev=>prev.filter(g=>g.id!==id));
@@ -9099,6 +9446,7 @@ export default function App(){
   };
 
   const delTeklif = async (id) => {
+    if(!guardSil()) return;
     if(!confirm("Bu teklifi silmek istediğinize emin misiniz?")) return;
     try { await sbDel('teklifler', id); await loadAll(); }
     catch(e) { setTeklifler(prev=>prev.filter(t=>t.id!==id)); }
@@ -9138,6 +9486,7 @@ export default function App(){
     }
   };
   const delSiparis = async (id) => {
+    if(!guardSil()) return;
     if(!confirm("Bu siparişi silmek istediğinize emin misiniz?")) return;
     try { await sbDel('satinalma_siparisleri', id); }
     catch(e) { console.warn("Sipariş silme hatası:", e.message); }
@@ -9237,6 +9586,7 @@ export default function App(){
     }
   };
   const delFatura = async (id) => {
+    if(!guardSil()) return;
     if(!confirm("Bu faturayı silmek istediğinize emin misiniz?")) return;
     try { await sbDel('alis_faturalari', id); }
     catch(e) { console.warn("Fatura silme hatası:", e.message); }
@@ -9320,6 +9670,7 @@ export default function App(){
     }
   };
   const delProje = async (id) => {
+    if(!guardSil()) return;
     if(!confirm("Bu projeyi silmek istediğinize emin misiniz?")) return;
     try {
       await sbDel('projeler', id);
@@ -9355,6 +9706,7 @@ export default function App(){
   };
 
   const delButceKalemi = async (id) => {
+    if(!guardSil()) return;
     try {
       await sbDel('butce_kalemleri', id);
       setButceKalemleri(prev=>prev.filter(b=>b.id!==id));
@@ -9411,14 +9763,27 @@ export default function App(){
     <style>{`@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}`}</style>
   </div>;
 
+  if(!currentUser) return <LoginPage onLogin={handleLogin}/>;
+  if(mustChangePwd) return <SifreDegistirPage user={currentUser} zorunlu onDone={handleSifreDegisti}/>;
+  if(showSifreDegistir) return <SifreDegistirPage user={currentUser} onDone={handleSifreDegisti} onCancel={()=>setShowSifreDegistir(false)}/>;
+
+  const adminOnly = isAdmin(currentUser);
+  const avatarHarf = (currentUser.kullaniciAdi||"?").charAt(0).toUpperCase();
+
   return <div style={{display:"flex",height:"100vh",width:"100vw",background:T.bg,fontFamily:T.f,overflow:"hidden"}}>
-    <Sidebar page={page} setPage={(p)=>{setEditMode(false);setPage(p);}} open={sbOpen} editMode={editMode}/>
+    <Sidebar page={page} setPage={(p)=>{setEditMode(false);setPage(p);}} open={sbOpen} editMode={editMode} currentUser={currentUser}/>
     <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <div style={{height:"56px",minHeight:"56px",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",background:"#fff",borderBottom:`1px solid ${T.border}`,boxShadow:T.sh}}>
         <button onClick={()=>setSbOpen(!sbOpen)} style={{background:"none",border:"none",color:T.t2,cursor:"pointer",padding:"6px",fontSize:"18px",borderRadius:"6px"}} onMouseEnter={e=>e.currentTarget.style.background="#f5f5f5"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>☰</button>
         <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
           <div style={{padding:"6px 14px",borderRadius:"6px",border:`1px solid ${T.border}`,fontSize:"13px",color:T.t3,display:"flex",alignItems:"center",gap:"6px"}}>🗄️ Supabase Bağlı</div>
-          <div style={{width:"32px",height:"32px",borderRadius:"50%",background:T.primary,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:600,fontSize:"13px"}}>A</div>
+          <div style={{display:"flex",alignItems:"center",gap:"8px",padding:"4px 10px 4px 4px",borderRadius:"20px",border:`1px solid ${T.border}`,background:"#fafafa"}}>
+            <div style={{width:"28px",height:"28px",borderRadius:"50%",background:T.primary,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:600,fontSize:"12px"}}>{avatarHarf}</div>
+            <div style={{fontSize:"13px",color:T.text,fontWeight:500}}>{currentUser.kullaniciAdi}</div>
+            <div style={{fontSize:"11px",color:T.t3,padding:"2px 6px",background:"#fff",borderRadius:"3px",border:`1px solid ${T.border}`}}>{adminOnly?"Yönetici":"Veri Girişi"}</div>
+          </div>
+          <button onClick={()=>setShowSifreDegistir(true)} title="Şifre Değiştir" style={{background:"none",border:`1px solid ${T.border}`,color:T.t2,cursor:"pointer",padding:"6px 10px",fontSize:"12px",borderRadius:"6px",display:"flex",alignItems:"center",gap:"4px"}}><Lock size={14}/></button>
+          <button onClick={()=>{ if(confirm("Çıkış yapılsın mı?")) handleLogout(); }} title="Çıkış" style={{background:"none",border:`1px solid ${T.border}`,color:T.t2,cursor:"pointer",padding:"6px 10px",fontSize:"12px",borderRadius:"6px",display:"flex",alignItems:"center",gap:"4px"}}><LogOut size={14}/></button>
         </div>
       </div>
       <div style={{flex:1,overflow:"auto",padding:"24px"}}>
@@ -9433,6 +9798,7 @@ export default function App(){
         {page==="maliyet"&&<MaliyetPage projeler={projeler} setProjeler={setProjeler} malzemeler={malzemeler} faturalar={faturalar} siparisler={siparisler} firmalar={firmalar} butceKalemleri={butceKalemleri} saveButceKalemi={saveButceKalemi} delButceKalemi={delButceKalemi} bulkSaveButceKalemleri={bulkSaveButceKalemleri}/>}
         {page==="satis_sunum"&&<SatisSunumPage projeler={projeler} setProjeler={setProjeler} firmalar={firmalar} saveProje={saveProje} saveFirma={saveFirma} setPage={setPage} goToFirma={goToFirma}/>}
         {page==="satis_rapor"&&<SatisRaporPage projeler={projeler}/>}
+        {page==="kullanicilar"&&adminOnly&&<KullanicilarPage currentUser={currentUser}/>}
       </div>
     </div>
   </div>;
