@@ -9123,89 +9123,207 @@ export default function App(){
 
   useEffect(()=>{ loadAll(true); },[loadAll]);
 
-  /* ---- REALTIME — birden çok tablonun değişikliklerini diğer kullanıcılara push et ---- */
+  /* ---- REALTIME — tüm tabloların değişikliklerini diğer kullanıcılara push et ---- */
   useEffect(() => {
     if(!currentUser) return;
 
-    // bolumler (daireler)
-    const bolumChannel = sbClient
-      .channel('realtime-bolumler')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bolumler' }, (payload) => {
-        const eventType = payload.eventType;
-        if(eventType === 'INSERT' || eventType === 'UPDATE') {
-          const local = bolumToLocal(payload.new);
-          setProjeler(prev => prev.map(p =>
-            p.id === local.projeId
-              ? { ...p, bolumler: eventType === 'INSERT'
-                  ? [...(p.bolumler||[]).filter(b=>b.id!==local.id), local]
-                  : (p.bolumler||[]).map(b => b.id === local.id ? local : b) }
-              : p
-          ));
-          showToast(`📡 ${local.blok||"—"} ${local.no||""} ${eventType==='INSERT'?'eklendi':'güncellendi'}`);
-        } else if(eventType === 'DELETE') {
-          const oldId = payload.old?.id;
-          if(!oldId) return;
-          setProjeler(prev => prev.map(p => ({
-            ...p,
-            bolumler: (p.bolumler||[]).filter(b => b.id !== oldId)
-          })));
+    const upsert = (arr, item) => arr.find(x=>x.id===item.id) ? arr.map(x=>x.id===item.id?item:x) : [...arr, item];
+    const remove = (arr, id) => arr.filter(x=>x.id!==id);
+    const isDel = (p) => p.eventType === 'DELETE';
+    const oldId = (p) => p.old?.id;
+
+    const channel = sbClient.channel('realtime-operon')
+      // bolumler (daireler) — projeler[].bolumler
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bolumler' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setProjeler(prev => prev.map(pr => ({...pr, bolumler: remove(pr.bolumler||[], id)})));
           showToast(`📡 Daire silindi`);
+        } else {
+          const local = bolumToLocal(p.new);
+          setProjeler(prev => prev.map(pr => pr.id===local.projeId ? {...pr, bolumler: upsert(pr.bolumler||[], local)} : pr));
+          showToast(`📡 ${local.blok||"—"} ${local.no||""} ${p.eventType==='INSERT'?'eklendi':'güncellendi'}`);
         }
       })
-      .subscribe();
-
-    // teklifler
-    const teklifChannel = sbClient
-      .channel('realtime-teklifler')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'teklifler' }, (payload) => {
-        const eventType = payload.eventType;
-        if(eventType === 'INSERT') {
-          const local = teklifToLocal(payload.new, []);
-          setTeklifler(prev => prev.find(t=>t.id===local.id) ? prev : [...prev, local]);
-          showToast(`📡 Teklif ${local.teklifNo||''} eklendi`);
-        } else if(eventType === 'UPDATE') {
-          const local = teklifToLocal(payload.new, []);
-          setTeklifler(prev => prev.map(t => t.id === local.id ? {...local, kalemler: t.kalemler||[]} : t));
-          showToast(`📡 Teklif ${local.teklifNo||''} güncellendi`);
-        } else if(eventType === 'DELETE') {
-          const oldId = payload.old?.id;
-          if(!oldId) return;
-          setTeklifler(prev => prev.filter(t => t.id !== oldId));
+      // bloklar — projeler[].bloklar (sessiz, parent toast vermez)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bloklar' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setProjeler(prev => prev.map(pr => ({...pr, bloklar: remove(pr.bloklar||[], id)})));
+        } else {
+          const local = blokToLocal(p.new);
+          setProjeler(prev => prev.map(pr => pr.id===local.projeId ? {...pr, bloklar: upsert(pr.bloklar||[], local)} : pr));
+        }
+      })
+      // projeler — top-level (nested arrays mevcut state'ten korunur)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projeler' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setProjeler(prev => remove(prev, id));
+          showToast(`📡 Proje silindi`);
+        } else {
+          const local = projeToLocal(p.new);
+          setProjeler(prev => prev.find(pr=>pr.id===local.id)
+            ? prev.map(pr => pr.id===local.id ? {...local, bloklar: pr.bloklar||[], bolumler: pr.bolumler||[]} : pr)
+            : [...prev, local]);
+          showToast(`📡 ${local.ad||'Proje'} ${p.eventType==='INSERT'?'eklendi':'güncellendi'}`);
+        }
+      })
+      // butce_kalemleri — top-level
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'butce_kalemleri' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return; setButceKalemleri(prev => remove(prev, id)); }
+        else { setButceKalemleri(prev => upsert(prev, butceKalemiToLocal(p.new))); }
+      })
+      // satinalma_siparisleri — top-level (nested kalemler korunur)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'satinalma_siparisleri' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setSiparisler(prev => remove(prev, id));
+          showToast(`📡 Sipariş silindi`);
+        } else {
+          const local = siparisToLocal(p.new, []);
+          setSiparisler(prev => prev.find(s=>s.id===local.id)
+            ? prev.map(s => s.id===local.id ? {...local, kalemler: s.kalemler||[]} : s)
+            : [...prev, local]);
+          showToast(`📡 Sipariş ${local.spNo||''} ${p.eventType==='INSERT'?'eklendi':'güncellendi'}`);
+        }
+      })
+      // satinalma_siparis_kalemleri — sessiz
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'satinalma_siparis_kalemleri' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setSiparisler(prev => prev.map(s => ({...s, kalemler: remove(s.kalemler||[], id)})));
+        } else {
+          const local = siparisKalemToLocal(p.new);
+          setSiparisler(prev => prev.map(s => s.id===local.siparisId ? {...s, kalemler: upsert(s.kalemler||[], local)} : s));
+        }
+      })
+      // alis_faturalari — top-level
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'alis_faturalari' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setFaturalar(prev => remove(prev, id));
+          showToast(`📡 Fatura silindi`);
+        } else {
+          const local = faturaToLocal(p.new, []);
+          setFaturalar(prev => prev.find(f=>f.id===local.id)
+            ? prev.map(f => f.id===local.id ? {...local, kalemler: f.kalemler||[]} : f)
+            : [...prev, local]);
+          showToast(`📡 Fatura ${local.afNo||''} ${p.eventType==='INSERT'?'eklendi':'güncellendi'}`);
+        }
+      })
+      // alis_fatura_kalemleri — sessiz
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'alis_fatura_kalemleri' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setFaturalar(prev => prev.map(f => ({...f, kalemler: remove(f.kalemler||[], id)})));
+        } else {
+          const local = faturaKalemToLocal(p.new);
+          setFaturalar(prev => prev.map(f => f.id===local.faturaId ? {...f, kalemler: upsert(f.kalemler||[], local)} : f));
+        }
+      })
+      // teklifler — top-level
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teklifler' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setTeklifler(prev => remove(prev, id));
           showToast(`📡 Teklif silindi`);
+        } else {
+          const local = teklifToLocal(p.new, []);
+          setTeklifler(prev => prev.find(t=>t.id===local.id)
+            ? prev.map(t => t.id===local.id ? {...local, kalemler: t.kalemler||[]} : t)
+            : [...prev, local]);
+          showToast(`📡 Teklif ${local.teklifNo||''} ${p.eventType==='INSERT'?'eklendi':'güncellendi'}`);
         }
+      })
+      // teklif_kalemleri — sessiz
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teklif_kalemleri' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setTeklifler(prev => prev.map(t => ({...t, kalemler: remove(t.kalemler||[], id)})));
+        } else {
+          const local = kalemToLocal(p.new);
+          setTeklifler(prev => prev.map(t => t.id===local.teklifId ? {...t, kalemler: upsert(t.kalemler||[], local)} : t));
+        }
+      })
+      // firmalar — top-level (nested sub-collections korunur)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'firmalar' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setFirmalar(prev => remove(prev, id));
+          showToast(`📡 Firma silindi`);
+        } else {
+          const local = firmaToLocal(p.new);
+          setFirmalar(prev => prev.find(f=>f.id===local.id)
+            ? prev.map(f => f.id===local.id ? {...local, kisiler:f.kisiler||[], notlar:f.notlar||[], subeler:f.subeler||[], bankalar:f.bankalar||[], iletisimler:f.iletisimler||[], adresler:f.adresler||[]} : f)
+            : [...prev, local]);
+          showToast(`📡 ${local.ad||'Firma'} ${p.eventType==='INSERT'?'eklendi':'güncellendi'}`);
+        }
+      })
+      // kisiler — firmalar[].kisiler (sessiz)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kisiler' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setFirmalar(prev => prev.map(f => ({...f, kisiler: remove(f.kisiler||[], id)})));
+        } else {
+          const local = kisiToLocal(p.new);
+          setFirmalar(prev => prev.map(f => f.id===local.firmaId ? {...f, kisiler: upsert(f.kisiler||[], local)} : f));
+        }
+      })
+      // notlar — firmalar[].notlar (sessiz)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notlar' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setFirmalar(prev => prev.map(f => ({...f, notlar: remove(f.notlar||[], id)})));
+        } else {
+          const local = notToLocal(p.new);
+          setFirmalar(prev => prev.map(f => f.id===local.firmaId ? {...f, notlar: upsert(f.notlar||[], local)} : f));
+        }
+      })
+      // firma_subeler — raw (sessiz)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'firma_subeler' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setFirmalar(prev => prev.map(f => ({...f, subeler: remove(f.subeler||[], id)})));
+        } else {
+          setFirmalar(prev => prev.map(f => f.id===p.new.firma_id ? {...f, subeler: upsert(f.subeler||[], p.new)} : f));
+        }
+      })
+      // firma_bankalar — raw (sessiz)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'firma_bankalar' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setFirmalar(prev => prev.map(f => ({...f, bankalar: remove(f.bankalar||[], id)})));
+        } else {
+          setFirmalar(prev => prev.map(f => f.id===p.new.firma_id ? {...f, bankalar: upsert(f.bankalar||[], p.new)} : f));
+        }
+      })
+      // firma_iletisim — raw (sessiz)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'firma_iletisim' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setFirmalar(prev => prev.map(f => ({...f, iletisimler: remove(f.iletisimler||[], id)})));
+        } else {
+          setFirmalar(prev => prev.map(f => f.id===p.new.firma_id ? {...f, iletisimler: upsert(f.iletisimler||[], p.new)} : f));
+        }
+      })
+      // firma_adresler — raw (sessiz)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'firma_adresler' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setFirmalar(prev => prev.map(f => ({...f, adresler: remove(f.adresler||[], id)})));
+        } else {
+          setFirmalar(prev => prev.map(f => f.id===p.new.firma_id ? {...f, adresler: upsert(f.adresler||[], p.new)} : f));
+        }
+      })
+      // malzemeler — top-level
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'malzemeler' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setMalzemeler(prev => remove(prev, id));
+          showToast(`📡 Malzeme silindi`);
+        } else {
+          const local = malzemeToLocal(p.new);
+          setMalzemeler(prev => upsert(prev, local));
+          showToast(`📡 ${local.ad||'Malzeme'} ${p.eventType==='INSERT'?'eklendi':'güncellendi'}`);
+        }
+      })
+      // kategoriler — sessiz
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kategoriler' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return; setAltKategoriler(prev => remove(prev, id)); }
+        else { setAltKategoriler(prev => upsert(prev, katToLocal(p.new))); }
+      })
+      // alt_gruplar — sessiz
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'alt_gruplar' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return; setAltGruplar(prev => remove(prev, id)); }
+        else { setAltGruplar(prev => upsert(prev, altGrpToLocal(p.new))); }
       })
       .subscribe();
 
-    // teklif_kalemleri (parent: teklifler[].kalemler) — toplu update'lerde toast spam etmemek için sessiz merge
-    const teklifKalemChannel = sbClient
-      .channel('realtime-teklif-kalemleri')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'teklif_kalemleri' }, (payload) => {
-        const eventType = payload.eventType;
-        if(eventType === 'INSERT' || eventType === 'UPDATE') {
-          const local = kalemToLocal(payload.new);
-          setTeklifler(prev => prev.map(t =>
-            t.id === local.teklifId
-              ? { ...t, kalemler: eventType === 'INSERT'
-                  ? [...(t.kalemler||[]).filter(k=>k.id!==local.id), local]
-                  : (t.kalemler||[]).map(k => k.id === local.id ? local : k) }
-              : t
-          ));
-        } else if(eventType === 'DELETE') {
-          const oldId = payload.old?.id;
-          if(!oldId) return;
-          setTeklifler(prev => prev.map(t => ({
-            ...t,
-            kalemler: (t.kalemler||[]).filter(k => k.id !== oldId)
-          })));
-        }
-      })
-      .subscribe();
-
-    return () => {
-      sbClient.removeChannel(bolumChannel);
-      sbClient.removeChannel(teklifChannel);
-      sbClient.removeChannel(teklifKalemChannel);
-    };
+    return () => { sbClient.removeChannel(channel); };
   }, [currentUser, showToast]);
 
   // BACKFILL — eski kayıtlar için bir kez oto-kapatma kontrolü (yeni auto-close mantığı eklenmeden önce kaydedilenler)
