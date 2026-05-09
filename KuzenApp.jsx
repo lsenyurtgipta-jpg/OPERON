@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Plus, Trash2, Pencil, Save, Download, Upload, Search, ChevronDown, ChevronUp, X, FileText, Image, Folder, Building2, Package, ClipboardList, ShoppingCart, Receipt, LayoutDashboard, FolderOpen, ChevronRight, Settings, User, LogOut, Eye, Copy, Filter, MoreVertical, Check, AlertCircle, Info, ArrowLeft, RefreshCw, ExternalLink, Calendar, MapPin, Phone, Mail, Hash, Layers, HardHat, FileCheck, SquarePlus, MoveLeft, Map, SquarePen, Grid2x2Plus, FileSpreadsheet, FolderPlus, ArrowDownFromLine, HousePlus, Lock, Users, ShieldCheck } from "lucide-react";
 import bcrypt from "bcryptjs";
+import { createClient } from "@supabase/supabase-js";
 import operonLogo from "./assets/operon-logo.png";
 import excelIcon from "./assets/icons8-excel-48.png";
 
@@ -13,6 +14,7 @@ const VERGI_DAIRELERI={"Adana":["5 Ocak VD","Adana İhtisas VD","Çukurova VD","
 /* ========== SUPABASE CLIENT ========== */
 const SUPABASE_URL = "https://pgzlxkbltutehjtuvfqx.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnemx4a2JsdHV0ZWhqdHV2ZnF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NjkyNjUsImV4cCI6MjA4OTI0NTI2NX0._EaSbj47GiRCs86IN1dbdaP3vpoQzA77-j2R4iMgqu4";
+const sbClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 const sbReq = async (path, opts={}) => {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...opts,
@@ -8983,6 +8985,11 @@ export default function App(){
   const goToFirma=(firmaId)=>{setGoToId(firmaId);setPage("firmalar");};
   const[sbOpen,setSbOpen]=useState(true);
   const[loading,setLoading]=useState(true);
+  const[toast,setToast]=useState(null);
+  const showToast = useCallback((msg) => {
+    setToast(msg);
+    setTimeout(()=>setToast(null), 2500);
+  }, []);
 
   /* ---- AUTH HANDLERS ---- */
   const handleLogin = useCallback(async (u) => {
@@ -9115,6 +9122,91 @@ export default function App(){
   }, []);
 
   useEffect(()=>{ loadAll(true); },[loadAll]);
+
+  /* ---- REALTIME — birden çok tablonun değişikliklerini diğer kullanıcılara push et ---- */
+  useEffect(() => {
+    if(!currentUser) return;
+
+    // bolumler (daireler)
+    const bolumChannel = sbClient
+      .channel('realtime-bolumler')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bolumler' }, (payload) => {
+        const eventType = payload.eventType;
+        if(eventType === 'INSERT' || eventType === 'UPDATE') {
+          const local = bolumToLocal(payload.new);
+          setProjeler(prev => prev.map(p =>
+            p.id === local.projeId
+              ? { ...p, bolumler: eventType === 'INSERT'
+                  ? [...(p.bolumler||[]).filter(b=>b.id!==local.id), local]
+                  : (p.bolumler||[]).map(b => b.id === local.id ? local : b) }
+              : p
+          ));
+          showToast(`📡 ${local.blok||"—"} ${local.no||""} ${eventType==='INSERT'?'eklendi':'güncellendi'}`);
+        } else if(eventType === 'DELETE') {
+          const oldId = payload.old?.id;
+          if(!oldId) return;
+          setProjeler(prev => prev.map(p => ({
+            ...p,
+            bolumler: (p.bolumler||[]).filter(b => b.id !== oldId)
+          })));
+          showToast(`📡 Daire silindi`);
+        }
+      })
+      .subscribe();
+
+    // teklifler
+    const teklifChannel = sbClient
+      .channel('realtime-teklifler')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teklifler' }, (payload) => {
+        const eventType = payload.eventType;
+        if(eventType === 'INSERT') {
+          const local = teklifToLocal(payload.new, []);
+          setTeklifler(prev => prev.find(t=>t.id===local.id) ? prev : [...prev, local]);
+          showToast(`📡 Teklif ${local.teklifNo||''} eklendi`);
+        } else if(eventType === 'UPDATE') {
+          const local = teklifToLocal(payload.new, []);
+          setTeklifler(prev => prev.map(t => t.id === local.id ? {...local, kalemler: t.kalemler||[]} : t));
+          showToast(`📡 Teklif ${local.teklifNo||''} güncellendi`);
+        } else if(eventType === 'DELETE') {
+          const oldId = payload.old?.id;
+          if(!oldId) return;
+          setTeklifler(prev => prev.filter(t => t.id !== oldId));
+          showToast(`📡 Teklif silindi`);
+        }
+      })
+      .subscribe();
+
+    // teklif_kalemleri (parent: teklifler[].kalemler) — toplu update'lerde toast spam etmemek için sessiz merge
+    const teklifKalemChannel = sbClient
+      .channel('realtime-teklif-kalemleri')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teklif_kalemleri' }, (payload) => {
+        const eventType = payload.eventType;
+        if(eventType === 'INSERT' || eventType === 'UPDATE') {
+          const local = kalemToLocal(payload.new);
+          setTeklifler(prev => prev.map(t =>
+            t.id === local.teklifId
+              ? { ...t, kalemler: eventType === 'INSERT'
+                  ? [...(t.kalemler||[]).filter(k=>k.id!==local.id), local]
+                  : (t.kalemler||[]).map(k => k.id === local.id ? local : k) }
+              : t
+          ));
+        } else if(eventType === 'DELETE') {
+          const oldId = payload.old?.id;
+          if(!oldId) return;
+          setTeklifler(prev => prev.map(t => ({
+            ...t,
+            kalemler: (t.kalemler||[]).filter(k => k.id !== oldId)
+          })));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      sbClient.removeChannel(bolumChannel);
+      sbClient.removeChannel(teklifChannel);
+      sbClient.removeChannel(teklifKalemChannel);
+    };
+  }, [currentUser, showToast]);
 
   // BACKFILL — eski kayıtlar için bir kez oto-kapatma kontrolü (yeni auto-close mantığı eklenmeden önce kaydedilenler)
   useEffect(()=>{
@@ -9868,5 +9960,9 @@ export default function App(){
         {page==="kullanicilar"&&adminOnly&&<KullanicilarPage currentUser={currentUser}/>}
       </div>
     </div>
+    {toast && <div style={{position:"fixed",bottom:"20px",right:"20px",background:"#384248",color:"#fff",padding:"10px 16px",borderRadius:"6px",boxShadow:"0 4px 12px rgba(0,0,0,0.25)",zIndex:9999,fontSize:"13px",fontWeight:500,maxWidth:"320px",animation:"toastIn .25s ease-out"}}>
+      {toast}
+      <style>{`@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
+    </div>}
   </div>;
 }
