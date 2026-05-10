@@ -4349,6 +4349,51 @@ const butceKalemiToDb = (k, projeId) => ({
   tamamlandi_kaynak: k.tamamlandiKaynak||null,
   sira_no: k.siraNo||0
 });
+// Bütçe kalemi satırı (butce_kalemi_satirlari ayrı tablosu — JSONB'den ayrılmış)
+const kalemSatirToLocal = (s) => ({
+  id: s.id,
+  butceKalemiId: s.butce_kalemi_id,
+  siraNo: s.sira_no!=null?String(s.sira_no):"",
+  aciklama: s.aciklama||"",
+  miktar: s.miktar!=null?String(s.miktar):"",
+  guncelMiktar: s.guncel_miktar!=null?String(s.guncel_miktar):"",
+  birimFiyat: s.birim_fiyat!=null?String(s.birim_fiyat):"",
+  guncelBirimFiyat: s.guncel_birim_fiyat!=null?String(s.guncel_birim_fiyat):"",
+  kdvOrani: s.kdv_orani||"20",
+  tamamlandi: s.tamamlandi===true
+});
+const kalemSatirToDb = (s, butceKalemiId) => ({
+  butce_kalemi_id: butceKalemiId,
+  sira_no: s.siraNo!==""&&s.siraNo!=null?parseInt(s.siraNo)||0:0,
+  aciklama: s.aciklama||"",
+  miktar: s.miktar!==""&&s.miktar!=null?Number(s.miktar):null,
+  guncel_miktar: s.guncelMiktar!==""&&s.guncelMiktar!=null?Number(s.guncelMiktar):(s.miktar!==""&&s.miktar!=null?Number(s.miktar):null),
+  birim_fiyat: s.birimFiyat!==""&&s.birimFiyat!=null?Number(s.birimFiyat):null,
+  guncel_birim_fiyat: s.guncelBirimFiyat!==""&&s.guncelBirimFiyat!=null?Number(s.guncelBirimFiyat):null,
+  kdv_orani: s.kdvOrani||"20",
+  tamamlandi: s.tamamlandi===true
+});
+// Satır revizyonu (butce_kalemi_satir_revizyonlari)
+const satirRevToLocal = (r) => ({
+  id: r.id,
+  butceKalemiSatirId: r.butce_kalemi_satir_id,
+  revNo: r.rev_no||0,
+  tarih: r.tarih||"",
+  tip: r.tip||"fiyat",
+  eskiDeger: r.eski_deger!=null?String(r.eski_deger):"",
+  yeniDeger: r.yeni_deger!=null?String(r.yeni_deger):"",
+  aciklama: r.aciklama||"",
+  createdAt: r.created_at||""
+});
+const satirRevToDb = (r, satirId) => ({
+  butce_kalemi_satir_id: satirId,
+  rev_no: r.revNo||0,
+  tarih: r.tarih||new Date().toISOString().split("T")[0],
+  tip: r.tip||"fiyat",
+  eski_deger: r.eskiDeger!==""&&r.eskiDeger!=null?Number(r.eskiDeger):null,
+  yeni_deger: r.yeniDeger!==""&&r.yeniDeger!=null?Number(r.yeniDeger):null,
+  aciklama: r.aciklama||""
+});
 
 // Alt satır otomatik kapanma kontrolü — butceKalemiSatirId eşleşen faturalar miktar/fiyat birebir tutturursa kapanır
 const altSatirEslesti = (altSatir, bkId, faturalarList) => {
@@ -6033,32 +6078,45 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
 
   // Revizyon işlemleri
   const[revEkleAcik,setRevEkleAcik]=useState(false);
-  const[revForm,setRevForm]=useState({tip:"fiyat",yeniDeger:"",not:""});
-  const[revDuzenle,setRevDuzenle]=useState(null);
+  const[revForm,setRevForm]=useState({satirId:"",tip:"fiyat",yeniDeger:"",aciklama:""});
   const addRevizyon=()=>{
-    if(!revForm.yeniDeger)return;
-    const eskiDeger=revForm.tip==="fiyat"?fm.planlananBirimFiyat||"0":fm.planlananMiktar||"0";
-    const revNo=(fm.revizyonlar||[]).length+1;
-    const yeniRev={id:Date.now(),tarih:new Date().toISOString().split("T")[0],tip:revForm.tip,eskiDeger,yeniDeger:revForm.yeniDeger,not:revForm.not,revNo};
-    uf("revizyonlar",[...(fm.revizyonlar||[]),yeniRev]);
-    if(revForm.tip==="fiyat"){fiyatDegistir(revForm.yeniDeger);}
-    else{uf("planlananMiktar",revForm.yeniDeger);}
-    setRevForm({tip:"fiyat",yeniDeger:"",not:""});setRevEkleAcik(false);
+    if(!revForm.yeniDeger||!revForm.satirId)return;
+    const satirIdx=(fm.planlananSatirlari||[]).findIndex(s=>String(s.id)===String(revForm.satirId));
+    if(satirIdx<0)return;
+    const satir=fm.planlananSatirlari[satirIdx];
+    const eskiDeger=revForm.tip==="fiyat"?(satir.guncelBirimFiyat||satir.birimFiyat||"0"):(satir.guncelMiktar||satir.miktar||"0");
+    const revNo=(satir.revizyonlar||[]).length+1;
+    const yeniRev={id:Date.now(),butceKalemiSatirId:satir.id,tarih:new Date().toISOString().split("T")[0],tip:revForm.tip,eskiDeger:String(eskiDeger),yeniDeger:revForm.yeniDeger,aciklama:revForm.aciklama||"",revNo};
+    const newSatirlar=(fm.planlananSatirlari||[]).map((s,i)=>{
+      if(i!==satirIdx)return s;
+      const updated={...s,revizyonlar:[...(s.revizyonlar||[]),yeniRev]};
+      if(revForm.tip==="fiyat")updated.guncelBirimFiyat=revForm.yeniDeger;
+      else updated.guncelMiktar=revForm.yeniDeger;
+      return updated;
+    });
+    uf("planlananSatirlari",newSatirlar);
+    setRevForm({satirId:"",tip:"fiyat",yeniDeger:"",aciklama:""});setRevEkleAcik(false);
   };
-  const delRevizyon=(id)=>uf("revizyonlar",(fm.revizyonlar||[]).filter(r=>r.id!==id));
-  const saveRevDuzenle=(id,field,val)=>{uf("revizyonlar",(fm.revizyonlar||[]).map(r=>r.id===id?{...r,[field]:val}:r));};
+  const delRevizyon=(satirId,revId)=>{
+    const newSatirlar=(fm.planlananSatirlari||[]).map(s=>String(s.id)===String(satirId)?{...s,revizyonlar:(s.revizyonlar||[]).filter(r=>r.id!==revId)}:s);
+    uf("planlananSatirlari",newSatirlar);
+  };
+  const saveRevDuzenle=(satirId,revId,field,val)=>{
+    const newSatirlar=(fm.planlananSatirlari||[]).map(s=>String(s.id)===String(satirId)?{...s,revizyonlar:(s.revizyonlar||[]).map(r=>r.id===revId?{...r,[field]:val}:r)}:s);
+    uf("planlananSatirlari",newSatirlar);
+  };
 
   // Toplam planlanan sekmesinden hesaplanır
   const planlananTop=fiyatToplamHesapla(fm.planlananSatirlari);
   const toplam=planlananTop.kdvHaricTop;
 
-  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-    <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"1600px",maxHeight:"95vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,overflow:"auto",display:"grid",placeContent:"center",padding:"20px"}}>
+    <div style={{background:"#fff",borderRadius:T.rl,width:"2100px",height:"1000px",display:"flex",flexDirection:"column",overflow:"hidden",fontFamily:"'Arial Narrow', Arial, sans-serif"}}>
       <div style={{padding:"12px 20px",background:"#384248",display:"flex",alignItems:"center",gap:"16px",borderRadius:`${T.rl} ${T.rl} 0 0`}}>
         <button onClick={onClose} title="Kapat" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={28}/></button>
         <div style={{flex:1,textAlign:"center"}}><span style={{fontSize:"16px",fontWeight:600,color:"#8799a3",textTransform:"uppercase"}}>{fm.malzemeKodu?fm.malzemeKodu+" - ":""}{fm.malzemeAd||"Bütçe Kalemi"}</span></div>
         <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
-          <button onClick={()=>{if(!kaydetValidasyon())return;const pt=fiyatToplamHesapla(fm.planlananSatirlari);onSave({...fm,planlananToplam:pt.kdvHaricTop,planlananMiktar:String(pt.miktarTop||""),planlananBirimFiyat:(pt.miktarTop>0?String(pt.kdvHaricTop/pt.miktarTop):"")});setSaved(true);setTimeout(()=>setSaved(false),2000);setHatalar({});}} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={30}/></button>
+          <button onClick={()=>{if(!kaydetValidasyon())return;const pt=fiyatToplamHesapla(fm.planlananSatirlari);const cleanedSatirlar=(fm.planlananSatirlari||[]).map(s=>{const{_isNew,_miktarEdit,_bfEdit,_gbfEdit,...rest}=s;return rest;});onSave({...fm,planlananSatirlari:cleanedSatirlar,planlananToplam:pt.kdvHaricTop,planlananMiktar:String(pt.miktarTop||""),planlananBirimFiyat:(pt.miktarTop>0?String(pt.kdvHaricTop/pt.miktarTop):"")});setFm(p=>({...p,planlananSatirlari:cleanedSatirlar}));setSaved(true);setTimeout(()=>setSaved(false),2000);setHatalar({});}} title={saved?"Kaydedildi":"Kaydet"} style={{padding:"0",border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",transition:"color .3s"}}><Save size={30}/></button>
           {onDel&&<button onClick={()=>{if(!confirm("Bu bütçe kalemini silmek istiyor musunuz?"))return;onDel(fm.id);onClose();}} title="Sil" style={{padding:"0",border:"none",background:"transparent",color:"#ff6b6b",cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={30}/></button>}
         </div>
       </div>
@@ -6067,8 +6125,7 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
         <div style={{display:"flex",gap:"4px",borderBottom:`1px solid ${T.border}`,marginBottom:"4px"}}>
           {[
             {id:"plan",label:"Planlanan Fiyat",count:null},
-            {id:"sp",label:"Satınalma Siparişleri",count:bagliSp.length},
-            {id:"af",label:"Alış Faturaları",count:bagliAf.length}
+            {id:"sp",label:"Satınalma Siparişleri",count:bagliSp.length}
           ].map(t=><button key={t.id} onClick={()=>setModalTab(t.id)} style={{padding:"8px 16px",border:"none",borderBottom:`3px solid ${modalTab===t.id?T.primary:"transparent"}`,background:"transparent",color:modalTab===t.id?T.primary:T.t2,fontSize:"14px",fontWeight:modalTab===t.id?600:500,cursor:"pointer",display:"flex",alignItems:"center",gap:"8px"}}>
             {t.label}
             {t.count!=null&&<span style={{fontSize:"11px",fontWeight:700,padding:"1px 8px",borderRadius:"10px",background:t.count>0?(modalTab===t.id?T.primary:T.pBg):"#f0f0f0",color:t.count>0?(modalTab===t.id?"#fff":T.primary):T.t3,minWidth:"20px",textAlign:"center"}}>{t.count}</span>}
@@ -6098,14 +6155,32 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
 
           const addSatir=()=>{
             const yeniId=Date.now();
-            uf("planlananSatirlari",[...satirlar,{id:yeniId,siraNo:String(satirlar.length+1),aciklama:"",miktar:"",birimFiyat:"",kdvOrani:varsayilanKdv,tamamlandi:false}]);
+            uf("planlananSatirlari",[...satirlar,{id:yeniId,_isNew:true,siraNo:String(satirlar.length+1),aciklama:"",miktar:"",guncelMiktar:"",birimFiyat:"",guncelBirimFiyat:"",kdvOrani:varsayilanKdv,tamamlandi:false}]);
           };
           const delSatir=(idx)=>{
             const yeniSatirlar=satirlar.filter((_,i)=>i!==idx);
             const yeniTamamlandi=yeniSatirlar.length>0&&yeniSatirlar.every(s=>s.tamamlandi===true);
             setFm(p=>({...p,planlananSatirlari:yeniSatirlar,tamamlandi:yeniTamamlandi}));
           };
-          const upPlan=(idx,field,val)=>{const arr=[...satirlar];arr[idx]={...arr[idx],[field]:val};uf("planlananSatirlari",arr);};
+          const upPlan=(idx,field,val)=>{
+            const arr=[...satirlar];
+            const old=arr[idx];
+            // B.Fiyat / Miktar değişince auto-sync: güncel değer henüz manuel değiştirilmediyse planlanan ile aynı tutulur
+            if(field==="birimFiyat"){
+              const oldP=old.birimFiyat||"";
+              const oldG=old.guncelBirimFiyat||"";
+              arr[idx]={...old,birimFiyat:val};
+              if(oldG===""||oldG===oldP){ arr[idx].guncelBirimFiyat=val; }
+            } else if(field==="miktar"){
+              const oldP=old.miktar||"";
+              const oldG=old.guncelMiktar||"";
+              arr[idx]={...old,miktar:val};
+              if(oldG===""||oldG===oldP){ arr[idx].guncelMiktar=val; }
+            } else {
+              arr[idx]={...old,[field]:val};
+            }
+            uf("planlananSatirlari",arr);
+          };
           const toggleAltTamamlandi=(idx)=>{
             const arr=[...satirlar];
             arr[idx]={...arr[idx],tamamlandi:!arr[idx].tamamlandi};
@@ -6113,17 +6188,24 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
             setFm(p=>({...p,planlananSatirlari:arr,tamamlandi:yeniTamamlandi}));
           };
 
-          let pMikTop=0,pKdvHTop=0,pKdvTop=0;
+          let pMikTop=0,gMikTop=0,pKdvHTop=0,pKdvTop=0,gKdvHTop=0,gKdvTop=0;
           satirlar.forEach(s=>{
             const m=parseFloat(s.miktar||0);
+            const mG=parseFloat(s.guncelMiktar||s.miktar||0);
             const pBf=parseFloat(s.birimFiyat||0);
+            const gBf=parseFloat(s.guncelBirimFiyat||0);
             const pKdvO=parseInt(s.kdvOrani||varsayilanKdv)/100;
-            const pH=m*pBf;pMikTop+=m;pKdvHTop+=pH;pKdvTop+=pH*pKdvO;
+            const pH=m*pBf;
+            const gH=mG*gBf;
+            pMikTop+=m;gMikTop+=mG;
+            pKdvHTop+=pH;pKdvTop+=pH*pKdvO;
+            gKdvHTop+=gH;gKdvTop+=gH*pKdvO;
           });
 
-          const gridCols="30px 40px 1fr 80px 55px 90px 90px 55px 80px 90px 24px";
+          const gridCols="30px 32px 350px 65px 50px 50px 16px 65px 75px 75px 85px 16px 65px 75px 75px 85px 33px";
 
-          return <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
+          return <div style={{display:"flex",gap:"30px",alignItems:"flex-start"}}>
+          <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden",flex:"0 0 auto"}}>
             {/* HESAPLA BUTONU */}
             {_hesaplamaVar&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 14px",background:"#fffbe6",borderBottom:`1px solid ${T.border}`}}>
               <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
@@ -6135,13 +6217,17 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
               </button>
             </div>}
             {/* BAŞLIK */}
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 12px",background:"#384248"}}>
-              <span style={{fontSize:"11px",fontWeight:700,color:"#52c41a",letterSpacing:"1px"}}>PLANLANAN FİYAT</span>
-              <button onClick={addSatir} title="Satır Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>
+            <div style={{display:"grid",gridTemplateColumns:gridCols,gap:"4px",padding:"6px 8px",alignItems:"center"}}>
+              <div style={{gridColumn:"span 6",border:`1px solid ${T.bDark}`,borderRadius:"8px",padding:"6px 8px",textAlign:"center",fontSize:"14pt",fontWeight:700,color:"#8799a3",background:"#384248"}}>GENEL BİLGİLER</div>
+              <div></div>
+              <div style={{gridColumn:"span 4",border:`1px solid ${T.bDark}`,borderRadius:"8px",padding:"6px 8px",textAlign:"center",fontSize:"14pt",fontWeight:700,color:"rgb(255,245,235)",background:"rgb(255,128,64)"}}>PLANLANAN HESAPLAMALAR</div>
+              <div></div>
+              <div style={{gridColumn:"span 4",border:`1px solid ${T.bDark}`,borderRadius:"8px",padding:"6px 8px",textAlign:"center",fontSize:"14pt",fontWeight:700,color:"rgb(230,245,245)",background:"rgb(0,128,128)"}}>GÜNCEL HESAPLAMALAR</div>
+              <button onClick={addSatir} title="Satır Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><SquarePlus size={30}/></button>
             </div>
             {/* TABLO HEADER */}
-            <div style={{display:"grid",gridTemplateColumns:gridCols,gap:"4px",padding:"4px 8px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
-              {["✓","S.No","Açıklama","Miktar","Birim","B.Fiyat","KDV Hariç","KDV%","KDV Tut.","Toplam",""].map((h,i)=><div key={i} style={{fontSize:"10px",fontWeight:600,color:i>=5?"#52c41a":T.t3,textTransform:"uppercase",textAlign:i===0?"center":(i>=3?"right":"left")}}>{h}</div>)}
+            <div style={{display:"grid",gridTemplateColumns:gridCols,gap:"4px",padding:"4px 8px",borderBottom:`1px solid ${T.border}`}}>
+              {["✓","S.No","Açıklama","Miktar","Birim","KDV%","","B.Fiyat","KDV Hariç","KDV Tut.","Toplam","","B.Fiyat","KDV Hariç","KDV Tut.","Toplam",""].map((h,i)=><div key={i} style={{fontSize:"9pt",fontWeight:500,color:i>=12?"rgb(0,128,128)":(i>=7?"rgb(255,128,64)":"rgb(128,128,128)"),textTransform:"uppercase",textAlign:"center"}}>{h}</div>)}
             </div>
             {/* SATIRLAR */}
             <div style={{maxHeight:"400px",overflow:"auto"}}>
@@ -6149,27 +6235,38 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
                 ?<div style={{padding:"24px",textAlign:"center",color:T.t3,fontSize:"12px"}}>Satır eklemek için sağ üstteki + butonuna tıklayın.</div>
                 :satirlar.map((s,idx)=>{
                   const m=parseFloat(s.miktar||0);
+                  const mG=parseFloat(s.guncelMiktar||s.miktar||0);
                   const pBf=parseFloat(s.birimFiyat||0);const pKdvO=parseInt(s.kdvOrani||varsayilanKdv);
                   const pH=m*pBf;const pKdvT=pH*(pKdvO/100);const pTop=pH+pKdvT;
+                  const gBf=parseFloat(s.guncelBirimFiyat||0);
+                  const gH=mG*gBf;const gKdvT=gH*(pKdvO/100);const gTop=gH+gKdvT;
                   const altTamam=s.tamamlandi===true;
                   const rowBg=altTamam?"#f6ffed":(idx%2===0?"#fff":"#fafafa");
                   const altTxtClr=altTamam?"#52c41a":null;
+                  const isNew=s._isNew===true;
+                  const lockBg="#f5f5f5";
                   return <div key={s.id} style={{display:"grid",gridTemplateColumns:gridCols,gap:"4px",padding:"3px 8px",alignItems:"center",borderBottom:idx<satirlar.length-1?`1px solid ${T.border}`:"none",background:rowBg}}>
                     <div onClick={()=>toggleAltTamamlandi(idx)} title={altTamam?"Tamamlandı işaretini kaldır":"Tamamlandı olarak işaretle"} style={{display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
                       <div style={{width:"16px",height:"16px",borderRadius:"3px",border:`2px solid ${altTamam?"#52c41a":T.bDark}`,background:altTamam?"#52c41a":"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
                         {altTamam&&<span style={{color:"#fff",fontSize:"11px",fontWeight:700,lineHeight:1}}>✓</span>}
                       </div>
                     </div>
-                    <input style={{...iS,fontSize:"12px",padding:"4px 4px",textAlign:"center",color:altTxtClr||T.text}} value={s.siraNo||String(idx+1)} onChange={e=>upPlan(idx,"siraNo",e.target.value)} onFocus={foc} onBlur={blr}/>
-                    <input style={{...iS,fontSize:"12px",padding:"4px 6px"}} value={s.aciklama||""} onChange={e=>upPlan(idx,"aciklama",e.target.value)} placeholder="Açıklama..." onFocus={foc} onBlur={blr}/>
-                    <input style={{...iS,fontSize:"14px",padding:"4px 4px",textAlign:"right",fontWeight:600}} value={s._miktarEdit?s.miktar||"":(parseFloat(s.miktar||0)>0?parseFloat(s.miktar).toLocaleString("tr-TR"):"")} onChange={e=>{const raw=e.target.value.replace(/[^0-9.,]/g,"").replace(/,/g,".");const pts=raw.split(".");const v=pts.length>2?pts[0]+"."+pts.slice(1).join(""):raw;upPlan(idx,"miktar",v);}} placeholder="0" onFocus={e=>{upPlan(idx,"_miktarEdit",true);foc(e);}} onBlur={e=>{upPlan(idx,"_miktarEdit",false);blr(e);}}/>
-                    <div style={{fontSize:"11px",color:T.t2,textAlign:"right"}}>{birim}</div>
-                    <input style={{...iS,fontSize:"14px",padding:"4px 4px",textAlign:"right",background:"#f6ffed",fontWeight:600}} value={s._bfEdit?s.birimFiyat||"":(parseFloat(s.birimFiyat||0)>0?parseFloat(s.birimFiyat).toLocaleString("tr-TR"):"")} onChange={e=>{const raw=e.target.value.replace(/[^0-9.,]/g,"").replace(/,/g,".");const pts=raw.split(".");const v=pts.length>2?pts[0]+"."+pts.slice(1).join(""):raw;upPlan(idx,"birimFiyat",v);}} placeholder="0" onFocus={e=>{upPlan(idx,"_bfEdit",true);foc(e);}} onBlur={e=>{upPlan(idx,"_bfEdit",false);blr(e);}}/>
-                    <div style={{fontSize:"11px",fontWeight:600,color:T.text,textAlign:"right"}}>{pH>0?pH.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                    <select style={{...iS,fontSize:"10px",padding:"2px",textAlign:"center",background:"#f6ffed"}} value={s.kdvOrani||varsayilanKdv} onChange={e=>upPlan(idx,"kdvOrani",e.target.value)}>{KDV_ORANLARI.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select>
-                    <div style={{fontSize:"11px",color:T.t2,textAlign:"right"}}>{pKdvT>0?pKdvT.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                    <div style={{fontSize:"11px",fontWeight:700,color:"#52c41a",textAlign:"right"}}>{pTop>0?pTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-                    <button onClick={()=>delSatir(idx)} style={{padding:"0",border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={14}/></button>
+                    <input style={{...iS,fontSize:"10pt",padding:"4px 4px",textAlign:"center",color:altTxtClr||T.text,height:"30px",lineHeight:"30px"}} value={s.siraNo||String(idx+1)} onChange={e=>upPlan(idx,"siraNo",e.target.value)} onFocus={foc} onBlur={blr}/>
+                    <input style={{...iS,fontSize:"10pt",padding:"3px 3px",height:"30px",lineHeight:"30px"}} value={s.aciklama||""} onChange={e=>upPlan(idx,"aciklama",e.target.value)} placeholder="Açıklama..." onFocus={foc} onBlur={blr}/>
+                    <input disabled={!isNew} title={isNew?"":"Kayıtlı — değişiklik için Revizyon Ekle butonu"} style={{...iS,fontSize:"10pt",padding:"4px 4px",textAlign:"right",fontWeight:400,height:"30px",lineHeight:"30px",...(isNew?{}:{background:lockBg,cursor:"not-allowed"})}} value={isNew?(s._miktarEdit?s.miktar||"":(parseFloat(s.miktar||0)>0?parseFloat(s.miktar).toLocaleString("tr-TR"):"")):(mG>0?mG.toLocaleString("tr-TR"):"")} onChange={e=>{if(!isNew)return;const raw=e.target.value.replace(/[^0-9.,]/g,"").replace(/,/g,".");const pts=raw.split(".");const v=pts.length>2?pts[0]+"."+pts.slice(1).join(""):raw;upPlan(idx,"miktar",v);}} placeholder="0" onFocus={e=>{if(!isNew)return;upPlan(idx,"_miktarEdit",true);foc(e);}} onBlur={e=>{if(!isNew)return;upPlan(idx,"_miktarEdit",false);blr(e);}}/>
+                    <div style={{fontSize:"9pt",color:T.t2,textAlign:"right",height:"30px",lineHeight:"30px",border:`1px solid ${T.bDark}`,borderRadius:T.r,padding:"0 4px",boxSizing:"border-box"}}>{birim}</div>
+                    <select style={{...iS,fontSize:"9pt",padding:"2px",textAlign:"center",height:"30px",lineHeight:"30px"}} value={s.kdvOrani||varsayilanKdv} onChange={e=>upPlan(idx,"kdvOrani",e.target.value)}>{KDV_ORANLARI.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select>
+                    <div></div>
+                    <input style={{...iS,fontSize:"10pt",padding:"4px 4px",textAlign:"right",fontWeight:600,height:"30px",lineHeight:"30px",color:"rgb(255,128,64)",background:"rgb(255,245,235)"}} value={s._bfEdit?s.birimFiyat||"":(parseFloat(s.birimFiyat||0)>0?parseFloat(s.birimFiyat).toLocaleString("tr-TR"):"")} onChange={e=>{const raw=e.target.value.replace(/[^0-9.,]/g,"").replace(/,/g,".");const pts=raw.split(".");const v=pts.length>2?pts[0]+"."+pts.slice(1).join(""):raw;upPlan(idx,"birimFiyat",v);}} placeholder="0" onFocus={e=>{upPlan(idx,"_bfEdit",true);foc(e);}} onBlur={e=>{upPlan(idx,"_bfEdit",false);blr(e);}}/>
+                    <div style={{fontSize:"10pt",fontWeight:400,color:"rgb(255,128,64)",textAlign:"right",height:"30px",lineHeight:"30px",border:`1px solid ${T.bDark}`,borderRadius:T.r,padding:"0 4px",boxSizing:"border-box",background:"rgb(255,245,235)"}}>{pH>0?pH.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                    <div style={{fontSize:"10pt",color:"rgb(255,128,64)",textAlign:"right",height:"30px",lineHeight:"30px",border:`1px solid ${T.bDark}`,borderRadius:T.r,padding:"0 4px",boxSizing:"border-box",background:"rgb(255,245,235)"}}>{pKdvT>0?pKdvT.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                    <div style={{fontSize:"11.5pt",fontWeight:600,color:"rgb(255,128,64)",textAlign:"right",height:"30px",lineHeight:"30px",border:`1px solid ${T.bDark}`,borderRadius:T.r,padding:"0 4px",boxSizing:"border-box",background:"rgb(255,245,235)"}}>{pTop>0?pTop.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                    <div></div>
+                    <input disabled={!isNew} title={isNew?"":"Kayıtlı — değişiklik için Revizyon Ekle butonu"} style={{...iS,fontSize:"10pt",padding:"4px 4px",textAlign:"right",fontWeight:600,height:"30px",lineHeight:"30px",color:"rgb(0,128,128)",background:isNew?"rgb(230,245,245)":lockBg,...(isNew?{}:{cursor:"not-allowed"})}} value={s._gbfEdit?s.guncelBirimFiyat||"":(parseFloat(s.guncelBirimFiyat||0)>0?parseFloat(s.guncelBirimFiyat).toLocaleString("tr-TR"):"")} onChange={e=>{if(!isNew)return;const raw=e.target.value.replace(/[^0-9.,]/g,"").replace(/,/g,".");const pts=raw.split(".");const v=pts.length>2?pts[0]+"."+pts.slice(1).join(""):raw;upPlan(idx,"guncelBirimFiyat",v);}} placeholder="0" onFocus={e=>{if(!isNew)return;upPlan(idx,"_gbfEdit",true);foc(e);}} onBlur={e=>{if(!isNew)return;upPlan(idx,"_gbfEdit",false);blr(e);}}/>
+                    <div style={{fontSize:"10pt",fontWeight:400,color:"rgb(0,128,128)",textAlign:"right",height:"30px",lineHeight:"30px",border:`1px solid ${T.bDark}`,borderRadius:T.r,padding:"0 4px",boxSizing:"border-box",background:"rgb(230,245,245)"}}>{gH>0?gH.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                    <div style={{fontSize:"10pt",color:"rgb(0,128,128)",textAlign:"right",height:"30px",lineHeight:"30px",border:`1px solid ${T.bDark}`,borderRadius:T.r,padding:"0 4px",boxSizing:"border-box",background:"rgb(230,245,245)"}}>{gKdvT>0?gKdvT.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                    <div style={{fontSize:"11.5pt",fontWeight:600,color:"rgb(0,128,128)",textAlign:"right",height:"30px",lineHeight:"30px",border:`1px solid ${T.bDark}`,borderRadius:T.r,padding:"0 4px",boxSizing:"border-box",background:"rgb(230,245,245)"}}>{gTop>0?gTop.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                    <button onClick={()=>delSatir(idx)} style={{padding:"0",border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",width:"33px",height:"33px"}}><Trash2 size={20}/></button>
                   </div>;
                 })
               }
@@ -6178,16 +6275,156 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
             {satirlar.length>0&&<div style={{display:"grid",gridTemplateColumns:gridCols,gap:"4px",padding:"6px 8px",background:"#f0f5ff",borderTop:`2px solid ${T.primary}`}}>
               <div></div>
               <div></div>
-              <div style={{fontSize:"11px",fontWeight:700,color:T.text,textAlign:"right"}}>TOPLAM</div>
-              <div style={{fontSize:"11px",fontWeight:700,color:T.text,textAlign:"right"}}>{pMikTop>0?pMikTop.toLocaleString("tr-TR"):""}</div>
-              <div style={{fontSize:"10px",color:T.t3,textAlign:"right"}}>{birim}</div>
+              <div style={{fontSize:"12pt",fontWeight:700,color:T.text,textAlign:"right",height:"30px",lineHeight:"30px",padding:"0 4px",boxSizing:"border-box"}}>TOPLAM</div>
+              <div style={{fontSize:"12pt",fontWeight:700,color:T.text,textAlign:"right",height:"30px",lineHeight:"30px",padding:"0 4px",boxSizing:"border-box"}}>{gMikTop>0?gMikTop.toLocaleString("tr-TR"):""}</div>
+              <div style={{fontSize:"10pt",fontWeight:700,color:T.t2,textAlign:"right",height:"30px",lineHeight:"30px",padding:"0 4px",boxSizing:"border-box"}}>{birim}</div>
               <div></div>
-              <div style={{fontSize:"11px",fontWeight:700,color:"#52c41a",textAlign:"right"}}>{pKdvHTop>0?pKdvHTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
               <div></div>
-              <div style={{fontSize:"11px",fontWeight:700,color:"#52c41a",textAlign:"right"}}>{pKdvTop>0?pKdvTop.toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
-              <div style={{fontSize:"12px",fontWeight:700,color:"#52c41a",textAlign:"right"}}>{(pKdvHTop+pKdvTop)>0?(pKdvHTop+pKdvTop).toLocaleString("tr-TR",{minimumFractionDigits:2}):"—"}</div>
+              <div></div>
+              <div style={{fontSize:"12pt",fontWeight:700,color:"rgb(255,128,64)",textAlign:"right",height:"30px",lineHeight:"30px",padding:"0 4px",boxSizing:"border-box"}}>{pKdvHTop>0?pKdvHTop.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+              <div style={{fontSize:"12pt",fontWeight:700,color:"rgb(255,128,64)",textAlign:"right",height:"30px",lineHeight:"30px",padding:"0 4px",boxSizing:"border-box"}}>{pKdvTop>0?pKdvTop.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+              <div style={{fontSize:"12pt",fontWeight:700,color:"rgb(255,128,64)",textAlign:"right",height:"30px",lineHeight:"30px",padding:"0 4px",boxSizing:"border-box"}}>{(pKdvHTop+pKdvTop)>0?(pKdvHTop+pKdvTop).toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+              <div></div>
+              <div></div>
+              <div style={{fontSize:"12pt",fontWeight:700,color:"rgb(0,128,128)",textAlign:"right",height:"30px",lineHeight:"30px",padding:"0 4px",boxSizing:"border-box"}}>{gKdvHTop>0?gKdvHTop.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+              <div style={{fontSize:"12pt",fontWeight:700,color:"rgb(0,128,128)",textAlign:"right",height:"30px",lineHeight:"30px",padding:"0 4px",boxSizing:"border-box"}}>{gKdvTop>0?gKdvTop.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+              <div style={{fontSize:"12pt",fontWeight:700,color:"rgb(0,128,128)",textAlign:"right",height:"30px",lineHeight:"30px",padding:"0 4px",boxSizing:"border-box"}}>{(gKdvHTop+gKdvTop)>0?(gKdvHTop+gKdvTop).toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
               <div></div>
             </div>}
+            {/* AÇIKLAMA + REVİZYON TARİHÇESİ ALT SATIRI */}
+            <div style={{display:"grid",gridTemplateColumns:gridCols,gap:"4px",padding:"8px 8px",borderTop:`1px solid ${T.border}`,alignItems:"flex-start"}}>
+              {/* AÇIKLAMA — GENEL BİLGİLER altında (span 6) */}
+              <textarea value={fm.aciklama||""} onChange={e=>uf("aciklama",e.target.value)} placeholder="Notlar..." onFocus={foc} onBlur={blr} style={{gridColumn:"span 6",fontSize:"10pt",padding:"6px 8px",border:`1px solid ${T.bDark}`,borderRadius:T.r,width:"100%",minHeight:"120px",resize:"none",boxSizing:"border-box",outline:"none",fontFamily:"inherit",color:T.text,textAlign:"left",verticalAlign:"top"}}/>
+              <div></div>
+              {/* REVİZYON TARİHÇESİ — PLANLANAN+GÜNCEL altında (span 9) */}
+              <div style={{gridColumn:"span 9",border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
+                <div style={{padding:"6px 12px",background:"#384248",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <span style={{fontSize:"12px",fontWeight:600,color:"#8799a3"}}>Revizyon Tarihçesi ({(fm.revizyonlar||[]).length})</span>
+                  <button onClick={()=>setRevEkleAcik(!revEkleAcik)} style={{padding:"4px 12px",borderRadius:"4px",border:"1px solid #8799a3",background:"transparent",color:"#8799a3",fontSize:"12px",cursor:"pointer",fontWeight:600}}>{revEkleAcik?"İptal":"+ Revizyon Ekle"}</button>
+                </div>
+                {revEkleAcik&&<div style={{padding:"12px",background:"#fff7e6",borderBottom:`1px solid ${T.border}`,display:"flex",flexDirection:"column",gap:"8px"}}>
+                  <div style={{display:"flex",gap:"16px",alignItems:"center",flexWrap:"wrap"}}>
+                    <span style={{fontSize:"12px",fontWeight:600,color:T.t2}}>Satır:</span>
+                    <select style={{...iS,height:"32px",lineHeight:"32px",fontSize:"12px",maxWidth:"320px"}} value={revForm.satirId} onChange={e=>setRevForm(p=>({...p,satirId:e.target.value}))}>
+                      <option value="">— Satır seçin —</option>
+                      {(fm.planlananSatirlari||[]).map(s=><option key={s.id} value={s.id}>S.No {s.siraNo||"?"} — {s.aciklama||"(boş)"}</option>)}
+                    </select>
+                    <span style={{fontSize:"12px",fontWeight:600,color:T.t2}}>Tip:</span>
+                    {["fiyat","miktar"].map(t=><label key={t} style={{display:"flex",alignItems:"center",gap:"4px",cursor:"pointer",fontSize:"13px"}}>
+                      <input type="radio" checked={revForm.tip===t} onChange={()=>setRevForm(p=>({...p,tip:t}))} style={{accentColor:T.primary}}/>
+                      <span>{t==="fiyat"?"Fiyat":"Miktar"}</span>
+                    </label>)}
+                    {revForm.satirId&&(()=>{
+                      const sec=(fm.planlananSatirlari||[]).find(s=>String(s.id)===String(revForm.satirId));
+                      if(!sec)return null;
+                      const mev=revForm.tip==="fiyat"?(sec.guncelBirimFiyat||sec.birimFiyat||"0"):(sec.guncelMiktar||sec.miktar||"0");
+                      return <span style={{fontSize:"12px",color:T.t3,marginLeft:"8px"}}>Mevcut: {Number(mev).toLocaleString("tr-TR")}</span>;
+                    })()}
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:"8px",alignItems:"center"}}>
+                    <input style={iS} value={revForm.yeniDeger} onChange={e=>{const raw=e.target.value.replace(/[^0-9.,]/g,"").replace(/,/g,".");const pts=raw.split(".");const v=pts.length>2?pts.slice(0,-1).join("")+"."+pts[pts.length-1]:raw;setRevForm(p=>({...p,yeniDeger:v}));}} placeholder={revForm.tip==="fiyat"?"Yeni fiyat":"Yeni miktar"} onFocus={foc} onBlur={blr}/>
+                    <input style={iS} value={revForm.aciklama} onChange={e=>setRevForm(p=>({...p,aciklama:e.target.value}))} placeholder="Açıklama..." onFocus={foc} onBlur={blr}/>
+                    <button onClick={addRevizyon} disabled={!revForm.satirId||!revForm.yeniDeger} style={{padding:"6px 16px",borderRadius:T.r,border:"none",background:revForm.satirId&&revForm.yeniDeger?T.primary:"#d9d9d9",color:"#fff",fontSize:"13px",cursor:revForm.satirId&&revForm.yeniDeger?"pointer":"not-allowed",fontWeight:600}}>Ekle</button>
+                  </div>
+                </div>}
+                {(()=>{
+                  const allRevs=[];
+                  (fm.planlananSatirlari||[]).forEach(s=>{
+                    (s.revizyonlar||[]).forEach(r=>{
+                      allRevs.push({...r,_satirId:s.id,_satirSiraNo:s.siraNo||"?",_satirAciklama:s.aciklama||""});
+                    });
+                  });
+                  allRevs.sort((a,b)=>(a.tarih||"").localeCompare(b.tarih||"")||(a.revNo||0)-(b.revNo||0));
+                  if(allRevs.length===0&&!revEkleAcik)return <div style={{padding:"16px",textAlign:"center",color:T.t3,fontSize:"13px",background:"#fff"}}>Henüz revizyon yok.</div>;
+                  if(allRevs.length===0)return null;
+                  return <>
+                    <div style={{display:"grid",gridTemplateColumns:"40px 80px 140px 60px 90px 90px 1fr 50px",gap:"6px",padding:"4px 12px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
+                      {["Rev","Tarih","Satır","Tip","Eski","Yeni","Açıklama",""].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t3,textTransform:"uppercase"}}>{h}</div>)}
+                    </div>
+                    {allRevs.map((r,idx)=><div key={r.id} style={{display:"grid",gridTemplateColumns:"40px 80px 140px 60px 90px 90px 1fr 50px",gap:"6px",padding:"4px 12px",alignItems:"center",borderBottom:idx<allRevs.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa"}}>
+                      <div style={{fontSize:"13px",fontWeight:700,color:T.primary}}>R{r.revNo||idx+1}</div>
+                      <div style={{fontSize:"12px",color:T.t2}}>{fmtDate(r.tarih)}</div>
+                      <div style={{fontSize:"12px",color:T.t2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={`S.No ${r._satirSiraNo} — ${r._satirAciklama}`}>S.No {r._satirSiraNo} — {r._satirAciklama}</div>
+                      <div><span style={{padding:"1px 6px",borderRadius:"3px",fontSize:"11px",fontWeight:600,background:r.tip==="fiyat"?"#e6f4ff":"#f6ffed",color:r.tip==="fiyat"?"#1677ff":"#52c41a"}}>{r.tip==="fiyat"?"Fiyat":"Miktar"}</span></div>
+                      <div style={{fontSize:"13px",color:T.t3,textAlign:"right"}}>{Number(r.eskiDeger||0).toLocaleString("tr-TR")}</div>
+                      <div style={{fontSize:"13px",fontWeight:600,textAlign:"right",color:parseFloat(r.yeniDeger||0)>parseFloat(r.eskiDeger||0)?"#ff4d4f":"#52c41a"}}>{Number(r.yeniDeger||0).toLocaleString("tr-TR")}</div>
+                      <input style={{...iS,fontSize:"12px",height:"28px",lineHeight:"28px"}} value={r.aciklama||""} onChange={e=>saveRevDuzenle(r._satirId,r.id,"aciklama",e.target.value)} placeholder="Açıklama..." onFocus={foc} onBlur={blr}/>
+                      <div style={{display:"flex",gap:"8px"}}>
+                        <button onClick={()=>delRevizyon(r._satirId,r.id)} title="Sil" style={{padding:"0",border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={16}/></button>
+                      </div>
+                    </div>)}
+                  </>;
+                })()}
+              </div>
+              <div></div>
+            </div>
+          </div>
+          {/* GERÇEKLEŞME / ALIŞ FATURALARI PORTALI */}
+          {(()=>{
+            const gerCols="80px 80px 130px 60px 75px 75px 75px 90px";
+            const gerKalemler=[];
+            (bagliAf||[]).forEach(f=>{
+              (f.kalemler||[]).forEach(k=>{
+                if(String(k.butceKalemiId)===String(fm.id)){
+                  gerKalemler.push({...k,faturaTarihi:f.faturaTarihi,afNo:f.afNo,firmaAd:f.firmaAd});
+                }
+              });
+            });
+            let gerMikTop=0,gerKdvHTop=0,gerKdvTop=0;
+            gerKalemler.forEach(k=>{
+              const m=parseFloat(k.miktar||0);
+              const bf=parseFloat(k.netFiyat||0);
+              const kdvO=parseInt(k.kdvOrani||"20")/100;
+              const kdvHar=m*bf;
+              gerMikTop+=m;gerKdvHTop+=kdvHar;gerKdvTop+=kdvHar*kdvO;
+            });
+            return <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden",flex:"0 0 auto"}}>
+              {/* BAŞLIK */}
+              <div style={{display:"grid",gridTemplateColumns:gerCols,gap:"4px",padding:"6px 8px",alignItems:"center"}}>
+                <div style={{gridColumn:"span 8",border:`1px solid ${T.bDark}`,borderRadius:"8px",padding:"6px 8px",textAlign:"center",fontSize:"14pt",fontWeight:700,color:"rgb(230,240,250)",background:"rgb(0,110,220)"}}>GERÇEKLEŞME / ALIŞ FATURALARI</div>
+              </div>
+              {/* TABLO HEADER */}
+              <div style={{display:"grid",gridTemplateColumns:gerCols,gap:"4px",padding:"4px 8px",borderBottom:`1px solid ${T.border}`}}>
+                {["Tarih","AF No","Firma","Miktar","B.Fiyat","KDV Hariç","KDV Tut.","Toplam"].map((h,i)=><div key={i} style={{fontSize:"9pt",fontWeight:500,color:"rgb(0,110,220)",textTransform:"uppercase",textAlign:"center"}}>{h}</div>)}
+              </div>
+              {/* SATIRLAR */}
+              <div style={{maxHeight:"400px",overflow:"auto"}}>
+                {gerKalemler.length===0
+                  ?<div style={{padding:"24px",textAlign:"center",color:T.t3,fontSize:"12px"}}>Bağlı alış faturası yok.</div>
+                  :gerKalemler.map((k,idx)=>{
+                    const m=parseFloat(k.miktar||0);
+                    const bf=parseFloat(k.netFiyat||0);
+                    const kdvO=parseInt(k.kdvOrani||"20");
+                    const kdvHar=m*bf;
+                    const kdvTut=kdvHar*(kdvO/100);
+                    const top=kdvHar+kdvTut;
+                    const rowBg=idx%2===0?"#fff":"#fafafa";
+                    return <div key={k.id} style={{display:"grid",gridTemplateColumns:gerCols,gap:"4px",padding:"3px 8px",alignItems:"center",borderBottom:idx<gerKalemler.length-1?`1px solid ${T.border}`:"none",background:rowBg}}>
+                      <div style={{fontSize:"9pt",color:"rgb(0,110,220)",textAlign:"center",height:"30px",lineHeight:"30px"}}>{k.faturaTarihi?fmtDate(k.faturaTarihi):"—"}</div>
+                      <div style={{fontSize:"9pt",color:"rgb(0,110,220)",textAlign:"center",height:"30px",lineHeight:"30px"}}>{k.afNo||"—"}</div>
+                      <div style={{fontSize:"9pt",color:"rgb(0,110,220)",textAlign:"left",height:"30px",lineHeight:"30px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",padding:"0 4px"}} title={k.firmaAd||""}>{k.firmaAd||"—"}</div>
+                      <div style={{fontSize:"10pt",color:"rgb(0,110,220)",textAlign:"right",height:"30px",lineHeight:"30px",border:`1px solid ${T.bDark}`,borderRadius:T.r,padding:"0 4px",boxSizing:"border-box",background:"rgb(230,240,250)"}}>{m>0?m.toLocaleString("tr-TR"):"—"}</div>
+                      <div style={{fontSize:"10pt",fontWeight:600,color:"rgb(0,110,220)",textAlign:"right",height:"30px",lineHeight:"30px",border:`1px solid ${T.bDark}`,borderRadius:T.r,padding:"0 4px",boxSizing:"border-box",background:"rgb(230,240,250)"}}>{bf>0?bf.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                      <div style={{fontSize:"10pt",color:"rgb(0,110,220)",textAlign:"right",height:"30px",lineHeight:"30px",border:`1px solid ${T.bDark}`,borderRadius:T.r,padding:"0 4px",boxSizing:"border-box",background:"rgb(230,240,250)"}}>{kdvHar>0?kdvHar.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                      <div style={{fontSize:"10pt",color:"rgb(0,110,220)",textAlign:"right",height:"30px",lineHeight:"30px",border:`1px solid ${T.bDark}`,borderRadius:T.r,padding:"0 4px",boxSizing:"border-box",background:"rgb(230,240,250)"}}>{kdvTut>0?kdvTut.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                      <div style={{fontSize:"11.5pt",fontWeight:600,color:"rgb(0,110,220)",textAlign:"right",height:"30px",lineHeight:"30px",border:`1px solid ${T.bDark}`,borderRadius:T.r,padding:"0 4px",boxSizing:"border-box",background:"rgb(230,240,250)"}}>{top>0?top.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                    </div>;
+                  })
+                }
+              </div>
+              {/* TOPLAMLAR */}
+              {gerKalemler.length>0&&<div style={{display:"grid",gridTemplateColumns:gerCols,gap:"4px",padding:"6px 8px",background:"#f0f5ff",borderTop:`2px solid ${T.primary}`}}>
+                <div></div>
+                <div></div>
+                <div style={{fontSize:"12pt",fontWeight:700,color:T.text,textAlign:"right",height:"30px",lineHeight:"30px",padding:"0 4px",boxSizing:"border-box"}}>TOPLAM</div>
+                <div style={{fontSize:"12pt",fontWeight:700,color:"rgb(0,110,220)",textAlign:"right",height:"30px",lineHeight:"30px",padding:"0 4px",boxSizing:"border-box"}}>{gerMikTop>0?gerMikTop.toLocaleString("tr-TR"):"—"}</div>
+                <div></div>
+                <div style={{fontSize:"12pt",fontWeight:700,color:"rgb(0,110,220)",textAlign:"right",height:"30px",lineHeight:"30px",padding:"0 4px",boxSizing:"border-box"}}>{gerKdvHTop>0?gerKdvHTop.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                <div style={{fontSize:"12pt",fontWeight:700,color:"rgb(0,110,220)",textAlign:"right",height:"30px",lineHeight:"30px",padding:"0 4px",boxSizing:"border-box"}}>{gerKdvTop>0?gerKdvTop.toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+                <div style={{fontSize:"12pt",fontWeight:700,color:"rgb(0,110,220)",textAlign:"right",height:"30px",lineHeight:"30px",padding:"0 4px",boxSizing:"border-box"}}>{(gerKdvHTop+gerKdvTop)>0?(gerKdvHTop+gerKdvTop).toLocaleString("tr-TR",{maximumFractionDigits:0}):"—"}</div>
+              </div>}
+            </div>;
+          })()}
           </div>;
         })()}
         {/* VALİDASYON HATALARI */}
@@ -6196,53 +6433,6 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
         </div>}
 
 
-        {/* REVİZYON TARİHÇESİ */}
-        <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
-          <div style={{padding:"6px 12px",background:"#384248",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <span style={{fontSize:"12px",fontWeight:600,color:"#8799a3"}}>Revizyon Tarihçesi ({(fm.revizyonlar||[]).length})</span>
-            <button onClick={()=>setRevEkleAcik(!revEkleAcik)} style={{padding:"4px 12px",borderRadius:"4px",border:"1px solid #8799a3",background:"transparent",color:"#8799a3",fontSize:"12px",cursor:"pointer",fontWeight:600}}>{revEkleAcik?"İptal":"+ Revizyon Ekle"}</button>
-          </div>
-          {/* REVİZYON EKLEME FORMU */}
-          {revEkleAcik&&<div style={{padding:"12px",background:"#fff7e6",borderBottom:`1px solid ${T.border}`,display:"flex",flexDirection:"column",gap:"8px"}}>
-            <div style={{display:"flex",gap:"16px",alignItems:"center"}}>
-              <span style={{fontSize:"12px",fontWeight:600,color:T.t2}}>Tip:</span>
-              {["fiyat","miktar"].map(t=><label key={t} style={{display:"flex",alignItems:"center",gap:"4px",cursor:"pointer",fontSize:"13px"}}>
-                <input type="radio" checked={revForm.tip===t} onChange={()=>setRevForm(p=>({...p,tip:t}))} style={{accentColor:T.primary}}/>
-                <span>{t==="fiyat"?"Fiyat":"Miktar"}</span>
-              </label>)}
-              <span style={{fontSize:"12px",color:T.t3,marginLeft:"8px"}}>Mevcut: {revForm.tip==="fiyat"?(fm.planlananBirimFiyat?Number(fm.planlananBirimFiyat).toLocaleString("tr-TR"):"0"):(fm.planlananMiktar||"0")}</span>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:"8px",alignItems:"center"}}>
-              <input style={iS} value={revForm.yeniDeger} onChange={e=>{const raw=e.target.value.replace(/[^0-9.,]/g,"").replace(/,/g,".");const pts=raw.split(".");const v=pts.length>2?pts.slice(0,-1).join("")+"."+pts[pts.length-1]:raw;setRevForm(p=>({...p,yeniDeger:v}));}} placeholder={revForm.tip==="fiyat"?"Yeni fiyat":"Yeni miktar"} onFocus={foc} onBlur={blr}/>
-              <input style={iS} value={revForm.not} onChange={e=>setRevForm(p=>({...p,not:e.target.value}))} placeholder="Revizyon notu..." onFocus={foc} onBlur={blr}/>
-              <button onClick={addRevizyon} style={{padding:"6px 16px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"13px",cursor:"pointer",fontWeight:600}}>Ekle</button>
-            </div>
-          </div>}
-          {/* TABLO */}
-          {(fm.revizyonlar||[]).length>0&&<>
-            <div style={{display:"grid",gridTemplateColumns:"50px 90px 70px 100px 100px 1fr 60px",gap:"6px",padding:"4px 12px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
-              {["Rev","Tarih","Tip","Eski","Yeni","Not",""].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t3,textTransform:"uppercase"}}>{h}</div>)}
-            </div>
-            {(fm.revizyonlar||[]).map((r,idx)=><div key={r.id} style={{display:"grid",gridTemplateColumns:"50px 90px 70px 100px 100px 1fr 60px",gap:"6px",padding:"4px 12px",alignItems:"center",borderBottom:idx<(fm.revizyonlar||[]).length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa"}}>
-              <div style={{fontSize:"13px",fontWeight:700,color:T.primary}}>R{r.revNo||idx+1}</div>
-              <div style={{fontSize:"12px",color:T.t2}}>{fmtDate(r.tarih)}</div>
-              <div><span style={{padding:"1px 6px",borderRadius:"3px",fontSize:"11px",fontWeight:600,background:r.tip==="fiyat"?"#e6f4ff":"#f6ffed",color:r.tip==="fiyat"?"#1677ff":"#52c41a"}}>{r.tip==="fiyat"?"Fiyat":"Miktar"}</span></div>
-              <div style={{fontSize:"13px",color:T.t3}}>{Number(r.eskiDeger||r.eskiFiyat||0).toLocaleString("tr-TR")}</div>
-              <div style={{fontSize:"13px",fontWeight:600,color:parseFloat(r.yeniDeger||r.yeniFiyat||0)>parseFloat(r.eskiDeger||r.eskiFiyat||0)?"#ff4d4f":"#52c41a"}}>{Number(r.yeniDeger||r.yeniFiyat||0).toLocaleString("tr-TR")}</div>
-              <input style={{...iS,fontSize:"12px",height:"28px",lineHeight:"28px"}} value={r.not||r.sebep||""} onChange={e=>saveRevDuzenle(r.id,"not",e.target.value)} placeholder="Not..." onFocus={foc} onBlur={blr}/>
-              <div style={{display:"flex",gap:"8px"}}>
-                <button onClick={()=>delRevizyon(r.id)} title="Sil" style={{padding:"0",border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={16}/></button>
-              </div>
-            </div>)}
-          </>}
-          {(fm.revizyonlar||[]).length===0&&!revEkleAcik&&<div style={{padding:"16px",textAlign:"center",color:T.t3,fontSize:"13px",background:"#fff"}}>Henüz revizyon yok.</div>}
-        </div>
-
-        {/* AÇIKLAMA */}
-        <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
-          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Açıklama</label>
-          <input style={iS} value={fm.aciklama||""} onChange={e=>uf("aciklama",e.target.value)} placeholder="Not..." onFocus={foc} onBlur={blr}/>
-        </div>
         </>}
 
         {/* SATINALMA SİPARİŞLERİ SEKMESİ */}
@@ -6271,31 +6461,6 @@ const ButceKalemModal=({kalem,onSave,onDel,onClose,malzemeler,projeBloklar=[],pr
             </>}
         </div>}
 
-        {/* ALIŞ FATURALARI SEKMESİ */}
-        {modalTab==="af"&&<div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>
-          {bagliAf.length===0
-            ?<div style={{padding:"40px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fafafa"}}>Bu bütçe kalemine bağlı alış faturası yok.</div>
-            :<>
-              <div style={{display:"grid",gridTemplateColumns:"130px 1fr 100px 80px 120px 120px",gap:"8px",padding:"8px 14px",background:"#384248",color:"#fff"}}>
-                {["AF No","Firma","Tarih","Miktar","Tutar (KDV Haric)","Durum"].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:700,letterSpacing:"0.5px",textTransform:"uppercase",color:i>=3&&i<=5?"#8799a3":"#fff",textAlign:i===3||i===4?"right":"left"}}>{h}</div>)}
-              </div>
-              {bagliAf.map((f,idx)=>{
-                const kl=(f.kalemler||[]).filter(k=>String(k.butceKalemiId)===String(fm.id));
-                const mik=kl.reduce((t,k)=>t+(parseFloat(k.miktar)||0),0);
-                const tut=kl.reduce((t,k)=>t+(parseFloat(k.miktar)||0)*(parseFloat(k.netFiyat)||0),0);
-                const durumMap={beklemede:{l:"Beklemede",c:"#fa8c16",b:"#fff7e6"},kismi_odendi:{l:"Kısmi Ödendi",c:"#722ed1",b:"#f9f0ff"},odendi:{l:"Ödendi",c:"#52c41a",b:"#f6ffed"},iptal:{l:"İptal",c:"#ff4d4f",b:"#fff1f0"}};
-                const o=durumMap[f.durum]||{l:f.durum||"—",c:T.t2,b:"#fafafa"};
-                return <div key={f.id} style={{display:"grid",gridTemplateColumns:"130px 1fr 100px 80px 120px 120px",gap:"8px",padding:"10px 14px",borderBottom:idx<bagliAf.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",alignItems:"center"}}>
-                  <div style={{fontSize:"13px",fontWeight:600,color:T.primary,fontFamily:"monospace"}}>{f.afNo||f.faturaNo||"—"}</div>
-                  <div style={{fontSize:"13px",color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.firmaAd||"—"}</div>
-                  <div style={{fontSize:"12px",color:T.t2}}>{f.faturaTarihi?fmtDate(f.faturaTarihi):"—"}</div>
-                  <div style={{fontSize:"13px",fontWeight:500,color:T.text,textAlign:"right"}}>{mik.toLocaleString("tr-TR",{maximumFractionDigits:2})}</div>
-                  <div style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right"}}>{tut.toLocaleString("tr-TR",{maximumFractionDigits:0})} ₺</div>
-                  <div><span style={{fontSize:"11px",fontWeight:700,color:o.c,background:o.b,border:`1px solid ${o.c}40`,borderRadius:"10px",padding:"2px 10px"}}>{o.l}</span></div>
-                </div>;
-              })}
-            </>}
-        </div>}
       </div>
     </div>
     {/* HESAPLAMA YARDIMCI MODAL */}
@@ -9063,7 +9228,7 @@ export default function App(){
   const loadAll = useCallback(async (ilkYukleme=false) => {
     if(ilkYukleme) setLoading(true);
     try {
-      const [fDb, kDb, nDb, mDb, katDb, agDb, tDb, tkDb, sbDb, bkDb, ilDb, adDb, pDb, spDb, spkDb, afDb, afkDb, bkalDb, blokDb, bolumDb] = await Promise.all([
+      const [fDb, kDb, nDb, mDb, katDb, agDb, tDb, tkDb, sbDb, bkDb, ilDb, adDb, pDb, spDb, spkDb, afDb, afkDb, bkalDb, blokDb, bolumDb, bksatDb, bksrDb] = await Promise.all([
         sbGet('firmalar','order=id.asc'),
         sbGet('kisiler','order=id.asc'),
         sbGet('notlar','order=id.asc'),
@@ -9084,6 +9249,8 @@ export default function App(){
         sbGet('butce_kalemleri','order=proje_id.asc,sira_no.asc'),
         sbGet('bloklar','order=proje_id.asc,id.asc'),
         sbGet('bolumler','order=proje_id.asc,id.asc'),
+        sbGet('butce_kalemi_satirlari','order=butce_kalemi_id.asc,sira_no.asc'),
+        sbGet('butce_kalemi_satir_revizyonlari','order=butce_kalemi_satir_id.asc,rev_no.asc'),
       ]);
       const firmaList = fDb.map(f => {
         const loc = firmaToLocal(f);
@@ -9113,7 +9280,18 @@ export default function App(){
         loc.bolumler=(bolumDb||[]).filter(b=>b.proje_id===p.id).map(bolumToLocal);
         return loc;
       }));
-      setButceKalemleri((bkalDb||[]).map(butceKalemiToLocal));
+      setButceKalemleri((bkalDb||[]).map(bk => {
+        const local = butceKalemiToLocal(bk);
+        // butce_kalemi_satirlari ayrı tablodan satırları attach et (eski JSONB sütunu paralel duruyor — fallback olarak)
+        const sqlSatirlar = (bksatDb||[]).filter(s => s.butce_kalemi_id === bk.id).map(s => {
+          const sLocal = kalemSatirToLocal(s);
+          // Her satıra revizyonlarını ekle
+          sLocal.revizyonlar = (bksrDb||[]).filter(r => r.butce_kalemi_satir_id === s.id).map(satirRevToLocal);
+          return sLocal;
+        });
+        if (sqlSatirlar.length > 0) local.planlananSatirlari = sqlSatirlar;
+        return local;
+      }));
     } catch(e) {
       // Supabase bağlantısı yoksa sessizce devam et — local state ile çalışır
       console.warn("Supabase bağlantısı yok, local modda çalışılıyor:", e.message);
@@ -9170,6 +9348,24 @@ export default function App(){
       .on('postgres_changes', { event: '*', schema: 'public', table: 'butce_kalemleri' }, (p) => {
         if(isDel(p)) { const id=oldId(p); if(!id) return; setButceKalemleri(prev => remove(prev, id)); }
         else { setButceKalemleri(prev => upsert(prev, butceKalemiToLocal(p.new))); }
+      })
+      // butce_kalemi_satirlari — butceKalemleri[].planlananSatirlari (sessiz)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'butce_kalemi_satirlari' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setButceKalemleri(prev => prev.map(bk => ({...bk, planlananSatirlari: remove(bk.planlananSatirlari||[], id)})));
+        } else {
+          const local = kalemSatirToLocal(p.new);
+          setButceKalemleri(prev => prev.map(bk => bk.id===local.butceKalemiId ? {...bk, planlananSatirlari: upsert(bk.planlananSatirlari||[], {...local, revizyonlar: (bk.planlananSatirlari||[]).find(s=>s.id===local.id)?.revizyonlar||[]})} : bk));
+        }
+      })
+      // butce_kalemi_satir_revizyonlari — satır içindeki revizyonlar[] (sessiz)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'butce_kalemi_satir_revizyonlari' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setButceKalemleri(prev => prev.map(bk => ({...bk, planlananSatirlari: (bk.planlananSatirlari||[]).map(s => ({...s, revizyonlar: remove(s.revizyonlar||[], id)}))})));
+        } else {
+          const local = satirRevToLocal(p.new);
+          setButceKalemleri(prev => prev.map(bk => ({...bk, planlananSatirlari: (bk.planlananSatirlari||[]).map(s => s.id===local.butceKalemiSatirId ? {...s, revizyonlar: upsert(s.revizyonlar||[], local)} : s)})));
+        }
       })
       // satinalma_siparisleri — top-level (nested kalemler korunur)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'satinalma_siparisleri' }, (p) => {
@@ -9973,6 +10169,55 @@ export default function App(){
         await sbPatch('butce_kalemleri', kalem.id, dbData);
         setButceKalemleri(prev=>prev.map(b=>b.id===kalem.id?{...b,...butceKalemiToLocal({...dbData,id:kalem.id,proje_id:dbData.proje_id})}:b));
       }
+      // Satırlar sync (DIFF-BASED — satır ID'leri korunur, sipariş/fatura bağları kopmaz)
+      try {
+        const dbSatirlar = await sbReq(`butce_kalemi_satirlari?butce_kalemi_id=eq.${savedId}&select=id`);
+        const dbIds = new Set((dbSatirlar||[]).map(s=>s.id));
+        const stateSatirlar = kalem.planlananSatirlari||[];
+        const stateIds = new Set(stateSatirlar.map(s=>s.id));
+        // SİL — DB'de var, state'te yok
+        const silinecek = [...dbIds].filter(id=>!stateIds.has(id));
+        if(silinecek.length>0){
+          try { await sbReq(`butce_kalemi_satirlari?id=in.(${silinecek.join(',')})`, {method:'DELETE', headers:{'Prefer':'count=none'}}); }
+          catch(e){ console.warn("Satır batch silme hatası:", e.message); }
+        }
+        // EKLE — state'te var, DB'de yok (yeni satır = Date.now() ID'leri)
+        const yeniler = stateSatirlar.filter(s=>!dbIds.has(s.id));
+        if(yeniler.length>0){
+          try {
+            const yeniDbRows = yeniler.map(s=>kalemSatirToDb(s, savedId));
+            const savedYeniler = await sbPost('butce_kalemi_satirlari', yeniDbRows);
+            yeniler.forEach((s,i)=>{ if(savedYeniler && savedYeniler[i]) s.id = savedYeniler[i].id; });
+          } catch(e){ console.warn("Satır batch ekleme hatası:", e.message); }
+        }
+        // GÜNCELLE — her ikisinde de var (mevcut satırlar)
+        const mevcutlar = stateSatirlar.filter(s=>dbIds.has(s.id));
+        for(const s of mevcutlar){
+          try { await sbPatch('butce_kalemi_satirlari', s.id, kalemSatirToDb(s, savedId)); }
+          catch(e){ console.warn(`Satır güncelleme hatası (id=${s.id}):`, e.message); }
+        }
+        // SATIR REVİZYONLARI sync — her satır için yeni revizyonları INSERT et (silme/güncelleme yok şimdilik)
+        for(const s of stateSatirlar){
+          if(!s.id || !(s.revizyonlar||[]).length) continue;
+          try {
+            const dbRevs = await sbReq(`butce_kalemi_satir_revizyonlari?butce_kalemi_satir_id=eq.${s.id}&select=id`);
+            const dbRevIds = new Set((dbRevs||[]).map(r=>r.id));
+            const yeniRevs = (s.revizyonlar||[]).filter(r=>!dbRevIds.has(r.id));
+            if(yeniRevs.length>0){
+              const yeniRevRows = yeniRevs.map(r=>satirRevToDb(r, s.id));
+              const savedRevs = await sbPost('butce_kalemi_satir_revizyonlari', yeniRevRows);
+              yeniRevs.forEach((r,i)=>{ if(savedRevs && savedRevs[i]) r.id = savedRevs[i].id; });
+            }
+            // Silinen revizyonlar (state'te yok ama DB'de var)
+            const stateRevIds = new Set((s.revizyonlar||[]).map(r=>r.id));
+            const silinenRevs = [...dbRevIds].filter(id=>!stateRevIds.has(id));
+            if(silinenRevs.length>0){
+              try { await sbReq(`butce_kalemi_satir_revizyonlari?id=in.(${silinenRevs.join(',')})`, {method:'DELETE', headers:{'Prefer':'count=none'}}); }
+              catch(e){ console.warn("Satır revizyon silme hatası:", e.message); }
+            }
+          } catch(e){ console.warn(`Satır revizyon sync hatası (satirId=${s.id}):`, e.message); }
+        }
+      } catch(e) { console.warn("Satır sync hatası:", e.message); }
       return savedId;
     } catch(e) {
       console.error("Bütçe kalemi kayıt hatası:", e.message);
