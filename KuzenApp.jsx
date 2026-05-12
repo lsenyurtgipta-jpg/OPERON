@@ -845,6 +845,41 @@ const authTouch = () => {
 const authClear = () => sessionStorage.removeItem(AUTH_KEY);
 
 const isAdmin = (user) => user && user.rol === "admin";
+const isSatici = (user) => user && user.rol === "satici";
+
+/* Yetki matrisi — sayfa erişimleri.
+   Yetkisiz kullanıcı sayfaya gelirse useEffect ile dashboard'a düşer. */
+const PAGE_ROLES = {
+  dashboard:    ['admin','data_entry'],
+  firmalar:     ['admin','data_entry','satici'],
+  malzemeler:   ['admin','data_entry'],
+  projeler:     ['admin','data_entry'],
+  teklifler:    ['admin','data_entry'],
+  satinalma:    ['admin','data_entry'],
+  teklif_verme: ['admin','data_entry'],
+  satinalma_sp: ['admin','data_entry'],
+  alis_fatura:  ['admin','data_entry'],
+  satis_fatura: ['admin','data_entry'],
+  maliyet:      ['admin','data_entry'],
+  satis_sunum:  ['admin','data_entry','satici'],
+  satis_rapor:  ['admin','data_entry','satici'],
+  kullanicilar: ['admin'],
+};
+
+/* Rol bazlı varsayılan home sayfası — login sonrası ve yetkisiz redirect'te kullanılır. */
+const HOME_PAGE_BY_ROL = {
+  admin:      "dashboard",
+  data_entry: "dashboard",
+  satici:     "satis_sunum",
+};
+
+const canSee = (pageId, user) => {
+  if(!user) return false;
+  const allowed = PAGE_ROLES[pageId];
+  return !allowed || allowed.includes(user.rol);
+};
+
+const rolLabel = (rol) => ({admin:"Yönetici", data_entry:"Veri Girişi", satici:"Satıcı"}[rol] || rol);
 
 /* ========== LOGIN PAGE ========== */
 const LoginPage = ({onLogin}) => {
@@ -966,7 +1001,7 @@ const KullanicilarPage = ({currentUser}) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [yeniOpen, setYeniOpen] = useState(false);
-  const [yeni, setYeni] = useState({ kullanici_adi:"", sifre:"", rol:"data_entry" });
+  const [yeni, setYeni] = useState({ kullanici_adi:"", sifre:"", rol:"data_entry", ad_soyad:"", telefon:"", eposta:"" });
   const [yeniHata, setYeniHata] = useState("");
   const [yeniBusy, setYeniBusy] = useState(false);
 
@@ -989,8 +1024,14 @@ const KullanicilarPage = ({currentUser}) => {
     setYeniBusy(true);
     try {
       const hash = bcrypt.hashSync(yeni.sifre, 10);
-      await sbPost('kullanicilar', { kullanici_adi:k, sifre_hash:hash, rol:yeni.rol, sifre_degistirildi:false, aktif:true });
-      setYeni({ kullanici_adi:"", sifre:"", rol:"data_entry" });
+      await sbPost('kullanicilar', {
+        kullanici_adi:k, sifre_hash:hash, rol:yeni.rol,
+        sifre_degistirildi:false, aktif:true,
+        ad_soyad:(yeni.ad_soyad||"").trim(),
+        telefon:(yeni.telefon||"").trim(),
+        eposta:(yeni.eposta||"").trim(),
+      });
+      setYeni({ kullanici_adi:"", sifre:"", rol:"data_entry", ad_soyad:"", telefon:"", eposta:"" });
       setYeniOpen(false);
       await load();
     } catch(e) { setYeniHata("Hata: " + e.message); }
@@ -1052,7 +1093,7 @@ const KullanicilarPage = ({currentUser}) => {
                 {u.id===currentUser.id && <span style={{fontSize:"11px",color:T.primary,background:T.pBg,padding:"2px 6px",borderRadius:"3px"}}>SİZ</span>}
               </div>
             </td>
-            <td style={{padding:"12px 16px",fontSize:"13px",color:T.t2}}>{u.rol==="admin" ? "Yönetici" : "Veri Girişi"}</td>
+            <td style={{padding:"12px 16px",fontSize:"13px",color:T.t2}}>{rolLabel(u.rol)}</td>
             <td style={{padding:"12px 16px",fontSize:"13px"}}>
               {u.aktif ? <span style={{color:"#52c41a"}}>● Aktif</span> : <span style={{color:"#8c8c8c"}}>● Pasif</span>}
               {!u.sifre_degistirildi && <span style={{marginLeft:"8px",fontSize:"11px",color:"#fa8c16",background:"#fff7e6",padding:"2px 6px",borderRadius:"3px"}}>Şifre değişmemiş</span>}
@@ -1086,8 +1127,26 @@ const KullanicilarPage = ({currentUser}) => {
             style={{width:"100%",height:"38px",padding:"0 12px",borderRadius:T.r,border:`1px solid ${T.bDark}`,fontSize:"14px",boxSizing:"border-box",background:"#fff"}}>
             <option value="data_entry">Veri Girişi (silme yetkisi yok)</option>
             <option value="admin">Yönetici (tam yetki)</option>
+            <option value="satici">Satıcı (saha satışı)</option>
           </select>
         </div>
+        {yeni.rol === "satici" && <>
+          <div>
+            <label style={{display:"block",fontSize:"13px",color:T.t2,marginBottom:"6px",fontWeight:500}}>Ad Soyad</label>
+            <input value={yeni.ad_soyad} onChange={e=>setYeni({...yeni,ad_soyad:e.target.value})} disabled={yeniBusy} placeholder="örn. Ahmet Yılmaz"
+              style={{width:"100%",height:"38px",padding:"0 12px",borderRadius:T.r,border:`1px solid ${T.bDark}`,fontSize:"14px",boxSizing:"border-box"}}/>
+          </div>
+          <div>
+            <label style={{display:"block",fontSize:"13px",color:T.t2,marginBottom:"6px",fontWeight:500}}>Telefon</label>
+            <input value={yeni.telefon} onChange={e=>setYeni({...yeni,telefon:e.target.value})} disabled={yeniBusy} placeholder="örn. 0532 123 45 67"
+              style={{width:"100%",height:"38px",padding:"0 12px",borderRadius:T.r,border:`1px solid ${T.bDark}`,fontSize:"14px",boxSizing:"border-box"}}/>
+          </div>
+          <div>
+            <label style={{display:"block",fontSize:"13px",color:T.t2,marginBottom:"6px",fontWeight:500}}>E-posta</label>
+            <input type="email" value={yeni.eposta} onChange={e=>setYeni({...yeni,eposta:e.target.value})} disabled={yeniBusy} placeholder="ornek@firma.com"
+              style={{width:"100%",height:"38px",padding:"0 12px",borderRadius:T.r,border:`1px solid ${T.bDark}`,fontSize:"14px",boxSizing:"border-box"}}/>
+          </div>
+        </>}
         {yeniHata && <div style={{padding:"10px 12px",background:"#fff1f0",border:`1px solid #ffa39e`,borderRadius:T.r,color:"#cf1322",fontSize:"13px"}}>{yeniHata}</div>}
         <div style={{display:"flex",gap:"10px",marginTop:"6px"}}>
           <button onClick={()=>setYeniOpen(false)} disabled={yeniBusy} style={{flex:1,height:"40px",border:`1px solid ${T.bDark}`,borderRadius:T.r,background:"#fff",color:T.t2,fontSize:"14px",cursor:"pointer"}}>Vazgeç</button>
@@ -1106,7 +1165,7 @@ const Sidebar=({page,setPage,open,editMode=false,currentUser=null})=>{
   const[uyariHedef,setUyariHedef]=useState(null);
   const sayfaDegistir=(hedef)=>{if(editMode){setUyariHedef(hedef);return;}setPage(hedef);};
 
-  const items=[
+  const allItems=[
     {id:"dashboard",label:"DASHBOARD"},
     {id:"firmalar",label:"FİRMALAR"},
     {id:"malzemeler",label:"MALZEMELER"},
@@ -1126,8 +1185,16 @@ const Sidebar=({page,setPage,open,editMode=false,currentUser=null})=>{
       {id:"satis_sunum",label:"Satış Sunumu"},
       {id:"satis_rapor",label:"Satış Raporu"},
     ]},
-    ...(isAdmin(currentUser) ? [{id:"kullanicilar",label:"KULLANICILAR"}] : []),
+    {id:"kullanicilar",label:"KULLANICILAR"},
   ];
+  // Role bazlı filtre — yetkisi olmayan menü öğelerini gizle
+  const items=allItems.map(it=>{
+    if(it.type==="group"){
+      const fc=it.children.filter(c=>canSee(c.id,currentUser));
+      return fc.length>0 ? {...it,children:fc} : null;
+    }
+    return canSee(it.id,currentUser) ? it : null;
+  }).filter(Boolean);
 
   const SB={
     bg:"#384248",
@@ -1194,8 +1261,8 @@ const Sidebar=({page,setPage,open,editMode=false,currentUser=null})=>{
     </nav>
     {/* ALT KISIM */}
     <div style={{padding:"16px 20px",borderTop:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",gap:"10px"}}>
-      <div style={{width:"32px",height:"32px",borderRadius:"50%",background:"#8799a3",display:"flex",alignItems:"center",justifyContent:"center",color:"#384248",fontWeight:600,fontSize:"13px",flexShrink:0}}>A</div>
-      <div><div style={{color:"rgba(255,255,255,0.85)",fontSize:"13px",fontWeight:500,whiteSpace:"nowrap",fontFamily:SB.font}}>Admin</div><div style={{color:"rgba(255,255,255,0.4)",fontSize:"11px",whiteSpace:"nowrap",fontFamily:SB.font}}>Yönetici</div></div>
+      <div style={{width:"32px",height:"32px",borderRadius:"50%",background:"#8799a3",display:"flex",alignItems:"center",justifyContent:"center",color:"#384248",fontWeight:600,fontSize:"13px",flexShrink:0}}>{(currentUser?.kullaniciAdi||"?").charAt(0).toUpperCase()}</div>
+      <div><div style={{color:"rgba(255,255,255,0.85)",fontSize:"13px",fontWeight:500,whiteSpace:"nowrap",fontFamily:SB.font}}>{currentUser?.kullaniciAdi||"-"}</div><div style={{color:"rgba(255,255,255,0.4)",fontSize:"11px",whiteSpace:"nowrap",fontFamily:SB.font}}>{rolLabel(currentUser?.rol)}</div></div>
     </div>
     {uyariHedef&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1100,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setUyariHedef(null)}>
       <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:T.rl,padding:"28px 32px",maxWidth:"420px",width:"90%",boxShadow:T.shM}}>
@@ -1221,12 +1288,12 @@ const DashPage=({firmalar,malzemeler,teklifler=[],setPage})=>{const topKalem=tek
 </div>;};
 
 /* ========== FIRMA KODU POPUP (AYNI KALIYOR) ========== */
-const FirmaKoduCreator=({firmalar,onComplete,onClose})=>{const[step,setStep]=useState(1);const[selTur,setSelTur]=useState(null);const[selPara,setSelPara]=useState(null);const getNext=(tk,pk)=>{const pre=`${tk}.${pk}.`;const ex=firmalar.filter(f=>f.firmaKodu.startsWith(pre)).map(f=>{const n=parseInt(f.firmaKodu.split(".")[2],10);return isNaN(n)?0:n;});return String((ex.length>0?Math.max(...ex):0)+1).padStart(5,"0");};const turObj=FIRMA_TURLERI.find(t=>t.id===selTur);const paraObj=PARA_BIRIMLERI.find(p=>p.id===selPara);const nextNum=(turObj&&paraObj)?getNext(turObj.kod,paraObj.kod):"00001";
+const FirmaKoduCreator=({firmalar,onComplete,onClose,kisitliTurler=null})=>{const turlerListe=FIRMA_TURLERI.filter(t=>!kisitliTurler||kisitliTurler.includes(t.id));const[step,setStep]=useState(1);const[selTur,setSelTur]=useState(null);const[selPara,setSelPara]=useState(null);const getNext=(tk,pk)=>{const pre=`${tk}.${pk}.`;const ex=firmalar.filter(f=>f.firmaKodu.startsWith(pre)).map(f=>{const n=parseInt(f.firmaKodu.split(".")[2],10);return isNaN(n)?0:n;});return String((ex.length>0?Math.max(...ex):0)+1).padStart(5,"0");};const turObj=FIRMA_TURLERI.find(t=>t.id===selTur);const paraObj=PARA_BIRIMLERI.find(p=>p.id===selPara);const nextNum=(turObj&&paraObj)?getNext(turObj.kod,paraObj.kod):"00001";
   return <div style={{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.45)"}} onClick={onClose}><div onClick={e=>e.stopPropagation()} style={{width:"520px",background:"#fff",borderRadius:T.rl,boxShadow:T.shM,overflow:"hidden"}}>
     <div style={{padding:"16px 24px",borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{fontSize:"16px",fontWeight:600,color:T.text}}>Firma Kodu Oluştur</div><div style={{color:T.t2,fontSize:"13px"}}>Adım {step} / 2</div></div><button onClick={onClose} style={{background:"none",border:"none",fontSize:"18px",color:T.t3,cursor:"pointer",padding:"4px"}}>✕</button></div>
     <div style={{padding:"16px 24px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:"4px",fontFamily:"'SF Mono','Courier New',monospace"}}><span style={{fontSize:"26px",fontWeight:700,color:turObj?T.primary:"#d9d9d9"}}>{turObj?turObj.kod:"---"}</span><span style={{fontSize:"26px",color:"#d9d9d9"}}>.</span><span style={{fontSize:"26px",fontWeight:700,color:paraObj?"#52c41a":"#d9d9d9"}}>{paraObj?paraObj.kod:"--"}</span><span style={{fontSize:"26px",color:"#d9d9d9"}}>.</span><span style={{fontSize:"26px",fontWeight:700,color:(turObj&&paraObj)?T.primary:"#d9d9d9"}}>{(turObj&&paraObj)?nextNum:"-----"}</span></div>
     <div style={{padding:"24px"}}>
-      {step===1&&<div><div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"12px"}}>Firma Türünü Seçin</div><div style={{display:"flex",flexDirection:"column",gap:"8px"}}>{FIRMA_TURLERI.map(t=>{const sel=selTur===t.id;return <button key={t.id} onClick={()=>setSelTur(t.id)} style={{display:"flex",alignItems:"center",gap:"14px",padding:"12px 16px",borderRadius:T.r,border:`1px solid ${sel?t.color:T.border}`,background:sel?t.bg:"#fff",cursor:"pointer",transition:"all .2s"}}><span style={{fontSize:"22px"}}>{t.icon}</span><div style={{flex:1,textAlign:"left"}}><div style={{fontWeight:sel?600:500,color:sel?t.color:T.text,fontSize:"14px"}}>{t.label}</div><div style={{color:T.t2,fontSize:"12px"}}>Kod: {t.kod}</div></div>{sel&&<span style={{color:t.color,fontSize:"16px"}}>✓</span>}</button>})}</div><div style={{display:"flex",justifyContent:"flex-end",marginTop:"20px"}}><button onClick={()=>{if(selTur)setStep(2);else alert("Firma türü seçiniz!");}} style={{padding:"8px 24px",borderRadius:"6px",border:"none",background:selTur?T.primary:"#d9d9d9",color:"#fff",fontWeight:500,fontSize:"14px",cursor:selTur?"pointer":"not-allowed"}}>Devam →</button></div></div>}
+      {step===1&&<div><div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"12px"}}>Firma Türünü Seçin</div><div style={{display:"flex",flexDirection:"column",gap:"8px"}}>{turlerListe.map(t=>{const sel=selTur===t.id;return <button key={t.id} onClick={()=>setSelTur(t.id)} style={{display:"flex",alignItems:"center",gap:"14px",padding:"12px 16px",borderRadius:T.r,border:`1px solid ${sel?t.color:T.border}`,background:sel?t.bg:"#fff",cursor:"pointer",transition:"all .2s"}}><span style={{fontSize:"22px"}}>{t.icon}</span><div style={{flex:1,textAlign:"left"}}><div style={{fontWeight:sel?600:500,color:sel?t.color:T.text,fontSize:"14px"}}>{t.label}</div><div style={{color:T.t2,fontSize:"12px"}}>Kod: {t.kod}</div></div>{sel&&<span style={{color:t.color,fontSize:"16px"}}>✓</span>}</button>})}</div><div style={{display:"flex",justifyContent:"flex-end",marginTop:"20px"}}><button onClick={()=>{if(selTur)setStep(2);else alert("Firma türü seçiniz!");}} style={{padding:"8px 24px",borderRadius:"6px",border:"none",background:selTur?T.primary:"#d9d9d9",color:"#fff",fontWeight:500,fontSize:"14px",cursor:selTur?"pointer":"not-allowed"}}>Devam →</button></div></div>}
       {step===2&&<div><div style={{fontSize:"14px",fontWeight:600,color:T.text,marginBottom:"12px"}}>Para Birimini Seçin</div><div style={{display:"flex",flexDirection:"column",gap:"8px"}}>{PARA_BIRIMLERI.map(p=>{const sel=selPara===p.id;return <button key={p.id} onClick={()=>setSelPara(p.id)} style={{display:"flex",alignItems:"center",gap:"14px",padding:"12px 16px",borderRadius:T.r,border:`1px solid ${sel?"#52c41a":T.border}`,background:sel?"#f6ffed":"#fff",cursor:"pointer",transition:"all .2s"}}><span style={{width:"36px",height:"36px",borderRadius:T.r,background:sel?"#52c41a22":"#fafafa",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",fontWeight:700,color:sel?"#52c41a":T.t2}}>{p.symbol}</span><div style={{flex:1,textAlign:"left"}}><div style={{fontWeight:sel?600:500,color:sel?"#389e0d":T.text,fontSize:"14px"}}>{p.label}</div><div style={{color:T.t2,fontSize:"12px"}}>Kod: {p.kod}</div></div>{sel&&<span style={{color:"#52c41a",fontSize:"16px"}}>✓</span>}</button>})}</div><div style={{display:"flex",justifyContent:"space-between",marginTop:"20px"}}><button onClick={()=>setStep(1)} style={{padding:"8px 20px",borderRadius:"6px",border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontWeight:500,fontSize:"14px",cursor:"pointer"}}>← Geri</button><button onClick={()=>{if(!selPara){alert("Para birimi seçiniz!");return;}onComplete({firmaKodu:`${turObj.kod}.${paraObj.kod}.${nextNum}`,turler:[selTur],paraBirimi:selPara});}} style={{padding:"8px 24px",borderRadius:"6px",border:"none",background:selPara?T.primary:"#d9d9d9",color:"#fff",fontWeight:500,fontSize:"14px",cursor:selPara?"pointer":"not-allowed"}}>Firma Oluştur ✓</button></div></div>}
     </div>
   </div></div>;};
@@ -4080,7 +4147,7 @@ const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firma
 };
 
 /* ========== FİRMALAR SAYFASI (YENİDEN DÜZENLEME) ========== */
-const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,onClearInitial,projeler=[],setPage,setEditMode})=>{
+const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,onClearInitial,projeler=[],setPage,setEditMode,kisitliTurler=null,currentUser=null})=>{
   const[search,setSearch]=useState("");
   const[fTur,setFTur]=useState("all");
   const[fDurum,setFDurum]=useState("aktif");
@@ -4099,7 +4166,7 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
   },[initialFirmaId]);
   const[initData,setInitData]=useState(null);
 
-  const filtered=firmalar.filter(f=>{const q=nTR(search);const ms=nTR(f.ad).includes(q)||nTR(f.firmaKodu).includes(q)||nTR(f.aciklama).includes(q)||f.kisiler.some(k=>nTR(`${k.ad} ${k.soyad}`).includes(q));const mt=fTur==="all"||f.turler.includes(fTur);const md=fDurum==="all"||(fDurum==="aktif"?f.aktif!==false:f.aktif===false);return ms&&mt&&md;});
+  const filtered=firmalar.filter(f=>{const q=nTR(search);const ms=nTR(f.ad).includes(q)||nTR(f.firmaKodu).includes(q)||nTR(f.aciklama).includes(q)||f.kisiler.some(k=>nTR(`${k.ad} ${k.soyad}`).includes(q));const mt=fTur==="all"||f.turler.includes(fTur);const md=fDurum==="all"||(fDurum==="aktif"?f.aktif!==false:f.aktif===false);const mk=!kisitliTurler||(Array.isArray(f.turler)&&f.turler.some(t=>kisitliTurler.includes(t)));return ms&&mt&&md&&mk;});
 
   const handleSave=async(d)=>{
     if(onSave){d._isNew=(view!=="form-edit");await onSave(d);}
@@ -4149,7 +4216,7 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
       <input style={{...iS,maxWidth:"260px"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Firma, kişi veya kod ara..." onFocus={foc} onBlur={blr}/>
       <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
         <button onClick={()=>setFTur("all")} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fTur==="all"?"#384248":T.bDark}`,background:fTur==="all"?"#384248":"#fff",color:fTur==="all"?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>Tümü</button>
-        {FIRMA_TURLERI.map(t=><button key={t.id} onClick={()=>setFTur(fTur===t.id?"all":t.id)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fTur===t.id?"#384248":T.bDark}`,background:fTur===t.id?"#384248":"#fff",color:fTur===t.id?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>{t.label}</button>)}
+        {FIRMA_TURLERI.filter(t=>!kisitliTurler||kisitliTurler.includes(t.id)).map(t=><button key={t.id} onClick={()=>setFTur(fTur===t.id?"all":t.id)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fTur===t.id?"#384248":T.bDark}`,background:fTur===t.id?"#384248":"#fff",color:fTur===t.id?"#fff":T.t2,fontSize:"14px",cursor:"pointer"}}>{t.label}</button>)}
       </div>
       <div style={{display:"flex",gap:"6px"}}>
         {[{k:"aktif",l:"Aktif"},{k:"pasif",l:"Pasif"},{k:"all",l:"Tümü"}].map(d=><button key={d.k} onClick={()=>setFDurum(d.k)} style={{height:"36px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${fDurum===d.k?(d.k==="aktif"?T.ok:d.k==="pasif"?T.err:"#384248"):T.bDark}`,background:fDurum===d.k?(d.k==="aktif"?"#f6ffed":d.k==="pasif"?"#fff1f0":"#384248"):"#fff",color:fDurum===d.k?(d.k==="aktif"?T.ok:d.k==="pasif"?T.err:"#fff"):T.t2,fontSize:"14px",cursor:"pointer",fontWeight:fDurum===d.k?600:400}}>{d.l}</button>)}
@@ -4197,7 +4264,7 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
         </>
       }
     </div>
-    {showKod&&<FirmaKoduCreator firmalar={firmalar} onComplete={handleKodComplete} onClose={()=>setShowKod(false)}/>}
+    {showKod&&<FirmaKoduCreator firmalar={firmalar} onComplete={handleKodComplete} onClose={()=>setShowKod(false)} kisitliTurler={kisitliTurler}/>}
   </div>;
 };
 
@@ -9296,6 +9363,14 @@ export default function App(){
     };
   }, [currentUser, handleLogout]);
 
+  /* ---- YETKİSİZ SAYFA REDIRECT ----
+     Kullanıcı rolüne uygun olmayan bir page state'ine düşerse rol bazlı home'a yönlendir. */
+  useEffect(() => {
+    if(currentUser && !canSee(page, currentUser)) {
+      setPage(HOME_PAGE_BY_ROL[currentUser.rol] || "dashboard");
+    }
+  }, [page, currentUser]);
+
   /* ---- ROLE GUARD: silme işlemleri ---- */
   const guardSil = useCallback(() => {
     if(!isAdmin(currentUser)) {
@@ -9689,6 +9764,11 @@ export default function App(){
     firmaSavingRef.current = true;
     try {
       const dbData = firmaToDb(form);
+      // Satıcı yeni firma eklerken sahipliği otomatik kaydet (sahiplik filtresi açıldığında lazım)
+      if(form._isNew && isSatici(currentUser)) {
+        dbData.satici_id = currentUser.id;
+        dbData.atama_tarihi = new Date().toISOString();
+      }
       let firmaId;
       if(form._isNew) {
         const [saved] = await sbPost('firmalar', dbData);
@@ -10404,7 +10484,7 @@ export default function App(){
           <div style={{display:"flex",alignItems:"center",gap:"8px",padding:"4px 10px 4px 4px",borderRadius:"20px",border:`1px solid ${T.border}`,background:"#fafafa"}}>
             <div style={{width:"28px",height:"28px",borderRadius:"50%",background:T.primary,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:600,fontSize:"12px"}}>{avatarHarf}</div>
             <div style={{fontSize:"13px",color:T.text,fontWeight:500}}>{currentUser.kullaniciAdi}</div>
-            <div style={{fontSize:"11px",color:T.t3,padding:"2px 6px",background:"#fff",borderRadius:"3px",border:`1px solid ${T.border}`}}>{adminOnly?"Yönetici":"Veri Girişi"}</div>
+            <div style={{fontSize:"11px",color:T.t3,padding:"2px 6px",background:"#fff",borderRadius:"3px",border:`1px solid ${T.border}`}}>{rolLabel(currentUser.rol)}</div>
           </div>
           <button onClick={()=>setShowSifreDegistir(true)} title="Şifre Değiştir" style={{background:"none",border:`1px solid ${T.border}`,color:T.t2,cursor:"pointer",padding:"6px 10px",fontSize:"12px",borderRadius:"6px",display:"flex",alignItems:"center",gap:"4px"}}><Lock size={14}/></button>
           <button onClick={()=>{ if(confirm("Çıkış yapılsın mı?")) handleLogout(); }} title="Çıkış" style={{background:"none",border:`1px solid ${T.border}`,color:T.t2,cursor:"pointer",padding:"6px 10px",fontSize:"12px",borderRadius:"6px",display:"flex",alignItems:"center",gap:"4px"}}><LogOut size={14}/></button>
@@ -10412,7 +10492,7 @@ export default function App(){
       </div>
       <div style={{flex:1,overflow:"auto",padding:"24px"}}>
         {page==="dashboard"&&<DashPage firmalar={firmalar} malzemeler={malzemeler} teklifler={teklifler} setPage={setPage}/>}
-        {page==="firmalar"&&<FirmalarPage firmalar={firmalar} setFirmalar={setFirmalar} onSave={saveFirma} onDel={delFirma} addNote={addNote} initialFirmaId={goToId} onClearInitial={()=>setGoToId(null)} projeler={projeler} setPage={setPage} setEditMode={setEditMode}/>}
+        {page==="firmalar"&&<FirmalarPage firmalar={firmalar} setFirmalar={setFirmalar} onSave={saveFirma} onDel={delFirma} addNote={addNote} initialFirmaId={goToId} onClearInitial={()=>setGoToId(null)} projeler={projeler} setPage={setPage} setEditMode={setEditMode} kisitliTurler={isSatici(currentUser)?['potansiyel','alici']:null} currentUser={currentUser}/>}
         {page==="malzemeler"&&<MalzemelerPage malzemeler={malzemeler} setMalzemeler={setMalzemeler} onSaveMalzeme={saveMalzeme} onDelMalzeme={delMalzeme} firmalar={firmalar} altKategoriler={altKategoriler} setAltKategoriler={setAltKategoriler} altGruplar={altGruplar} setAltGruplar={setAltGruplar} teklifler={teklifler} setTeklifler={setTeklifler} onSaveKat={saveKat} onDelKat={delKat} onSaveAltGrp={saveAltGrp} onDelAltGrp={delAltGrp} onSaveTeklif={saveTeklif} onDelTeklif={delTeklif} projeler={projeler} setEditMode={setEditMode}/>}
         {page==="projeler"&&<ProjelerPage projeler={projeler} setProjeler={setProjeler} onSave={saveProje} onDel={delProje} firmalar={firmalar} dosyaKategorileri={dosyaKategorileri} setDosyaKategorileri={setDosyaKategorileri} setPage={setPage} goToFirma={goToFirma} setEditMode={setEditMode} malzemeler={malzemeler} bagimsizBolumKartiAc={bagimsizBolumKartiAc} tumMuteahhitDairelerineKartAc={tumMuteahhitDairelerineKartAc}/>}
         {page==="teklifler"&&<AlinanTekliflerYonetim teklifler={teklifler} setTeklifler={setTeklifler} onSave={saveTeklif} onDel={delTeklif} malzemeler={malzemeler} firmalar={firmalar} projeler={projeler} onSpOlustur={spOlusturTeklifden}/>}
