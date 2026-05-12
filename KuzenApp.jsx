@@ -8915,7 +8915,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     {adim===2&&selProje&&(()=>{
       const pgor=projeGorselleri(selProje);
       const oz=projeOzet(selProje);
-      const sliderH="860px";
+      const sliderH="845px";
       return <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:"20px",alignItems:"stretch"}}>
         {/* SOL: proje bilgi sidebar */}
         <div style={{background:"#fff",borderRadius:T.rl,border:`1px solid ${T.border}`,boxShadow:T.sh,padding:"24px 20px",display:"flex",flexDirection:"column",justifyContent:"space-between",gap:"20px",minHeight:sliderH}}>
