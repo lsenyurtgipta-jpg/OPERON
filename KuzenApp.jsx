@@ -8840,7 +8840,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
   };
 
   // Breadcrumb (4 adım)
-  const breadcrumb=<div style={{display:"flex",alignItems:"center",gap:"8px",fontSize:"14px",marginBottom:"16px",flexWrap:"wrap"}}>
+  const breadcrumb=<div style={{display:"flex",alignItems:"center",gap:"8px",fontSize:"14px",flexWrap:"wrap"}}>
     {adBtn(1,"Proje",adim===1,adim>1,sifirlaHepsi,true)}
     <ChevronRight size={14} color={T.t3}/>
     {adBtn(2,"Tanıtım",adim===2,adim>2,sifirlaTanitimSonra,!!selProjeId)}
@@ -8861,11 +8861,14 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
       return <MusteriPickerModal firmalar={firmalar} onSaveFirma={saveFirma} onSelect={musteriSec} onClose={()=>setPickerAcik(false)} baslik={pickerIslem==="opsiyonla"?"OPSİYONLA — MÜŞTERİ SEÇ":(opsiyonluSatisaCevir?"SATIŞA ÇEVİR — FİYAT ONAYI":"SATIŞ — MÜŞTERİ SEÇ")} pickerIslem={pickerIslem} listeFiyatiOneri={selBolum?.listeFiyatiKdvDahil||""} initialFirma={mevcutFirma} initialSatisBedeli={mevcutSatisBed} initialPlus={mevcutPlus} bolum={selBolum}/>;
     })()}
 
-    {/* ÜST BAR — proje adı + tam ekran toggle */}
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"16px",paddingBottom:"12px",borderBottom:`1px solid ${T.border}`}}>
-      <div>
-        <h2 style={{fontSize:tamEkran?"24px":"20px",fontWeight:600,color:T.text,margin:0}}>SATIŞ SUNUMU</h2>
-        {selProje&&<div style={{fontSize:"13px",color:T.t2,marginTop:"2px"}}>{selProje.ad}{selBlokAd?` • ${selBlokAd} Blok`:""}{selBolum?` • Daire ${selBolum.no||"?"}`:""}</div>}
+    {/* ÜST BAR — proje adı + adımlar + tam ekran toggle */}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"16px",paddingBottom:"12px",borderBottom:`1px solid ${T.border}`,gap:"20px",flexWrap:"wrap"}}>
+      <div style={{display:"flex",alignItems:"center",gap:"44px",flexWrap:"wrap",flex:"1 1 auto"}}>
+        <div>
+          <h2 style={{fontSize:tamEkran?"24px":"20px",fontWeight:600,color:T.text,margin:0}}>SATIŞ SUNUMU</h2>
+          {selProje&&<div style={{fontSize:"13px",color:T.t2,marginTop:"2px"}}>{selProje.ad}{selBlokAd?` • ${selBlokAd} Blok`:""}{selBolum?` • Daire ${selBolum.no||"?"}`:""}</div>}
+        </div>
+        {breadcrumb}
       </div>
       <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
         <label style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",padding:"6px 14px",borderRadius:"20px",border:`1px solid ${tamEkran?T.primary:T.border}`,background:tamEkran?T.pBg:"#fff",color:tamEkran?T.primary:T.t2,fontSize:"13px",fontWeight:500}}>
@@ -8875,8 +8878,6 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
         {tamEkran&&<button onClick={()=>setTamEkran(false)} style={{padding:"6px 14px",borderRadius:"20px",border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>✕ Kapat</button>}
       </div>
     </div>
-
-    {breadcrumb}
 
     {/* ADIM 1 — PROJE SEÇİMİ */}
     {adim===1&&<div>
@@ -8910,50 +8911,48 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
         </div>}
     </div>}
 
-    {/* ADIM 2 — PROJE TANITIM (kayar görsel slider) */}
+    {/* ADIM 2 — PROJE TANITIM (sol: bilgi sidebar | sağ: tam yükseklik slider) */}
     {adim===2&&selProje&&(()=>{
       const pgor=projeGorselleri(selProje);
-      return <div>
-        {/* Büyük görsel slider */}
-        <GorselSlider gorseller={pgor} yukseklik={tamEkran?"58vh":"440px"} otomatik={true} placeholderIcon="🏢" placeholderText="Bu proje için henüz tanıtım görseli eklenmemiş"/>
-
-        {/* Proje özet bilgileri */}
-        <div style={{marginTop:"16px",padding:"20px 24px",background:"#fff",borderRadius:T.rl,border:`1px solid ${T.border}`,boxShadow:T.sh}}>
-          <div style={{display:"flex",alignItems:"flex-start",gap:"20px",flexWrap:"wrap"}}>
-            <div style={{flex:"1 1 260px",minWidth:"260px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}}>
-                {selProje.projeKodu&&<span style={{fontSize:"11px",color:T.t3,fontFamily:"monospace",background:"#f5f5f5",padding:"2px 6px",borderRadius:"3px"}}>{selProje.projeKodu}</span>}
-                {selProje.tur&&<span style={{fontSize:"11px",padding:"2px 8px",borderRadius:"3px",background:T.pBg,color:T.primary,fontWeight:500}}>{selProje.tur}</span>}
-              </div>
-              <div style={{fontSize:tamEkran?"26px":"22px",fontWeight:700,color:T.text,marginBottom:"6px"}}>{selProje.ad}</div>
-              <div style={{fontSize:"14px",color:T.t2,marginBottom:"4px",display:"flex",alignItems:"center",gap:"6px"}}><MapPin size={14}/> {selProje.il?`${selProje.il}${selProje.ilce?` / ${selProje.ilce}`:""}`:"—"}{selProje.mahalle?` • ${selProje.mahalle}`:""}</div>
-              {selProje.tahminiTeslim&&<div style={{fontSize:"14px",color:T.t2,display:"flex",alignItems:"center",gap:"6px"}}><Calendar size={14}/> Tahmini Teslim: <strong style={{color:T.text}}>{selProje.tahminiTeslim}</strong></div>}
-              {selProje.aciklama&&<div style={{fontSize:"13px",color:T.t2,marginTop:"10px",lineHeight:"1.5",fontStyle:"italic"}}>"{selProje.aciklama}"</div>}
+      const oz=projeOzet(selProje);
+      const sliderH="970px";
+      return <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:"20px",alignItems:"stretch"}}>
+        {/* SOL: proje bilgi sidebar */}
+        <div style={{background:"#fff",borderRadius:T.rl,border:`1px solid ${T.border}`,boxShadow:T.sh,padding:"24px 20px",display:"flex",flexDirection:"column",justifyContent:"space-between",gap:"20px",minHeight:sliderH}}>
+          {/* Üst: proje bilgileri ortalı */}
+          <div style={{textAlign:"center"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",marginBottom:"10px",flexWrap:"wrap"}}>
+              {selProje.projeKodu&&<span style={{fontSize:"11px",color:T.t3,fontFamily:"monospace",background:"#f5f5f5",padding:"2px 6px",borderRadius:"3px"}}>{selProje.projeKodu}</span>}
+              {selProje.tur&&<span style={{fontSize:"11px",padding:"2px 8px",borderRadius:"3px",background:T.pBg,color:T.primary,fontWeight:500}}>{selProje.tur}</span>}
             </div>
-            <div style={{flex:"0 0 auto",display:"flex",gap:"12px",flexWrap:"wrap"}}>
-              {(()=>{const oz=projeOzet(selProje);return<>
-                <div style={{padding:"10px 16px",borderRadius:T.r,background:"#f6ffed",border:"1px solid #b7eb8f",textAlign:"center",minWidth:"88px"}}>
-                  <div style={{fontSize:"22px",fontWeight:700,color:"#52c41a"}}>{oz.musait}</div>
-                  <div style={{fontSize:"11px",color:"#52c41a",fontWeight:500}}>Müsait</div>
-                </div>
-                <div style={{padding:"10px 16px",borderRadius:T.r,background:"#fff7e6",border:"1px solid #ffd591",textAlign:"center",minWidth:"88px"}}>
-                  <div style={{fontSize:"22px",fontWeight:700,color:"#fa8c16"}}>{oz.opsiyonlu}</div>
-                  <div style={{fontSize:"11px",color:"#fa8c16",fontWeight:500}}>Opsiyonlu</div>
-                </div>
-                <div style={{padding:"10px 16px",borderRadius:T.r,background:"#e6f4ff",border:"1px solid #91caff",textAlign:"center",minWidth:"88px"}}>
-                  <div style={{fontSize:"22px",fontWeight:700,color:"#1677ff"}}>{oz.satildi}</div>
-                  <div style={{fontSize:"11px",color:"#1677ff",fontWeight:500}}>Satıldı</div>
-                </div>
-              </>;})()}
+            <div style={{fontSize:"22px",fontWeight:700,color:T.text,marginBottom:"10px",lineHeight:1.2}}>{selProje.ad}</div>
+            <div style={{fontSize:"13px",color:T.t2,marginBottom:"6px",display:"flex",alignItems:"center",justifyContent:"center",gap:"6px"}}><MapPin size={14}/> {selProje.il?`${selProje.il}${selProje.ilce?` / ${selProje.ilce}`:""}`:"—"}{selProje.mahalle?` • ${selProje.mahalle}`:""}</div>
+            {selProje.tahminiTeslim&&<div style={{fontSize:"13px",color:T.t2,display:"flex",alignItems:"center",justifyContent:"center",gap:"6px"}}><Calendar size={14}/> Teslim: <strong style={{color:T.text}}>{selProje.tahminiTeslim}</strong></div>}
+            {selProje.aciklama&&<div style={{fontSize:"12px",color:T.t2,marginTop:"12px",lineHeight:"1.5",fontStyle:"italic"}}>"{selProje.aciklama}"</div>}
+          </div>
+
+          {/* Orta: stat rozetleri dikey + büyütülmüş */}
+          <div style={{display:"flex",flexDirection:"column",gap:"12px"}}>
+            <div style={{padding:"18px 20px",borderRadius:T.rl,background:"#f6ffed",border:"1px solid #b7eb8f",textAlign:"center"}}>
+              <div style={{fontSize:"38px",fontWeight:700,color:"#52c41a",lineHeight:1}}>{oz.musait}</div>
+              <div style={{fontSize:"13px",color:"#52c41a",fontWeight:600,marginTop:"4px",letterSpacing:"0.5px"}}>MÜSAİT</div>
+            </div>
+            <div style={{padding:"18px 20px",borderRadius:T.rl,background:"#fff7e6",border:"1px solid #ffd591",textAlign:"center"}}>
+              <div style={{fontSize:"38px",fontWeight:700,color:"#fa8c16",lineHeight:1}}>{oz.opsiyonlu}</div>
+              <div style={{fontSize:"13px",color:"#fa8c16",fontWeight:600,marginTop:"4px",letterSpacing:"0.5px"}}>OPSİYONLU</div>
+            </div>
+            <div style={{padding:"18px 20px",borderRadius:T.rl,background:"#e6f4ff",border:"1px solid #91caff",textAlign:"center"}}>
+              <div style={{fontSize:"38px",fontWeight:700,color:"#1677ff",lineHeight:1}}>{oz.satildi}</div>
+              <div style={{fontSize:"13px",color:"#1677ff",fontWeight:600,marginTop:"4px",letterSpacing:"0.5px"}}>SATILDI</div>
             </div>
           </div>
 
-          {/* Devam butonu */}
-          <div style={{marginTop:"20px",paddingTop:"16px",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",gap:"12px"}}>
-            <button onClick={sifirlaHepsi} style={{padding:"10px 20px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"14px",cursor:"pointer"}}>← Proje Seçimine Dön</button>
-            <button onClick={()=>setTanitimGecildi(true)} style={{padding:"12px 28px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"15px",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:"8px",boxShadow:T.shM}}>Bloklara Geç <ChevronRight size={18}/></button>
-          </div>
+          {/* Alt: Bloklara Geç butonu */}
+          <button onClick={()=>setTanitimGecildi(true)} style={{width:"100%",padding:"14px 20px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"15px",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",boxShadow:T.shM}}>Bloklara Geç <ChevronRight size={18}/></button>
         </div>
+
+        {/* SAĞ: tam yükseklik slider */}
+        <GorselSlider gorseller={pgor} yukseklik={sliderH} otomatik={true} placeholderIcon="🏢" placeholderText="Bu proje için henüz tanıtım görseli eklenmemiş"/>
       </div>;
     })()}
 
