@@ -873,7 +873,7 @@ const LoginPage = ({onLogin}) => {
     }
   };
 
-  return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",width:"100vw",background:"#384248",fontFamily:T.f}}>
+  return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",width:"100%",background:"#384248",fontFamily:T.f}}>
     <form onSubmit={submit} style={{background:"#fff",padding:"40px",borderRadius:"12px",boxShadow:"0 20px 60px rgba(0,0,0,0.3)",width:"400px",display:"flex",flexDirection:"column",gap:"16px"}}>
       <div style={{textAlign:"center",marginBottom:"8px"}}>
         <img src={operonLogo} alt="OPERON" style={{height:"48px",marginBottom:"8px"}}/>
@@ -927,7 +927,7 @@ const SifreDegistirPage = ({user, zorunlu=false, onDone, onCancel}) => {
     }
   };
 
-  return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",width:"100vw",background:"#384248",fontFamily:T.f}}>
+  return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",width:"100%",background:"#384248",fontFamily:T.f}}>
     <form onSubmit={submit} style={{background:"#fff",padding:"40px",borderRadius:"12px",boxShadow:"0 20px 60px rgba(0,0,0,0.3)",width:"420px",display:"flex",flexDirection:"column",gap:"14px"}}>
       <div style={{textAlign:"center",marginBottom:"8px"}}>
         <Lock size={32} color={T.primary} style={{marginBottom:"8px"}}/>
@@ -1158,7 +1158,7 @@ const Sidebar=({page,setPage,open,editMode=false,currentUser=null})=>{
     >{it.label}</button>;
   };
 
-  return <div style={{width:open?"264px":"0",minWidth:open?"264px":"0",height:"100vh",background:SB.bg,display:"flex",flexDirection:"column",transition:"width .3s cubic-bezier(.2,0,0,1),min-width .3s cubic-bezier(.2,0,0,1)",overflow:"hidden"}}>
+  return <div style={{width:open?"264px":"0",minWidth:open?"264px":"0",height:"100%",background:SB.bg,display:"flex",flexDirection:"column",transition:"width .3s cubic-bezier(.2,0,0,1),min-width .3s cubic-bezier(.2,0,0,1)",overflow:"hidden"}}>
     {/* LOGO */}
     <div style={{padding:"24px 24px 20px",display:"flex",flexDirection:"column",alignItems:"center"}}>
       <img src={operonLogo} alt="OPERON" style={{maxWidth:"160px",height:"auto"}}/>
@@ -8915,7 +8915,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     {adim===2&&selProje&&(()=>{
       const pgor=projeGorselleri(selProje);
       const oz=projeOzet(selProje);
-      const sliderH="970px";
+      const sliderH="860px";
       return <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:"20px",alignItems:"stretch"}}>
         {/* SOL: proje bilgi sidebar */}
         <div style={{background:"#fff",borderRadius:T.rl,border:`1px solid ${T.border}`,boxShadow:T.sh,padding:"24px 20px",display:"flex",flexDirection:"column",justifyContent:"space-between",gap:"20px",minHeight:sliderH}}>
@@ -10381,7 +10381,7 @@ export default function App(){
     alert(`✅ ${spNo} numaralı Satınalma Siparişi oluşturuldu!\nSatınalma Siparişleri sayfasına yönlendiriliyorsunuz.`);
   };
 
-  if(loading) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:T.bg,fontFamily:T.f,flexDirection:"column",gap:"16px"}}>
+  if(loading) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",background:T.bg,fontFamily:T.f,flexDirection:"column",gap:"16px"}}>
     <div style={{width:"48px",height:"48px",border:`4px solid ${T.pBg}`,borderTop:`4px solid ${T.primary}`,borderRadius:"50%",animation:"spin 1s linear infinite"}}></div>
     <div style={{color:T.t2,fontSize:"14px"}}>Veriler yükleniyor...</div>
     <style>{`@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}`}</style>
@@ -10394,7 +10394,7 @@ export default function App(){
   const adminOnly = isAdmin(currentUser);
   const avatarHarf = (currentUser.kullaniciAdi||"?").charAt(0).toUpperCase();
 
-  return <div style={{display:"flex",height:"100vh",width:"100vw",background:T.bg,fontFamily:T.f,overflow:"hidden"}}>
+  return <div style={{display:"flex",height:"100%",width:"100%",background:T.bg,fontFamily:T.f,overflow:"hidden"}}>
     <Sidebar page={page} setPage={(p)=>{setEditMode(false);setPage(p);}} open={sbOpen} editMode={editMode} currentUser={currentUser}/>
     <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <div style={{height:"56px",minHeight:"56px",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",background:"#fff",borderBottom:`1px solid ${T.border}`,boxShadow:T.sh}}>
