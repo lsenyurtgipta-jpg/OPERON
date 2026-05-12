@@ -60,6 +60,31 @@ const dosyaUrl = (d) => {
   if (d.data && d.data.startsWith("data:")) return d.data;
   return "";
 };
+const DOSYA_ONIZLE_EXT = new Set(["pdf","jpg","jpeg","png","gif","webp","bmp","svg","txt","htm","html","mp4","mp3","webm","ogg"]);
+const acDosya = async (d) => {
+  if (!d || (!d.storagePath && !d.data)) return;
+  const url = dosyaUrl(d);
+  if (!url) return;
+  const ext = (d.ad || "").split(".").pop().toLowerCase();
+  if (DOSYA_ONIZLE_EXT.has(ext)) {
+    window.open(url, "_blank");
+    return;
+  }
+  try {
+    const blob = await fetch(url).then(r => r.blob());
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = d.ad || "dosya";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  } catch (err) {
+    console.error("Dosya açma hatası:", err);
+    alert("Dosya açılamadı: " + err.message);
+  }
+};
 const safeName = (name) => (name || "dosya").replace(/[^a-zA-Z0-9._-]/g, "_").substring(0, 80);
 const nTR = (s) => (s==null?"":String(s)).replace(/[İIı]/g,"i").replace(/[şŞ]/g,"s").replace(/[ğĞ]/g,"g").replace(/[üÜ]/g,"u").replace(/[öÖ]/g,"o").replace(/[çÇ]/g,"c").toLowerCase();
 
@@ -4833,6 +4858,7 @@ const DosyaModal=({dosya,onSave,onClose,onDel,kategoriler,getAltKatlar})=>{
           <span style={{fontSize:"18px",fontWeight:600,color:"#8799a3",textTransform:"uppercase"}}>{form.ad?(form.aciklama||form.ad):"YENİ DOSYA"}</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:"20px"}}>
+          {(form.storagePath||form.data)&&<button onClick={()=>acDosya(form)} title="Aç" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><ExternalLink size={28}/></button>}
           <button onClick={()=>onSave(form)} title="Kaydet" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><Save size={30}/></button>
           {onDel&&<button onClick={()=>{if(!confirm("Bu dosyayı silmek istiyor musunuz?"))return;onDel(form.id);onClose();}} title="Sil" style={{padding:"0",border:"none",background:"transparent",color:"#ff6b6b",cursor:"pointer",display:"flex",alignItems:"center"}}><Trash2 size={30}/></button>}
         </div>
