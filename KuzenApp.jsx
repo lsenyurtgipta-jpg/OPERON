@@ -8996,10 +8996,10 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
       const oz=projeOzet(selProje);
       // iPad Sunum Modunda dinamik yükseklik; normal modda eski 845px sabit
       const sliderH=tamEkran?sunumIcerikH:"845px";
-      const sidebarW=tamEkran?"340px":"300px";
+      const sidebarW=tamEkran?"290px":"300px";
       return <div style={{display:"grid",gridTemplateColumns:`${sidebarW} 1fr`,gap:"20px",alignItems:"stretch",flex:"1 1 auto",minHeight:0}}>
         {/* SOL: proje bilgi sidebar */}
-        <div style={{background:"#fff",borderRadius:T.rl,border:`1px solid ${T.border}`,boxShadow:T.sh,padding:tamEkran?"28px 24px":"24px 20px",display:"flex",flexDirection:"column",justifyContent:"space-between",gap:"20px",height:sliderH,overflow:"hidden"}}>
+        <div style={{background:"#fff",borderRadius:T.rl,border:`1px solid ${T.border}`,boxShadow:T.sh,padding:tamEkran?"24px 18px":"24px 20px",display:"flex",flexDirection:"column",justifyContent:"space-between",gap:"18px",height:sliderH,overflow:"hidden"}}>
           {/* Üst: proje bilgileri ortalı */}
           <div style={{textAlign:"center"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",marginBottom:"12px",flexWrap:"wrap"}}>
@@ -9014,22 +9014,22 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
 
           {/* Orta: stat rozetleri dikey + büyütülmüş */}
           <div style={{display:"flex",flexDirection:"column",gap:"14px"}}>
-            <div style={{padding:tamEkran?"22px":"18px 20px",borderRadius:T.rl,background:"#f6ffed",border:"1px solid #b7eb8f",textAlign:"center"}}>
-              <div style={{fontSize:tamEkran?"44px":"38px",fontWeight:700,color:"#52c41a",lineHeight:1}}>{oz.musait}</div>
-              <div style={{fontSize:"14px",color:"#52c41a",fontWeight:700,marginTop:"6px",letterSpacing:"0.5px"}}>MÜSAİT</div>
+            <div style={{padding:tamEkran?"18px 16px":"18px 20px",borderRadius:T.rl,background:"#f6ffed",border:"1px solid #b7eb8f",textAlign:"center"}}>
+              <div style={{fontSize:tamEkran?"40px":"38px",fontWeight:700,color:"#52c41a",lineHeight:1}}>{oz.musait}</div>
+              <div style={{fontSize:"13px",color:"#52c41a",fontWeight:700,marginTop:"5px",letterSpacing:"0.5px"}}>MÜSAİT</div>
             </div>
-            <div style={{padding:tamEkran?"22px":"18px 20px",borderRadius:T.rl,background:"#fff7e6",border:"1px solid #ffd591",textAlign:"center"}}>
-              <div style={{fontSize:tamEkran?"44px":"38px",fontWeight:700,color:"#fa8c16",lineHeight:1}}>{oz.opsiyonlu}</div>
-              <div style={{fontSize:"14px",color:"#fa8c16",fontWeight:700,marginTop:"6px",letterSpacing:"0.5px"}}>OPSİYONLU</div>
+            <div style={{padding:tamEkran?"18px 16px":"18px 20px",borderRadius:T.rl,background:"#fff7e6",border:"1px solid #ffd591",textAlign:"center"}}>
+              <div style={{fontSize:tamEkran?"40px":"38px",fontWeight:700,color:"#fa8c16",lineHeight:1}}>{oz.opsiyonlu}</div>
+              <div style={{fontSize:"13px",color:"#fa8c16",fontWeight:700,marginTop:"5px",letterSpacing:"0.5px"}}>OPSİYONLU</div>
             </div>
-            <div style={{padding:tamEkran?"22px":"18px 20px",borderRadius:T.rl,background:"#e6f4ff",border:"1px solid #91caff",textAlign:"center"}}>
-              <div style={{fontSize:tamEkran?"44px":"38px",fontWeight:700,color:"#1677ff",lineHeight:1}}>{oz.satildi}</div>
-              <div style={{fontSize:"14px",color:"#1677ff",fontWeight:700,marginTop:"6px",letterSpacing:"0.5px"}}>SATILDI</div>
+            <div style={{padding:tamEkran?"18px 16px":"18px 20px",borderRadius:T.rl,background:"#e6f4ff",border:"1px solid #91caff",textAlign:"center"}}>
+              <div style={{fontSize:tamEkran?"40px":"38px",fontWeight:700,color:"#1677ff",lineHeight:1}}>{oz.satildi}</div>
+              <div style={{fontSize:"13px",color:"#1677ff",fontWeight:700,marginTop:"5px",letterSpacing:"0.5px"}}>SATILDI</div>
             </div>
           </div>
 
-          {/* Alt: Bloklara Geç butonu (touch hedefi 52px) */}
-          <button onClick={()=>setTanitimGecildi(true)} style={{width:"100%",padding:tamEkran?"18px 20px":"14px 20px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:tamEkran?"17px":"15px",fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",boxShadow:T.shM,minHeight:"52px"}}>Bloklara Geç <ChevronRight size={20}/></button>
+          {/* Alt: Bloklara Geç butonu (touch hedefi 48px) */}
+          <button onClick={()=>setTanitimGecildi(true)} style={{width:"100%",padding:tamEkran?"14px 16px":"14px 20px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:tamEkran?"15px":"15px",fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"6px",boxShadow:T.shM,minHeight:"48px"}}>Bloklara Geç <ChevronRight size={18}/></button>
         </div>
 
         {/* SAĞ: tam yükseklik slider */}
