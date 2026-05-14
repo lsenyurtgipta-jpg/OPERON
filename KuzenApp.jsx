@@ -8730,8 +8730,12 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
   const[pickerAcik,setPickerAcik]=useState(false);
   const[pickerIslem,setPickerIslem]=useState(null); // "opsiyonla" | "satildi"
 
-  // iPad Pro 13" landscape — sabit içerik alanı (body zoom 0.9 sonrası 1518×1138 CSS px, padding 24px düşülmüş)
-  const IPAD={W:1470,H:1090,GAP:20};
+  // iPad Sunum Modu — dinamik viewport ebatları (Safari URL bar + alt çubuğu hesaba katar)
+  // body zoom: 0.9 olduğu için 100vh/0.9 ve 100vw/0.9 ile gerçek CSS alanını alıyoruz
+  const PAD=16;                 // overlay padding
+  const TOP_BAR=78;            // üst bar yüksekliği (başlık + breadcrumb + padding-bottom + 14px margin)
+  // Adım 2 sidebar/slider yüksekliği — Sunum Modunda viewport'a göre
+  const sunumIcerikH=`calc((100vh / 0.9) - ${PAD*2 + TOP_BAR}px)`;
 
   const selProje=projeler.find(p=>p.id===selProjeId);
   const selBlok=selProje?.bloklar?.find(b=>b.ad===selBlokAd);
@@ -8920,9 +8924,9 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     {adBtn(4,"Daire",adim===4,false,()=>{},!!selBlokAd)}
   </div>;
 
-  // TAM EKRAN overlay (position:fixed) — iPad Pro 13" landscape için sabit 1470×1090 container
-  const content=<div style={tamEkran?{position:"fixed",inset:0,background:"#fff",zIndex:900,padding:"24px",overflow:"hidden",display:"flex",justifyContent:"center",alignItems:"flex-start"}:{}}>
-    <div style={tamEkran?{width:`${IPAD.W}px`,height:`${IPAD.H}px`,display:"flex",flexDirection:"column",overflow:"hidden"}:{width:"100%"}}>
+  // TAM EKRAN overlay (position:fixed) — iPad landscape için dinamik viewport
+  const content=<div style={tamEkran?{position:"fixed",inset:0,background:"#fff",zIndex:900,padding:`${PAD}px`,overflow:"hidden",display:"flex",justifyContent:"center",alignItems:"stretch"}:{}}>
+    <div style={tamEkran?{width:"100%",height:"100%",display:"flex",flexDirection:"column",overflow:"hidden"}:{width:"100%"}}>
     {pickerAcik&&(()=>{
       // Opsiyonludan Satışa Çevir: müşteri zaten bağlı, direkt onay ekranına geç + mevcut fiyatı pre-fill
       const opsiyonluSatisaCevir=pickerIslem==="satildi"&&selBolum?.durum==="opsiyonlu"&&selBolum?.aliciFirmaId;
@@ -8985,13 +8989,13 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
         </div>}
     </div>}
 
-    {/* ADIM 2 — PROJE TANITIM (iPad: sol 340px sidebar | sağ slider, tek ekrana sığar) */}
+    {/* ADIM 2 — PROJE TANITIM (iPad: sol sidebar | sağ slider, viewport-dinamik) */}
     {adim===2&&selProje&&(()=>{
       const pgor=projeGorselleri(selProje);
       const oz=projeOzet(selProje);
-      // iPad 13": içerik alanı yüksekliği ~1010px (1090 - üst bar). Normal modda eski 845px.
-      const sliderH=tamEkran?"1010px":"845px";
-      const sidebarW=tamEkran?"360px":"300px";
+      // iPad Sunum Modunda dinamik yükseklik; normal modda eski 845px sabit
+      const sliderH=tamEkran?sunumIcerikH:"845px";
+      const sidebarW=tamEkran?"340px":"300px";
       return <div style={{display:"grid",gridTemplateColumns:`${sidebarW} 1fr`,gap:"20px",alignItems:"stretch",flex:"1 1 auto",minHeight:0}}>
         {/* SOL: proje bilgi sidebar */}
         <div style={{background:"#fff",borderRadius:T.rl,border:`1px solid ${T.border}`,boxShadow:T.sh,padding:tamEkran?"28px 24px":"24px 20px",display:"flex",flexDirection:"column",justifyContent:"space-between",gap:"20px",height:sliderH,overflow:"hidden"}}>
