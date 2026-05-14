@@ -4740,7 +4740,7 @@ const BOLUM_DURUMLARI=[{id:"musait",label:"Müsait",color:"#52c41a",bg:"#f6ffed"
 const DOSYA_TURLERI=["Mimari Proje","Statik Proje","Elektrik Projesi","Mekanik Proje","Zemin Etüdü","İmar Planı","Ruhsat","Sözleşme","Diğer"];
 
 const DOSYA_KATEGORILERI=[
-  {id:"proje-gorselleri",ad:"Proje Görselleri",icon:"📷",altKategoriler:["Genel Görseller","Şantiye Fotoğrafları","Render / 3D","Drone Çekimleri"]},
+  {id:"proje-gorselleri",ad:"Proje Görselleri",icon:"📷",altKategoriler:["Genel Görseller","Şantiye Fotoğrafları","Render / 3D","Drone Çekimleri","Daire Detayları"]},
   {id:"resmi-evraklar",ad:"Resmi Evraklar",icon:"📋",altKategoriler:["Yapı Denetim","Ruhsat & İzinler","İskan","Tapu","Vergi"]},
   {id:"teknik-projeler",ad:"Teknik Projeler",icon:"📐",altKategoriler:["Mimari Proje","Statik Proje","Elektrik Projesi","Mekanik Proje","Peyzaj Projesi","Zemin Etüdü"]},
   {id:"sozlesmeler",ad:"Sözleşmeler",icon:"📝",altKategoriler:["Müteahhit Sözleşmesi","Taşeron Sözleşmesi","Satış Sözleşmesi","Kiralama Sözleşmesi"]},
@@ -4894,7 +4894,7 @@ const DosyaPortal=({dosyalar,setDosyalar,readonly,dosyaTurleri,setDosyaTurleri})
 };
 
 /* --- Dosya Detay Modal --- */
-const DosyaModal=({dosya,onSave,onClose,onDel,kategoriler,getAltKatlar})=>{
+const DosyaModal=({dosya,onSave,onClose,onDel,kategoriler,getAltKatlar,bolumler=[]})=>{
   const[form,setForm]=useState({...dosya});
   const u=(f,v)=>setForm(p=>({...p,[f]:v}));
   const dosyaIkon=(ad)=>{const ext=(ad||"").split(".").pop().toLowerCase();if(["pdf"].includes(ext))return"📄";if(["doc","docx"].includes(ext))return"📝";if(["xls","xlsx"].includes(ext))return"📊";if(["dwg","dxf"].includes(ext))return"📐";if(["jpg","jpeg","png","gif","webp"].includes(ext))return"🖼️";return"📎";};
@@ -5007,6 +5007,52 @@ const DosyaModal=({dosya,onSave,onClose,onDel,kategoriler,getAltKatlar})=>{
               <span style={{fontSize:"11px",color:T.t3,marginLeft:"4px"}}>(her projede sadece 1 görsel)</span>
             </label>
           </div>
+          {/* ATANAN DAİRELER — sadece "Proje Görselleri > Daire Detayları" altKategori için göster (display:none ile gizlenir) */}
+          <div style={{display:(form.anaKategori==="Proje Görselleri"&&form.altKategori==="Daire Detayları")?"grid":"none",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"flex-start"}}>
+            <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",lineHeight:"36px"}}>Atanan Daireler</label>
+            <div>
+              {bolumler.length===0
+                ?<div style={{fontSize:"12px",color:T.t3,padding:"8px 0"}}>Bu projede henüz daire tanımı yok.</div>
+                :<>
+                  <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"8px",flexWrap:"wrap"}}>
+                    <span style={{fontSize:"12px",color:T.t2}}>Seçili: <strong>{(form.bolumIds||[]).length}</strong> / {bolumler.length}</span>
+                    {(form.bolumIds||[]).length>0&&<button onClick={()=>u("bolumIds",[])} style={{padding:"3px 10px",borderRadius:"4px",border:`1px solid ${T.border}`,background:"#fff",color:T.t3,fontSize:"11px",cursor:"pointer"}}>Hepsini Temizle</button>}
+                  </div>
+                  <div style={{maxHeight:"220px",overflowY:"auto",padding:"8px",border:`1px solid ${T.border}`,borderRadius:T.r,background:"#fafafa"}}>
+                    {(()=>{
+                      const grupler={};
+                      bolumler.forEach(b=>{const k=b.blok||"Bloksuz";if(!grupler[k])grupler[k]=[];grupler[k].push(b);});
+                      return Object.entries(grupler).sort(([a],[b])=>a.localeCompare(b,"tr")).map(([blok,arr])=>{
+                        const blokIds=arr.map(b=>b.id);
+                        const hepsiSecili=blokIds.every(id=>(form.bolumIds||[]).includes(id));
+                        return <div key={blok} style={{marginBottom:"10px"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"4px"}}>
+                            <strong style={{fontSize:"12px",color:T.t2}}>{blok} Blok</strong>
+                            <button onClick={()=>{
+                              const cur=form.bolumIds||[];
+                              if(hepsiSecili)u("bolumIds",cur.filter(id=>!blokIds.includes(id)));
+                              else u("bolumIds",[...new Set([...cur,...blokIds])]);
+                            }} style={{padding:"1px 8px",borderRadius:"3px",border:`1px solid ${T.border}`,background:hepsiSecili?T.pBg:"#fff",color:hepsiSecili?T.primary:T.t3,fontSize:"10px",cursor:"pointer"}}>{hepsiSecili?"Bloğu Kaldır":"Bloğu Seç"}</button>
+                          </div>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:"4px"}}>
+                            {[...arr].sort((a,b)=>(a.no||"").localeCompare(b.no||"","tr",{numeric:true})).map(b=>{
+                              const secili=(form.bolumIds||[]).includes(b.id);
+                              return <button key={b.id} onClick={()=>{
+                                const cur=form.bolumIds||[];
+                                if(secili)u("bolumIds",cur.filter(id=>id!==b.id));
+                                else u("bolumIds",[...cur,b.id]);
+                              }} style={{padding:"3px 10px",borderRadius:"4px",border:`1px solid ${secili?T.primary:T.bDark}`,background:secili?T.pBg:"#fff",color:secili?T.primary:T.t2,fontSize:"12px",fontWeight:secili?600:400,cursor:"pointer"}}>{b.no||"?"}</button>;
+                            })}
+                          </div>
+                        </div>;
+                      });
+                    })()}
+                  </div>
+                </>
+              }
+              <div style={{fontSize:"11px",color:T.t3,marginTop:"4px",lineHeight:1.4}}>ℹ️ Seçili dairelerin Satış Sunumu slider'ında bu görsel gösterilir. Boş bırakılırsa sadece proje genel görseli olarak kalır.</div>
+            </div>
+          </div>
         </>}
         {/* DOSYA TÜRÜ */}
         <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
@@ -5033,7 +5079,16 @@ const DosyaModal=({dosya,onSave,onClose,onDel,kategoriler,getAltKatlar})=>{
 
 /* --- Merkezi Dosya Yönetim Portalı --- */
 const MerkeziDosyaPortal=({tumDosyalar,setTumDosyalar,dosyaKategorileri,bloklar=[],bolumler=[],blokSeviyeler=[]})=>{
-  const kategoriler=dosyaKategorileri&&dosyaKategorileri.length>0?dosyaKategorileri:DOSYA_KATEGORILERI;
+  const kategoriler=(()=>{
+    const base=dosyaKategorileri&&dosyaKategorileri.length>0?dosyaKategorileri:DOSYA_KATEGORILERI;
+    // "Proje Görselleri > Daire Detayları" alt kategorisi yoksa otomatik ekle (geriye dönük uyumluluk)
+    return base.map(k=>{
+      if(k.ad==="Proje Görselleri"&&Array.isArray(k.altKategoriler)&&!k.altKategoriler.includes("Daire Detayları")){
+        return{...k,altKategoriler:[...k.altKategoriler,"Daire Detayları"]};
+      }
+      return k;
+    });
+  })();
   const[filAnaKat,setFilAnaKat]=useState("hepsi");
   const[filAltKat,setFilAltKat]=useState("hepsi");
   const[light,setLight]=useState(null);
@@ -5103,7 +5158,7 @@ const MerkeziDosyaPortal=({tumDosyalar,setTumDosyalar,dosyaKategorileri,bloklar=
   const indir=(d)=>{const url=dosyaUrl(d);const a=document.createElement("a");a.href=url;a.download=d.ad;a.target="_blank";a.click();};
 
   return <div>
-    {dosyaModal&&<DosyaModal dosya={dosyaModal} onSave={saveDosya} onDel={delDosya} onClose={()=>setDosyaModal(null)} kategoriler={kategoriler} getAltKatlar={getAltKatlar}/>}
+    {dosyaModal&&<DosyaModal dosya={dosyaModal} onSave={saveDosya} onDel={delDosya} onClose={()=>setDosyaModal(null)} kategoriler={kategoriler} getAltKatlar={getAltKatlar} bolumler={bolumler}/>}
 
     {/* FİLTRE BAR */}
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"16px",flexWrap:"wrap",gap:"10px"}}>
@@ -8653,20 +8708,52 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
 const GorselSlider=({gorseller=[],yukseklik="380px",otomatik=true,placeholderIcon="🏢",placeholderText="Henüz görsel eklenmemiş"})=>{
   const[idx,setIdx]=useState(0);
   const[duraklat,setDuraklat]=useState(false);
+  const[lightOpen,setLightOpen]=useState(false);
   const touchStartX=useRef(null);
   const touchStartY=useRef(null);
+  const lightTouchStartX=useRef(null);
+  const lightTouchStartY=useRef(null);
   const say=gorseller.length;
 
-  useEffect(()=>{setIdx(0);},[gorseller]);
+  useEffect(()=>{setIdx(0);setLightOpen(false);},[gorseller]);
 
   useEffect(()=>{
-    if(!otomatik||say<=1||duraklat)return;
+    if(!otomatik||say<=1||duraklat||lightOpen)return;
     const t=setInterval(()=>setIdx(p=>(p+1)%say),5000);
     return()=>clearInterval(t);
-  },[say,otomatik,duraklat]);
+  },[say,otomatik,duraklat,lightOpen]);
 
   const prev=()=>setIdx(p=>(p-1+say)%say);
   const next=()=>setIdx(p=>(p+1)%say);
+
+  // Lightbox klavye kısayolları (Esc/ok)
+  useEffect(()=>{
+    if(!lightOpen)return;
+    const onKey=(e)=>{
+      if(e.key==="Escape")setLightOpen(false);
+      else if(e.key==="ArrowLeft"&&say>1)prev();
+      else if(e.key==="ArrowRight"&&say>1)next();
+    };
+    window.addEventListener("keydown",onKey);
+    return()=>window.removeEventListener("keydown",onKey);
+  },[lightOpen,say]);
+
+  // Lightbox swipe
+  const lightTouchStart=(e)=>{
+    if(say<=1)return;
+    lightTouchStartX.current=e.touches[0].clientX;
+    lightTouchStartY.current=e.touches[0].clientY;
+  };
+  const lightTouchEnd=(e)=>{
+    if(lightTouchStartX.current===null||say<=1)return;
+    const dx=lightTouchStartX.current-e.changedTouches[0].clientX;
+    const dy=lightTouchStartY.current-e.changedTouches[0].clientY;
+    if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)){
+      if(dx>0)next();else prev();
+    }
+    lightTouchStartX.current=null;
+    lightTouchStartY.current=null;
+  };
 
   // iPad dokunmatik swipe — 50px yatay kaydırma görsel değiştirir
   const handleTouchStart=(e)=>{
@@ -8697,22 +8784,38 @@ const GorselSlider=({gorseller=[],yukseklik="380px",otomatik=true,placeholderIco
 
   const aktif=gorseller[idx];
 
-  return <div onMouseEnter={()=>setDuraklat(true)} onMouseLeave={()=>setDuraklat(false)} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{position:"relative",height:yukseklik,borderRadius:T.rl,overflow:"hidden",background:"#000",boxShadow:T.shM,touchAction:"pan-y"}}>
-    <div style={{position:"absolute",inset:0,background:`url(${aktif?.url||""}) center/contain no-repeat, url(${aktif?.url||""}) center/cover`,backgroundBlendMode:"normal",transition:"background-image .4s ease"}}></div>
-    {/* Başlık varsa alt kısımda */}
-    {aktif?.aciklama&&<div style={{position:"absolute",bottom:0,left:0,right:0,padding:"16px 24px",background:"linear-gradient(180deg,transparent 0%,rgba(0,0,0,0.75) 100%)",color:"#fff",fontSize:"14px",fontWeight:500}}>{aktif.aciklama}</div>}
-    {/* Sol / sağ oklar */}
-    {say>1&&<>
-      <button onClick={prev} style={{position:"absolute",left:"12px",top:"50%",transform:"translateY(-50%)",width:"42px",height:"42px",borderRadius:"50%",border:"none",background:"rgba(0,0,0,0.5)",color:"#fff",cursor:"pointer",fontSize:"22px",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .2s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(0,0,0,0.75)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(0,0,0,0.5)"}>‹</button>
-      <button onClick={next} style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",width:"42px",height:"42px",borderRadius:"50%",border:"none",background:"rgba(0,0,0,0.5)",color:"#fff",cursor:"pointer",fontSize:"22px",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .2s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(0,0,0,0.75)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(0,0,0,0.5)"}>›</button>
-    </>}
-    {/* Dot indicator */}
-    {say>1&&<div style={{position:"absolute",bottom:"14px",left:"50%",transform:"translateX(-50%)",display:"flex",gap:"6px",padding:"6px 10px",borderRadius:"16px",background:"rgba(0,0,0,0.4)"}}>
-      {gorseller.map((_,i)=><button key={i} onClick={()=>setIdx(i)} style={{width:i===idx?"22px":"8px",height:"8px",borderRadius:"4px",border:"none",background:i===idx?"#fff":"rgba(255,255,255,0.5)",cursor:"pointer",transition:"all .25s",padding:0}}/>)}
+  return <>
+    <div onMouseEnter={()=>setDuraklat(true)} onMouseLeave={()=>setDuraklat(false)} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{position:"relative",height:yukseklik,borderRadius:T.rl,overflow:"hidden",background:"#000",boxShadow:T.shM,touchAction:"pan-y"}}>
+      <div onClick={()=>setLightOpen(true)} title="Büyütmek için tıklayın" style={{position:"absolute",inset:0,background:`url(${aktif?.url||""}) center/contain no-repeat, url(${aktif?.url||""}) center/cover`,backgroundBlendMode:"normal",transition:"background-image .4s ease",cursor:"zoom-in"}}></div>
+      {/* Başlık varsa alt kısımda */}
+      {aktif?.aciklama&&<div style={{position:"absolute",bottom:0,left:0,right:0,padding:"16px 24px",background:"linear-gradient(180deg,transparent 0%,rgba(0,0,0,0.75) 100%)",color:"#fff",fontSize:"14px",fontWeight:500,pointerEvents:"none"}}>{aktif.aciklama}</div>}
+      {/* Sol / sağ oklar */}
+      {say>1&&<>
+        <button onClick={prev} style={{position:"absolute",left:"12px",top:"50%",transform:"translateY(-50%)",width:"42px",height:"42px",borderRadius:"50%",border:"none",background:"rgba(0,0,0,0.5)",color:"#fff",cursor:"pointer",fontSize:"22px",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .2s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(0,0,0,0.75)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(0,0,0,0.5)"}>‹</button>
+        <button onClick={next} style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",width:"42px",height:"42px",borderRadius:"50%",border:"none",background:"rgba(0,0,0,0.5)",color:"#fff",cursor:"pointer",fontSize:"22px",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .2s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(0,0,0,0.75)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(0,0,0,0.5)"}>›</button>
+      </>}
+      {/* Dot indicator */}
+      {say>1&&<div style={{position:"absolute",bottom:"14px",left:"50%",transform:"translateX(-50%)",display:"flex",gap:"6px",padding:"6px 10px",borderRadius:"16px",background:"rgba(0,0,0,0.4)"}}>
+        {gorseller.map((_,i)=><button key={i} onClick={()=>setIdx(i)} style={{width:i===idx?"22px":"8px",height:"8px",borderRadius:"4px",border:"none",background:i===idx?"#fff":"rgba(255,255,255,0.5)",cursor:"pointer",transition:"all .25s",padding:0}}/>)}
+      </div>}
+      {/* Sayaç */}
+      {say>1&&<div style={{position:"absolute",top:"12px",right:"12px",padding:"4px 10px",borderRadius:"12px",background:"rgba(0,0,0,0.5)",color:"#fff",fontSize:"11px",fontWeight:600,pointerEvents:"none"}}>{idx+1} / {say}</div>}
+    </div>
+    {/* LIGHTBOX — tam ekran büyüt + oklar + kapat + swipe + Esc */}
+    {lightOpen&&<div onTouchStart={lightTouchStart} onTouchEnd={lightTouchEnd} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.95)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",touchAction:"pan-y"}}>
+      <img src={aktif?.url||""} alt={aktif?.aciklama||""} style={{maxWidth:"95vw",maxHeight:"90vh",objectFit:"contain",userSelect:"none"}}/>
+      {aktif?.aciklama&&<div style={{position:"fixed",bottom:"40px",left:"50%",transform:"translateX(-50%)",padding:"10px 22px",background:"rgba(0,0,0,0.65)",color:"#fff",fontSize:"16px",fontWeight:500,borderRadius:"24px",maxWidth:"80vw",textAlign:"center"}}>{aktif.aciklama}</div>}
+      {/* Kapat */}
+      <button onClick={()=>setLightOpen(false)} title="Kapat (Esc)" style={{position:"fixed",top:"20px",right:"24px",width:"52px",height:"52px",borderRadius:"50%",border:"none",background:"rgba(255,255,255,0.15)",color:"#fff",fontSize:"28px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.3)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.15)"}>×</button>
+      {/* Sol/Sağ ok */}
+      {say>1&&<>
+        <button onClick={prev} title="Önceki (←)" style={{position:"fixed",left:"24px",top:"50%",transform:"translateY(-50%)",width:"60px",height:"60px",borderRadius:"50%",border:"none",background:"rgba(255,255,255,0.15)",color:"#fff",fontSize:"36px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.3)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.15)"}>‹</button>
+        <button onClick={next} title="Sonraki (→)" style={{position:"fixed",right:"24px",top:"50%",transform:"translateY(-50%)",width:"60px",height:"60px",borderRadius:"50%",border:"none",background:"rgba(255,255,255,0.15)",color:"#fff",fontSize:"36px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.3)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.15)"}>›</button>
+      </>}
+      {/* Sayaç */}
+      {say>1&&<div style={{position:"fixed",top:"24px",left:"50%",transform:"translateX(-50%)",padding:"6px 16px",background:"rgba(0,0,0,0.6)",color:"#fff",fontSize:"14px",fontWeight:600,borderRadius:"16px"}}>{idx+1} / {say}</div>}
     </div>}
-    {/* Sayaç */}
-    {say>1&&<div style={{position:"absolute",top:"12px",right:"12px",padding:"4px 10px",borderRadius:"12px",background:"rgba(0,0,0,0.5)",color:"#fff",fontSize:"11px",fontWeight:600}}>{idx+1} / {say}</div>}
-  </div>;
+  </>;
 };
 
 /* ---- SATIŞ RAPORU PAGE ---- */
@@ -8938,14 +9041,30 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     return items.map(({url,aciklama})=>({url,aciklama}));
   };
   // Daire görselleri
+  // 1) Yeni sistem: tumDosyalar içinde bolumIds bu daireyi içeren görseller (sunumGoster=true, sunumSira artan)
+  // 2) Geriye dönük: eski bolum.gorseller[] (duplikat değilse eklenir)
   const bolumGorselleri=(bolum)=>{
-    const out=[];
+    if(!bolum)return[];
+    const items=[];
+    (selProje?.tumDosyalar||[]).forEach(d=>{
+      if(!d.bolumIds||!d.bolumIds.includes(bolum.id))return;
+      if(d.sunumGoster===false)return;
+      const src=dosyaUrl(d);
+      if(!src)return;
+      items.push({url:src,aciklama:d.aciklama||d.ad||"",sira:parseInt(d.sunumSira)||0});
+    });
     (bolum?.gorseller||[]).forEach(g=>{
       const src=g.url||dosyaUrl(g);
       if(!src)return;
-      out.push({url:src,aciklama:g.aciklama||g.ad||""});
+      if(items.some(x=>x.url===src))return;
+      items.push({url:src,aciklama:g.aciklama||g.ad||"",sira:0});
     });
-    return out;
+    items.sort((a,b)=>{
+      const aS=a.sira||Infinity;
+      const bS=b.sira||Infinity;
+      return aS-bS;
+    });
+    return items.map(({url,aciklama})=>({url,aciklama}));
   };
   // İlk görsel (kart için) — önce tumDosyalar içinde kapakMi=true, yoksa eski kapakGorseli, yoksa sunum ilk
   const projeIlkGorsel=(proje)=>{
@@ -9239,10 +9358,9 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
         <div style={{position:"relative",flexShrink:0}}>
           {(()=>{
             const daireG=bolumGorselleri(selBolum);
-            const gorseller=daireG.length>0?daireG:projeGorselleri(selProje);
-            // 3:2 sabit oran — proje slider'ı ile aynı görsel ebatı (1800×1200 px)
+            // 3:2 sabit oran — sadece daireye atanmış görseller (proje tanıtım görselleri fallback kaldırıldı)
             return <div style={{aspectRatio:"3/2",width:"100%"}}>
-              <GorselSlider gorseller={gorseller} yukseklik="100%" otomatik={true} placeholderIcon="🏠" placeholderText="Bu daire için görsel yok"/>
+              <GorselSlider gorseller={daireG} yukseklik="100%" otomatik={true} placeholderIcon="🏠" placeholderText="Bu daireye henüz görsel atanmamış (Dosya Yönetimi → Proje Görselleri → Daire Detayları)"/>
             </div>;
           })()}
           <div style={{position:"absolute",top:"12px",right:"12px",padding:"5px 14px",borderRadius:"4px",background:durumRenk(selBolum.durum).color,color:"#fff",fontSize:"12px",fontWeight:700,textTransform:"uppercase",zIndex:5,letterSpacing:"0.3px"}}>{durumRenk(selBolum.durum).label}</div>
