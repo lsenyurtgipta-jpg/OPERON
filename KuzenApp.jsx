@@ -8545,6 +8545,8 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
 const GorselSlider=({gorseller=[],yukseklik="380px",otomatik=true,placeholderIcon="🏢",placeholderText="Henüz görsel eklenmemiş"})=>{
   const[idx,setIdx]=useState(0);
   const[duraklat,setDuraklat]=useState(false);
+  const touchStartX=useRef(null);
+  const touchStartY=useRef(null);
   const say=gorseller.length;
 
   useEffect(()=>{setIdx(0);},[gorseller]);
@@ -8558,6 +8560,26 @@ const GorselSlider=({gorseller=[],yukseklik="380px",otomatik=true,placeholderIco
   const prev=()=>setIdx(p=>(p-1+say)%say);
   const next=()=>setIdx(p=>(p+1)%say);
 
+  // iPad dokunmatik swipe — 50px yatay kaydırma görsel değiştirir
+  const handleTouchStart=(e)=>{
+    if(say<=1)return;
+    touchStartX.current=e.touches[0].clientX;
+    touchStartY.current=e.touches[0].clientY;
+    setDuraklat(true);
+  };
+  const handleTouchEnd=(e)=>{
+    if(touchStartX.current===null||say<=1){setDuraklat(false);return;}
+    const dx=touchStartX.current-e.changedTouches[0].clientX;
+    const dy=touchStartY.current-e.changedTouches[0].clientY;
+    // yatay hareket dikey hareketten daha büyük olmalı (yanlış swipe önle)
+    if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)){
+      if(dx>0)next();else prev();
+    }
+    touchStartX.current=null;
+    touchStartY.current=null;
+    setDuraklat(false);
+  };
+
   if(say===0){
     return <div style={{height:yukseklik,background:"linear-gradient(135deg,#e6f4ff 0%,#f9f0ff 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:T.rl,border:`1px dashed ${T.border}`,gap:"12px"}}>
       <div style={{fontSize:"64px",opacity:0.6}}>{placeholderIcon}</div>
@@ -8567,7 +8589,7 @@ const GorselSlider=({gorseller=[],yukseklik="380px",otomatik=true,placeholderIco
 
   const aktif=gorseller[idx];
 
-  return <div onMouseEnter={()=>setDuraklat(true)} onMouseLeave={()=>setDuraklat(false)} style={{position:"relative",height:yukseklik,borderRadius:T.rl,overflow:"hidden",background:"#000",boxShadow:T.shM}}>
+  return <div onMouseEnter={()=>setDuraklat(true)} onMouseLeave={()=>setDuraklat(false)} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{position:"relative",height:yukseklik,borderRadius:T.rl,overflow:"hidden",background:"#000",boxShadow:T.shM,touchAction:"pan-y"}}>
     <div style={{position:"absolute",inset:0,background:`url(${aktif?.url||""}) center/contain no-repeat, url(${aktif?.url||""}) center/cover`,backgroundBlendMode:"normal",transition:"background-image .4s ease"}}></div>
     {/* Başlık varsa alt kısımda */}
     {aktif?.aciklama&&<div style={{position:"absolute",bottom:0,left:0,right:0,padding:"16px 24px",background:"linear-gradient(180deg,transparent 0%,rgba(0,0,0,0.75) 100%)",color:"#fff",fontSize:"14px",fontWeight:500}}>{aktif.aciklama}</div>}
