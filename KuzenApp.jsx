@@ -9184,8 +9184,10 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
           <button onClick={()=>setTanitimGecildi(true)} style={{width:"100%",padding:tamEkran?"14px 16px":"14px 20px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:tamEkran?"15px":"15px",fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"6px",boxShadow:T.shM,minHeight:"48px"}}>Bloklara Geç <ChevronRight size={18}/></button>
         </div>
 
-        {/* SAĞ: tam yükseklik slider */}
-        <GorselSlider gorseller={pgor} yukseklik={sliderH} otomatik={true} placeholderIcon="🏢" placeholderText="Bu proje için henüz tanıtım görseli eklenmemiş"/>
+        {/* SAĞ: 3:2 sabit oran slider — görsel yükleme ebadı: 1800×1200 px (önerilen 2700×1800 retina) */}
+        <div style={{aspectRatio:"3/2",maxHeight:sliderH,alignSelf:"center",width:"100%"}}>
+          <GorselSlider gorseller={pgor} yukseklik="100%" otomatik={true} placeholderIcon="🏢" placeholderText="Bu proje için henüz tanıtım görseli eklenmemiş"/>
+        </div>
       </div>;
     })()}
 
@@ -9269,7 +9271,10 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
           {(()=>{
             const daireG=bolumGorselleri(selBolum);
             const gorseller=daireG.length>0?daireG:projeGorselleri(selProje);
-            return <GorselSlider gorseller={gorseller} yukseklik={tamEkran?"280px":"240px"} otomatik={true} placeholderIcon="🏠" placeholderText="Bu daire için görsel yok"/>;
+            // 3:2 sabit oran — proje slider'ı ile aynı görsel ebatı (1800×1200 px)
+            return <div style={{aspectRatio:"3/2",width:"100%"}}>
+              <GorselSlider gorseller={gorseller} yukseklik="100%" otomatik={true} placeholderIcon="🏠" placeholderText="Bu daire için görsel yok"/>
+            </div>;
           })()}
           <div style={{position:"absolute",top:"12px",right:"12px",padding:"5px 14px",borderRadius:"4px",background:durumRenk(selBolum.durum).color,color:"#fff",fontSize:"12px",fontWeight:700,textTransform:"uppercase",zIndex:5,letterSpacing:"0.3px"}}>{durumRenk(selBolum.durum).label}</div>
         </div>
