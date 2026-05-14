@@ -4369,6 +4369,7 @@ const projeToLocal = (p) => ({
   bloklar: p.bloklar||[], bolumler: p.bolumler||[],
   firmaBaglantilari: p.firma_baglantilari||[],
   tumDosyalar: p.tum_dosyalar||[],
+  kapakGorseli: p.kapak_gorseli||null,
   dosyaKategorileri: p.dosya_kategorileri&&p.dosya_kategorileri.length>0?p.dosya_kategorileri:DOSYA_KATEGORILERI.map(k=>({...k,altKategoriler:[...k.altKategoriler]})),
   projeNotlari: p.proje_notlari||[],
   durumTarihce: p.durum_tarihce||[],
@@ -4397,6 +4398,8 @@ const projeToDb = (p) => ({
   // bloklar ve bolumler ayrı tablolarda tutuluyor — JSONB sütunları paralel, bu sütunlara yazmıyoruz
   firma_baglantilari: p.firmaBaglantilari||[],
   tum_dosyalar: p.tumDosyalar||[],
+  // kapak_gorseli: tumDosyalar içindeki kapakMi=true olan görselden türetilir; yoksa eski alan veya null
+  kapak_gorseli: (p.tumDosyalar||[]).find(d=>d.kapakMi===true)||p.kapakGorseli||null,
   dosya_kategorileri: p.dosyaKategorileri||[],
   proje_notlari: p.projeNotlari||[],
   durum_tarihce: p.durumTarihce||[],
@@ -4970,6 +4973,41 @@ const DosyaModal=({dosya,onSave,onClose,onDel,kategoriler,getAltKatlar})=>{
           <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Açıklama</label>
           <input style={iS} value={form.aciklama||""} onChange={e=>u("aciklama",e.target.value)} placeholder="Dosya açıklaması..." onFocus={foc} onBlur={blr}/>
         </div>
+        {/* SATIŞ SUNUMU — sadece görsel dosyalarda göster */}
+        {(form.resim||form.anaKategori==="Proje Görselleri"||(form.tip||"").startsWith("image/"))&&<>
+          <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
+            <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Satış Sunumu</label>
+            <div style={{display:"flex",alignItems:"center",gap:"14px",flexWrap:"wrap"}}>
+              <label style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",fontSize:"13px",color:T.text}}>
+                <input type="checkbox" checked={form.sunumGoster!==false} onChange={e=>u("sunumGoster",e.target.checked)} style={{width:"16px",height:"16px",cursor:"pointer",accentColor:T.primary}}/>
+                <span style={{fontWeight:500}}>Sunumda Göster</span>
+              </label>
+              <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+                <label style={{fontSize:"13px",color:T.t2}}>Sıra No:</label>
+                <input
+                  type="number"
+                  min="1"
+                  style={{...iS,width:"90px",textAlign:"center",opacity:form.sunumGoster===false?0.4:1}}
+                  value={form.sunumSira||""}
+                  onChange={e=>{const v=e.target.value.replace(/[^0-9]/g,"");u("sunumSira",v?parseInt(v):"");}}
+                  placeholder="—"
+                  disabled={form.sunumGoster===false}
+                  onFocus={foc} onBlur={blr}
+                />
+                <span style={{fontSize:"11px",color:T.t3}}>(boş = sona)</span>
+              </div>
+            </div>
+          </div>
+          {/* LİSTE KAPAK */}
+          <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
+            <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Liste Kapak</label>
+            <label style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",fontSize:"13px",color:T.text}}>
+              <input type="checkbox" checked={form.kapakMi===true} onChange={e=>u("kapakMi",e.target.checked)} style={{width:"16px",height:"16px",cursor:"pointer",accentColor:"#fa8c16"}}/>
+              <span style={{fontWeight:500}}>⭐ Bu görsel projeler listesinde kapak olsun</span>
+              <span style={{fontSize:"11px",color:T.t3,marginLeft:"4px"}}>(her projede sadece 1 görsel)</span>
+            </label>
+          </div>
+        </>}
         {/* DOSYA TÜRÜ */}
         <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
           <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Dosya Türü</label>
@@ -5024,10 +5062,16 @@ const MerkeziDosyaPortal=({tumDosyalar,setTumDosyalar,dosyaKategorileri,bloklar=
   };
 
   const filtrelenmis=useMemo(()=>{
-    return(tumDosyalar||[]).filter(d=>{
+    const list=(tumDosyalar||[]).filter(d=>{
       if(filAnaKat!=="hepsi"&&d.anaKategori!==filAnaKat)return false;
       if(filAltKat!=="hepsi"&&d.altKategori!==filAltKat)return false;
       return true;
+    });
+    // Sunum sıra numarasına göre sırala: sayı olanlar önce (artan), sıra atanmayanlar sona (orijinal sıra korunur — stable sort)
+    return[...list].sort((a,b)=>{
+      const aSira=parseInt(a.sunumSira)||Infinity;
+      const bSira=parseInt(b.sunumSira)||Infinity;
+      return aSira-bSira;
     });
   },[tumDosyalar,filAnaKat,filAltKat]);
 
@@ -5046,9 +5090,11 @@ const MerkeziDosyaPortal=({tumDosyalar,setTumDosyalar,dosyaKategorileri,bloklar=
     const hasSource=d.data||d.storagePath;
     if(!hasSource){alert("Lütfen bir dosya seçiniz.");return;}
     setTumDosyalar(prev=>{
-      const exists=prev.find(x=>x.id===d.id);
-      if(exists)return prev.map(x=>x.id===d.id?d:x);
-      return[...prev,d];
+      // Tek kapak kuralı: yeni dosya kapakMi=true ise diğer kayıtlardaki kapak işaretlerini temizle
+      const base=d.kapakMi===true?prev.map(x=>x.id!==d.id?{...x,kapakMi:false}:x):prev;
+      const exists=base.find(x=>x.id===d.id);
+      if(exists)return base.map(x=>x.id===d.id?d:x);
+      return[...base,d];
     });
     setDosyaModal(null);
   };
@@ -5104,15 +5150,46 @@ const MerkeziDosyaPortal=({tumDosyalar,setTumDosyalar,dosyaKategorileri,bloklar=
         </div>
         :<>
           {/* TABLO BAŞLIK */}
-          <div style={{display:"grid",gridTemplateColumns:"64px 160px 160px 90px 80px 80px 1fr",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
-            {["","Ana Kategori","Alt Kategori","Türü","Boyut","Tarih","Dosya Adı"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
+          <div style={{display:"grid",gridTemplateColumns:"64px 100px 160px 160px 90px 80px 80px 1fr",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
+            {["","Sunum / Kapak","Ana Kategori","Alt Kategori","Türü","Boyut","Tarih","Dosya Adı"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
           </div>
           {/* SATIRLAR */}
-          {filtrelenmis.map((d,idx)=>
-            <div key={d.id} onClick={()=>setDosyaModal(d)} style={{display:"grid",gridTemplateColumns:"64px 160px 160px 90px 80px 80px 1fr",padding:"6px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtrelenmis.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"80px"}}
+          {filtrelenmis.map((d,idx)=>{
+            const isGorsel=d.resim||d.anaKategori==="Proje Görselleri"||(d.tip||"").startsWith("image/");
+            const toggleKapak=()=>{
+              const yeni=!(d.kapakMi===true);
+              setTumDosyalar(prev=>{
+                if(yeni)return prev.map(x=>x.id===d.id?{...x,kapakMi:true}:{...x,kapakMi:false});
+                return prev.map(x=>x.id===d.id?{...x,kapakMi:false}:x);
+              });
+            };
+            return <div key={d.id} onClick={()=>setDosyaModal(d)} style={{display:"grid",gridTemplateColumns:"64px 100px 160px 160px 90px 80px 80px 1fr",padding:"6px 12px",gap:"8px",alignItems:"center",borderBottom:idx<filtrelenmis.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",cursor:"pointer",height:"80px"}}
               onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
               onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
-              {d.resim?<img src={dosyaUrl(d)} alt="" style={{width:"68px",height:"68px",objectFit:"cover",borderRadius:"4px"}}/>:<span style={{fontSize:"28px",textAlign:"center",display:"block"}}>{dosyaIkon(d.ad)}</span>}
+              <div style={{position:"relative"}}>
+                {d.resim?<img src={dosyaUrl(d)} alt="" style={{width:"68px",height:"68px",objectFit:"cover",borderRadius:"4px"}}/>:<span style={{fontSize:"28px",textAlign:"center",display:"block"}}>{dosyaIkon(d.ad)}</span>}
+                {d.kapakMi===true&&<span title="Liste Kapak Görseli" style={{position:"absolute",top:"-4px",left:"-4px",background:"#fa8c16",color:"#fff",borderRadius:"50%",width:"22px",height:"22px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}>⭐</span>}
+              </div>
+              {isGorsel
+                ?<div onClick={e=>e.stopPropagation()} style={{display:"flex",flexDirection:"column",gap:"3px",alignItems:"center"}}>
+                  <input
+                    type="number"
+                    min="1"
+                    value={d.sunumSira||""}
+                    onChange={e=>{const v=e.target.value.replace(/[^0-9]/g,"");setTumDosyalar(prev=>prev.map(x=>x.id===d.id?{...x,sunumSira:v?parseInt(v):""}:x));}}
+                    placeholder="—"
+                    disabled={d.sunumGoster===false}
+                    style={{width:"68px",height:"26px",padding:"0 4px",borderRadius:"4px",border:`1px solid ${T.bDark}`,background:"#fff",fontSize:"13px",textAlign:"center",opacity:d.sunumGoster===false?0.4:1,fontWeight:600,color:T.text}}
+                    onFocus={foc} onBlur={blr}
+                  />
+                  <label style={{display:"flex",alignItems:"center",gap:"3px",cursor:"pointer",fontSize:"10px",color:d.sunumGoster!==false?T.primary:T.t3,fontWeight:500}}>
+                    <input type="checkbox" checked={d.sunumGoster!==false} onChange={e=>setTumDosyalar(prev=>prev.map(x=>x.id===d.id?{...x,sunumGoster:e.target.checked}:x))} style={{width:"12px",height:"12px",cursor:"pointer",accentColor:T.primary,margin:0}}/>
+                    {d.sunumGoster!==false?"Göster":"Gizli"}
+                  </label>
+                  <button onClick={toggleKapak} title={d.kapakMi===true?"Kapak işaretini kaldır":"Kapak olarak ayarla (eski kapağı kaldırır)"} style={{display:"flex",alignItems:"center",gap:"3px",padding:"1px 6px",borderRadius:"3px",border:`1px solid ${d.kapakMi===true?"#fa8c16":T.bDark}`,background:d.kapakMi===true?"#fff7e6":"#fff",color:d.kapakMi===true?"#fa8c16":T.t3,fontSize:"10px",fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>⭐ {d.kapakMi===true?"Kapak":"Kapak Yap"}</button>
+                </div>
+                :<div style={{textAlign:"center",fontSize:"12px",color:T.t3}}>—</div>
+              }
               <div style={{fontSize:"14px",color:T.t2}}>{d.anaKategori||"—"}</div>
               <div style={{fontSize:"14px",color:T.t2}}>{d.altKategori||"—"}</div>
               <div style={{fontSize:"14px",color:T.t2}}>{d.dosyaTuru||"—"}</div>
@@ -5122,8 +5199,8 @@ const MerkeziDosyaPortal=({tumDosyalar,setTumDosyalar,dosyaKategorileri,bloklar=
                 <div style={{fontSize:"14px",fontWeight:500,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.aciklama||d.ad}</div>
                 {d.aciklama&&<div style={{fontSize:"12px",color:T.t3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.ad}</div>}
               </div>
-            </div>
-          )}
+            </div>;
+          })}
         </>
       }
     </div>
@@ -5389,6 +5466,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
     gorseller:[],
     dosyalar:[],
     tumDosyalar:[],
+    kapakGorseli:null,
     dosyaKategorileri:DOSYA_KATEGORILERI.map(k=>({...k,altKategoriler:[...k.altKategoriler]})),
     projeNotlari:[],
     durumTarihce:[],
@@ -5757,6 +5835,36 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
                 </div>
               </>;
             })()}
+          </div>
+        </div>
+
+        {/* LİSTE KAPAK GÖRSELİ — Dosya Yönetimi'nden ⭐ ile seçilen kapak görselinin önizlemesi */}
+        <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"flex-start",marginTop:"4px",paddingTop:"14px",borderTop:`1px solid ${T.border}`}}>
+          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",lineHeight:"36px"}}>Liste Kapak Görseli</label>
+          <div>
+            {(()=>{
+              const kapak=(form.tumDosyalar||[]).find(d=>d.kapakMi===true);
+              if(kapak)return <div style={{display:"flex",alignItems:"center",gap:"14px",padding:"12px",border:`1px solid ${T.border}`,borderRadius:T.r,background:"#fafafa"}}>
+                <img src={dosyaUrl(kapak)} alt="Kapak" style={{width:"140px",height:"100px",objectFit:"cover",borderRadius:"4px",border:`1px solid ${T.border}`}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:"14px",fontWeight:600,color:T.text,display:"flex",alignItems:"center",gap:"6px"}}>
+                    <span style={{color:"#fa8c16",fontSize:"16px"}}>⭐</span>
+                    <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{kapak.aciklama||kapak.ad}</span>
+                  </div>
+                  {kapak.aciklama&&<div style={{fontSize:"12px",color:T.t3,marginTop:"3px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{kapak.ad}</div>}
+                  <button onClick={()=>setTab("dosyaYonetimi")} style={{marginTop:"10px",padding:"5px 12px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.t2,fontSize:"12px",cursor:"pointer"}}>📂 Dosya Yönetimi'nden değiştir</button>
+                </div>
+              </div>;
+              return <div style={{padding:"14px 18px",border:`1px dashed ${T.border}`,borderRadius:T.r,background:"#fafafa",display:"flex",alignItems:"center",gap:"14px"}}>
+                <span style={{fontSize:"32px"}}>📷</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:"13px",fontWeight:500,color:T.t2}}>Henüz kapak görseli seçilmedi</div>
+                  <div style={{fontSize:"11px",color:T.t3,marginTop:"2px"}}>Dosya Yönetimi sekmesinden bir görselin satırındaki <strong>⭐ Kapak Yap</strong> butonuna tıklayın.</div>
+                </div>
+                <button onClick={()=>setTab("dosyaYonetimi")} style={{padding:"6px 14px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"12px",cursor:"pointer",whiteSpace:"nowrap"}}>📂 Dosya Yönetimi'ne Git</button>
+              </div>;
+            })()}
+            <div style={{fontSize:"11px",color:T.t3,marginTop:"6px",lineHeight:1.4}}>ℹ️ Projeler listesinde ve Satış Sunumu ADIM 1 kartında kullanılır. Her projede sadece 1 görsel kapak olabilir.</div>
           </div>
         </div>
       </div>}
@@ -8801,23 +8909,33 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     return/\.(jpe?g|png|gif|webp|bmp|svg)$/.test(ad);
   };
   // Proje görselleri (tüm) — Dosya Yönetimi'nden "Proje Görselleri" kategorisi + eski proje.gorseller[]
+  // Filtre: d.sunumGoster===false olanlar atlanır (undefined → varsayılan: göster, geriye dönük)
+  // Sıralama: d.sunumSira artan (boş/0 → sona)
   const projeGorselleri=(proje)=>{
-    const out=[];
+    const items=[];
     // 1) tumDosyalar'dan "Proje Görselleri" kategorisi
     (proje?.tumDosyalar||[]).forEach(d=>{
+      if(d.sunumGoster===false)return;
       const dosyaSrc=dosyaUrl(d);
       if(!dosyaSrc)return;
       if(d.anaKategori==="Proje Görselleri"||isResimDosyasi(d)){
-        out.push({url:dosyaSrc,aciklama:d.aciklama||d.ad||""});
+        items.push({url:dosyaSrc,aciklama:d.aciklama||d.ad||"",sira:parseInt(d.sunumSira)||0});
       }
     });
     // 2) Eski alan: proje.gorseller
     (proje?.gorseller||[]).forEach(g=>{
+      if(g.sunumGoster===false)return;
       const src=g.url||dosyaUrl(g);
       if(!src)return;
-      if(!out.some(x=>x.url===src))out.push({url:src,aciklama:g.aciklama||g.ad||""});
+      if(!items.some(x=>x.url===src))items.push({url:src,aciklama:g.aciklama||g.ad||"",sira:parseInt(g.sunumSira)||0});
     });
-    return out;
+    // Sıralama: sira>0 olanlar önce (ascending), 0/boş olanlar sona
+    items.sort((a,b)=>{
+      const aSira=a.sira||Infinity;
+      const bSira=b.sira||Infinity;
+      return aSira-bSira;
+    });
+    return items.map(({url,aciklama})=>({url,aciklama}));
   };
   // Daire görselleri
   const bolumGorselleri=(bolum)=>{
@@ -8829,8 +8947,18 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     });
     return out;
   };
-  // İlk görsel (kart için)
+  // İlk görsel (kart için) — önce tumDosyalar içinde kapakMi=true, yoksa eski kapakGorseli, yoksa sunum ilk
   const projeIlkGorsel=(proje)=>{
+    const kapakDosya=(proje?.tumDosyalar||[]).find(d=>d.kapakMi===true);
+    if(kapakDosya){
+      const src=dosyaUrl(kapakDosya);
+      if(src)return src;
+    }
+    // Geriye dönük: eski proje.kapakGorseli alanı (eğer doldurulmuşsa)
+    if(proje?.kapakGorseli){
+      const src=dosyaUrl(proje.kapakGorseli);
+      if(src)return src;
+    }
     const g=projeGorselleri(proje);
     return g.length>0?g[0].url:null;
   };
@@ -8948,8 +9076,10 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
   </div>;
 
   // TAM EKRAN overlay (position:fixed) — iPad landscape için dinamik viewport
+  // iPad Pro 13" landscape (1366 fiziksel / 0.9 zoom = 1518 CSS-px) — PC'de de aynı tuval, sağ/sol beyaz boşluk kalır
+  const SUNUM_MAX_W=1518;
   const content=<div style={tamEkran?{position:"fixed",inset:0,background:"#fff",zIndex:900,padding:`${PAD}px`,overflow:"hidden",display:"flex",justifyContent:"center",alignItems:"stretch"}:{}}>
-    <div style={tamEkran?{width:"100%",height:"100%",display:"flex",flexDirection:"column",overflow:"hidden"}:{width:"100%"}}>
+    <div style={tamEkran?{width:"100%",maxWidth:`${SUNUM_MAX_W}px`,height:"100%",display:"flex",flexDirection:"column",overflow:"hidden"}:{width:"100%"}}>
     {pickerAcik&&(()=>{
       // Opsiyonludan Satışa Çevir: müşteri zaten bağlı, direkt onay ekranına geç + mevcut fiyatı pre-fill
       const opsiyonluSatisaCevir=pickerIslem==="satildi"&&selBolum?.durum==="opsiyonlu"&&selBolum?.aliciFirmaId;
@@ -9315,8 +9445,8 @@ const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategoriler
           {projeler.length===0?"Henüz proje eklenmemiş.":"Sonuç bulunamadı."}
         </div>
         :<>
-          <div style={{display:"grid",gridTemplateColumns:"90px 1fr 100px 100px 90px 90px 80px 90px 70px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
-            {["Kod","Proje Adı","Tür","Durum","Brüt m²","Net m²","Bölüm","Teslim","Kayıt"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
+          <div style={{display:"grid",gridTemplateColumns:"64px 90px 1fr 100px 100px 90px 90px 80px 90px 70px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
+            {["Görsel","Kod","Proje Adı","Tür","Durum","Brüt m²","Net m²","Bölüm","Teslim","Kayıt"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
           </div>
           {fil.map((p,idx)=>{
             const turObj=PROJE_TURLERI.find(t=>t.label===p.tur);
@@ -9326,10 +9456,16 @@ const ProjelerPage=({projeler,setProjeler,onSave,onDel,firmalar,dosyaKategoriler
             const satilan=(p.bolumler||[]).filter(b=>b.durum==="satildi").length;
             const brutToplam=(p.bolumler||[]).reduce((s,b)=>s+parseFloat(b.brutM2||0),0);
             const netToplam=(p.bolumler||[]).reduce((s,b)=>s+parseFloat(b.netM2||0),0);
+            const kapakDosya=(p.tumDosyalar||[]).find(d=>d.kapakMi===true)||p.kapakGorseli||null;
+            const kapak=kapakDosya?dosyaUrl(kapakDosya):null;
             return <div key={p.id} onClick={()=>{setSecili(p.id);setEditMode?.(true);}}
-              style={{display:"grid",gridTemplateColumns:"90px 1fr 100px 100px 90px 90px 80px 90px 70px",padding:"8px 12px",gap:"8px",alignItems:"center",borderBottom:idx<fil.length-1?`1px solid ${T.border}`:"none",background:isPasif?"#fafafa":(idx%2===0?"#fff":"#fafafa"),cursor:"pointer",height:"44px",opacity:isPasif?0.45:1}}
+              style={{display:"grid",gridTemplateColumns:"64px 90px 1fr 100px 100px 90px 90px 80px 90px 70px",padding:"6px 12px",gap:"8px",alignItems:"center",borderBottom:idx<fil.length-1?`1px solid ${T.border}`:"none",background:isPasif?"#fafafa":(idx%2===0?"#fff":"#fafafa"),cursor:"pointer",height:"56px",opacity:isPasif?0.45:1}}
               onMouseEnter={e=>e.currentTarget.style.background=T.pBg}
               onMouseLeave={e=>e.currentTarget.style.background=isPasif?"#fafafa":(idx%2===0?"#fff":"#fafafa")}>
+              <div title={kapakDosya?.aciklama||""}>{kapak
+                ?<img src={kapak} alt="" style={{width:"54px",height:"42px",objectFit:"cover",borderRadius:"4px",border:`1px solid ${T.border}`}}/>
+                :<div style={{width:"54px",height:"42px",borderRadius:"4px",background:"#f5f5f5",border:`1px dashed ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",color:T.t3}}>🏢</div>
+              }</div>
               <div style={{fontSize:"14px",color:T.t3,fontWeight:500}}>{p.projeKodu||"—"}</div>
               <div style={{fontSize:"14px",fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.ad}{p.il?` (${p.ilce?p.ilce+"/":""}${p.il})`:""}</div>
               <div style={{fontSize:"14px",color:T.t2}}>{turObj?turObj.label:(p.tur||"—")}</div>

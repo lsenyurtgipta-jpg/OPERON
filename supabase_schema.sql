@@ -277,6 +277,8 @@ CREATE TABLE projeler (
   -- bloklar ve bolumler AYRI tablolarda tutulur (aşağıda) — JSONB'den normalize edildi
   firma_baglantilari JSONB DEFAULT '[]',
   tum_dosyalar JSONB DEFAULT '[]',
+  -- Projeler listesi ve Satış Sunumu ADIM 1 kart görseli (tumDosyalar içinde kapakMi=true olan görselin kopyası, save sırasında türetilir)
+  kapak_gorseli JSONB DEFAULT NULL,
   dosya_kategorileri JSONB DEFAULT '[]',
   proje_notlari JSONB DEFAULT '[]',
   durum_tarihce JSONB DEFAULT '[]',
