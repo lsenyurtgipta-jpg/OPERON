@@ -9096,6 +9096,12 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
           <h2 style={{fontSize:tamEkran?"22px":"20px",fontWeight:700,color:T.text,margin:0,letterSpacing:"0.3px"}}>SATIŞ SUNUMU</h2>
           {selProje&&<div style={{fontSize:"13px",color:T.t2,marginTop:"3px"}}>{selProje.ad}{selBlokAd?` • ${selBlokAd} Blok`:""}{selBolum?` • Daire ${selBolum.no||"?"}`:""}</div>}
         </div>
+        {/* Konum ikonu — tıklanınca proje adresi Google Maps'te yeni sekmede açılır */}
+        {selProje&&(()=>{
+          const parts=[selProje.adres,selProje.mahalle,selProje.ilce,selProje.il].filter(Boolean).join(", ");
+          if(!parts)return null;
+          return <button onClick={()=>window.open(`https://www.google.com/maps/search/${encodeURIComponent(parts)}`,"_blank")} title={`Haritada Göster: ${parts}`} style={{display:"flex",alignItems:"center",justifyContent:"center",width:"44px",height:"44px",borderRadius:"50%",border:`1px solid ${T.border}`,background:"#fff",color:T.primary,cursor:"pointer",flexShrink:0,transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.background=T.pBg;e.currentTarget.style.borderColor=T.primary;}} onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.borderColor=T.border;}}><MapPin size={22}/></button>;
+        })()}
         {breadcrumb}
       </div>
       <div style={{display:"flex",alignItems:"center",gap:"10px",flexShrink:0}}>
@@ -9142,50 +9148,13 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
         </div>}
     </div>}
 
-    {/* ADIM 2 — PROJE TANITIM (iPad: sol sidebar | sağ slider, viewport-dinamik) */}
+    {/* ADIM 2 — PROJE TANITIM (sidebar kaldırıldı; stat & blok geçişi ADIM 3 ve breadcrumb'tan; slider 16:9 tam alan) */}
     {adim===2&&selProje&&(()=>{
       const pgor=projeGorselleri(selProje);
-      const oz=projeOzet(selProje);
-      // iPad Sunum Modunda dinamik yükseklik; normal modda eski 845px sabit
       const sliderH=tamEkran?sunumIcerikH:"845px";
-      const sidebarW=tamEkran?"290px":"300px";
-      return <div style={{display:"grid",gridTemplateColumns:`${sidebarW} 1fr`,gap:"20px",alignItems:"stretch",flex:"1 1 auto",minHeight:0}}>
-        {/* SOL: proje bilgi sidebar */}
-        <div style={{background:"#fff",borderRadius:T.rl,border:`1px solid ${T.border}`,boxShadow:T.sh,padding:tamEkran?"24px 18px":"24px 20px",display:"flex",flexDirection:"column",justifyContent:"space-between",gap:"18px",height:sliderH,overflow:"hidden"}}>
-          {/* Üst: proje bilgileri ortalı */}
-          <div style={{textAlign:"center"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",marginBottom:"12px",flexWrap:"wrap"}}>
-              {selProje.projeKodu&&<span style={{fontSize:"12px",color:T.t3,fontFamily:"monospace",background:"#f5f5f5",padding:"3px 8px",borderRadius:"4px"}}>{selProje.projeKodu}</span>}
-              {selProje.tur&&<span style={{fontSize:"12px",padding:"3px 10px",borderRadius:"4px",background:T.pBg,color:T.primary,fontWeight:600}}>{selProje.tur}</span>}
-            </div>
-            <div style={{fontSize:tamEkran?"26px":"22px",fontWeight:700,color:T.text,marginBottom:"12px",lineHeight:1.2}}>{selProje.ad}</div>
-            <div style={{fontSize:"14px",color:T.t2,marginBottom:"8px",display:"flex",alignItems:"center",justifyContent:"center",gap:"6px"}}><MapPin size={16}/> {selProje.il?`${selProje.il}${selProje.ilce?` / ${selProje.ilce}`:""}`:"—"}{selProje.mahalle?` • ${selProje.mahalle}`:""}</div>
-            {selProje.tahminiTeslim&&<div style={{fontSize:"14px",color:T.t2,display:"flex",alignItems:"center",justifyContent:"center",gap:"6px"}}><Calendar size={16}/> Teslim: <strong style={{color:T.text}}>{selProje.tahminiTeslim}</strong></div>}
-            {selProje.aciklama&&<div style={{fontSize:"13px",color:T.t2,marginTop:"14px",lineHeight:"1.5",fontStyle:"italic"}}>"{selProje.aciklama}"</div>}
-          </div>
-
-          {/* Orta: stat rozetleri dikey + büyütülmüş */}
-          <div style={{display:"flex",flexDirection:"column",gap:"14px"}}>
-            <div style={{padding:tamEkran?"18px 16px":"18px 20px",borderRadius:T.rl,background:"#f6ffed",border:"1px solid #b7eb8f",textAlign:"center"}}>
-              <div style={{fontSize:tamEkran?"40px":"38px",fontWeight:700,color:"#52c41a",lineHeight:1}}>{oz.musait}</div>
-              <div style={{fontSize:"13px",color:"#52c41a",fontWeight:700,marginTop:"5px",letterSpacing:"0.5px"}}>MÜSAİT</div>
-            </div>
-            <div style={{padding:tamEkran?"18px 16px":"18px 20px",borderRadius:T.rl,background:"#fff7e6",border:"1px solid #ffd591",textAlign:"center"}}>
-              <div style={{fontSize:tamEkran?"40px":"38px",fontWeight:700,color:"#fa8c16",lineHeight:1}}>{oz.opsiyonlu}</div>
-              <div style={{fontSize:"13px",color:"#fa8c16",fontWeight:700,marginTop:"5px",letterSpacing:"0.5px"}}>OPSİYONLU</div>
-            </div>
-            <div style={{padding:tamEkran?"18px 16px":"18px 20px",borderRadius:T.rl,background:"#e6f4ff",border:"1px solid #91caff",textAlign:"center"}}>
-              <div style={{fontSize:tamEkran?"40px":"38px",fontWeight:700,color:"#1677ff",lineHeight:1}}>{oz.satildi}</div>
-              <div style={{fontSize:"13px",color:"#1677ff",fontWeight:700,marginTop:"5px",letterSpacing:"0.5px"}}>SATILDI</div>
-            </div>
-          </div>
-
-          {/* Alt: Bloklara Geç butonu (touch hedefi 48px) */}
-          <button onClick={()=>setTanitimGecildi(true)} style={{width:"100%",padding:tamEkran?"14px 16px":"14px 20px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:tamEkran?"15px":"15px",fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"6px",boxShadow:T.shM,minHeight:"48px"}}>Bloklara Geç <ChevronRight size={18}/></button>
-        </div>
-
-        {/* SAĞ: 3:2 sabit oran slider — görsel yükleme ebadı: 1800×1200 px (önerilen 2700×1800 retina) */}
-        <div style={{aspectRatio:"3/2",maxHeight:sliderH,alignSelf:"center",width:"100%"}}>
+      return <div style={{flex:"1 1 auto",minHeight:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+        {/* 3:2 sabit oran slider — görsel yükleme ebadı: 1800×1200 px (önerilen 2700×1800 retina) */}
+        <div style={{aspectRatio:"3/2",maxHeight:sliderH,width:"100%"}}>
           <GorselSlider gorseller={pgor} yukseklik="100%" otomatik={true} placeholderIcon="🏢" placeholderText="Bu proje için henüz tanıtım görseli eklenmemiş"/>
         </div>
       </div>;
