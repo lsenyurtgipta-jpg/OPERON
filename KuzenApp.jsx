@@ -8726,9 +8726,12 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
   const[tanitimGecildi,setTanitimGecildi]=useState(false);
   const[selBlokAd,setSelBlokAd]=useState(null);
   const[selBolumId,setSelBolumId]=useState(null);
-  const[tamEkran,setTamEkran]=useState(false);
+  const[tamEkran,setTamEkran]=useState(true); // iPad Pro 13" odaklı: sayfaya girince otomatik Sunum Modu
   const[pickerAcik,setPickerAcik]=useState(false);
   const[pickerIslem,setPickerIslem]=useState(null); // "opsiyonla" | "satildi"
+
+  // iPad Pro 13" landscape — sabit içerik alanı (body zoom 0.9 sonrası 1518×1138 CSS px, padding 24px düşülmüş)
+  const IPAD={W:1470,H:1090,GAP:20};
 
   const selProje=projeler.find(p=>p.id===selProjeId);
   const selBlok=selProje?.bloklar?.find(b=>b.ad===selBlokAd);
@@ -8895,30 +8898,31 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
   const sifirlaTanitimSonra=()=>{setTanitimGecildi(false);setSelBlokAd(null);setSelBolumId(null);};
   const sifirlaBlokSonra=()=>{setSelBlokAd(null);setSelBolumId(null);};
 
-  // Adım stilleri
+  // Adım stilleri — touch hedefi (iPad min 44px)
   const adBtn=(no,label,aktif,gecmis,onClick,enabled)=>{
     const bg=!enabled?"#f5f5f5":(aktif?T.pBg:(gecmis?"#fff":"transparent"));
     const fg=!enabled?T.t3:(aktif?T.primary:(gecmis?T.primary:T.t2));
     const brd=!enabled?T.border:(aktif||gecmis?T.primary:T.border);
-    return <button onClick={enabled?onClick:undefined} disabled={!enabled} style={{display:"flex",alignItems:"center",gap:"6px",background:bg,color:fg,border:`1px solid ${brd}`,padding:"6px 14px",borderRadius:"18px",fontSize:"13px",fontWeight:aktif?600:500,cursor:!enabled?"not-allowed":"pointer"}}>
-      <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:"20px",height:"20px",borderRadius:"50%",background:aktif?T.primary:(gecmis?T.primary:"#e8e8e8"),color:aktif||gecmis?"#fff":T.t3,fontSize:"11px",fontWeight:700}}>{gecmis&&!aktif?"✓":no}</span>
+    return <button onClick={enabled?onClick:undefined} disabled={!enabled} style={{display:"flex",alignItems:"center",gap:"8px",background:bg,color:fg,border:`1px solid ${brd}`,padding:"10px 18px",borderRadius:"24px",fontSize:"14px",fontWeight:aktif?700:500,cursor:!enabled?"not-allowed":"pointer",minHeight:"44px",boxSizing:"border-box",whiteSpace:"nowrap"}}>
+      <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:"24px",height:"24px",borderRadius:"50%",background:aktif?T.primary:(gecmis?T.primary:"#e8e8e8"),color:aktif||gecmis?"#fff":T.t3,fontSize:"12px",fontWeight:700,flexShrink:0}}>{gecmis&&!aktif?"✓":no}</span>
       {label}
     </button>;
   };
 
   // Breadcrumb (4 adım)
-  const breadcrumb=<div style={{display:"flex",alignItems:"center",gap:"8px",fontSize:"14px",flexWrap:"wrap"}}>
+  const breadcrumb=<div style={{display:"flex",alignItems:"center",gap:"6px",fontSize:"14px",flexWrap:"nowrap"}}>
     {adBtn(1,"Proje",adim===1,adim>1,sifirlaHepsi,true)}
-    <ChevronRight size={14} color={T.t3}/>
+    <ChevronRight size={16} color={T.t3}/>
     {adBtn(2,"Tanıtım",adim===2,adim>2,sifirlaTanitimSonra,!!selProjeId)}
-    <ChevronRight size={14} color={T.t3}/>
+    <ChevronRight size={16} color={T.t3}/>
     {adBtn(3,"Blok",adim===3,adim>3,sifirlaBlokSonra,!!selProjeId&&tanitimGecildi)}
-    <ChevronRight size={14} color={T.t3}/>
+    <ChevronRight size={16} color={T.t3}/>
     {adBtn(4,"Daire",adim===4,false,()=>{},!!selBlokAd)}
   </div>;
 
-  // TAM EKRAN overlay (position:fixed)
-  const content=<div style={tamEkran?{position:"fixed",inset:0,background:"#fff",zIndex:900,overflow:"auto",padding:"24px"}:{}}>
+  // TAM EKRAN overlay (position:fixed) — iPad Pro 13" landscape için sabit 1470×1090 container
+  const content=<div style={tamEkran?{position:"fixed",inset:0,background:"#fff",zIndex:900,padding:"24px",overflow:"hidden",display:"flex",justifyContent:"center",alignItems:"flex-start"}:{}}>
+    <div style={tamEkran?{width:`${IPAD.W}px`,height:`${IPAD.H}px`,display:"flex",flexDirection:"column",overflow:"hidden"}:{width:"100%"}}>
     {pickerAcik&&(()=>{
       // Opsiyonludan Satışa Çevir: müşteri zaten bağlı, direkt onay ekranına geç + mevcut fiyatı pre-fill
       const opsiyonluSatisaCevir=pickerIslem==="satildi"&&selBolum?.durum==="opsiyonlu"&&selBolum?.aliciFirmaId;
@@ -8928,94 +8932,99 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
       return <MusteriPickerModal firmalar={firmalar} onSaveFirma={saveFirma} onSelect={musteriSec} onClose={()=>setPickerAcik(false)} baslik={pickerIslem==="opsiyonla"?"OPSİYONLA — MÜŞTERİ SEÇ":(opsiyonluSatisaCevir?"SATIŞA ÇEVİR — FİYAT ONAYI":"SATIŞ — MÜŞTERİ SEÇ")} pickerIslem={pickerIslem} listeFiyatiOneri={selBolum?.listeFiyatiKdvDahil||""} initialFirma={mevcutFirma} initialSatisBedeli={mevcutSatisBed} initialPlus={mevcutPlus} bolum={selBolum}/>;
     })()}
 
-    {/* ÜST BAR — proje adı + adımlar + tam ekran toggle */}
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"16px",paddingBottom:"12px",borderBottom:`1px solid ${T.border}`,gap:"20px",flexWrap:"wrap"}}>
-      <div style={{display:"flex",alignItems:"center",gap:"44px",flexWrap:"wrap",flex:"1 1 auto"}}>
-        <div>
-          <h2 style={{fontSize:tamEkran?"24px":"20px",fontWeight:600,color:T.text,margin:0}}>SATIŞ SUNUMU</h2>
-          {selProje&&<div style={{fontSize:"13px",color:T.t2,marginTop:"2px"}}>{selProje.ad}{selBlokAd?` • ${selBlokAd} Blok`:""}{selBolum?` • Daire ${selBolum.no||"?"}`:""}</div>}
+    {/* ÜST BAR — proje adı + adımlar + tam ekran toggle (touch-optimized) */}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"14px",paddingBottom:"12px",borderBottom:`1px solid ${T.border}`,gap:"20px",flexWrap:"nowrap",flexShrink:0}}>
+      <div style={{display:"flex",alignItems:"center",gap:"32px",flexWrap:"nowrap",flex:"1 1 auto",minWidth:0}}>
+        <div style={{flexShrink:0}}>
+          <h2 style={{fontSize:tamEkran?"22px":"20px",fontWeight:700,color:T.text,margin:0,letterSpacing:"0.3px"}}>SATIŞ SUNUMU</h2>
+          {selProje&&<div style={{fontSize:"13px",color:T.t2,marginTop:"3px"}}>{selProje.ad}{selBlokAd?` • ${selBlokAd} Blok`:""}{selBolum?` • Daire ${selBolum.no||"?"}`:""}</div>}
         </div>
         {breadcrumb}
       </div>
-      <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
-        <label style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",padding:"6px 14px",borderRadius:"20px",border:`1px solid ${tamEkran?T.primary:T.border}`,background:tamEkran?T.pBg:"#fff",color:tamEkran?T.primary:T.t2,fontSize:"13px",fontWeight:500}}>
-          <input type="checkbox" checked={tamEkran} onChange={e=>setTamEkran(e.target.checked)} style={{cursor:"pointer"}}/>
-          🖥️ Sunum Modu
+      <div style={{display:"flex",alignItems:"center",gap:"10px",flexShrink:0}}>
+        <label style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",padding:"10px 16px",borderRadius:"24px",border:`1px solid ${tamEkran?T.primary:T.border}`,background:tamEkran?T.pBg:"#fff",color:tamEkran?T.primary:T.t2,fontSize:"14px",fontWeight:600,minHeight:"44px",boxSizing:"border-box"}}>
+          <input type="checkbox" checked={tamEkran} onChange={e=>setTamEkran(e.target.checked)} style={{cursor:"pointer",width:"16px",height:"16px"}}/>
+          🖥️ Sunum
         </label>
-        {tamEkran&&<button onClick={()=>setTamEkran(false)} style={{padding:"6px 14px",borderRadius:"20px",border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>✕ Kapat</button>}
+        {tamEkran&&<button onClick={()=>setTamEkran(false)} style={{padding:"10px 18px",borderRadius:"24px",border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"14px",fontWeight:500,cursor:"pointer",minHeight:"44px"}}>✕ Kapat</button>}
       </div>
     </div>
 
-    {/* ADIM 1 — PROJE SEÇİMİ */}
+    {/* İÇERİK ALANI — sabit yükseklik, gerektiğinde iç scroll */}
+    <div style={{flex:"1 1 auto",minHeight:0,overflowY:"auto",overflowX:"hidden",display:"flex",flexDirection:"column"}}>
+
+    {/* ADIM 1 — PROJE SEÇİMİ (iPad: 4 sütun, büyütülmüş kart) */}
     {adim===1&&<div>
       {projeler.length===0
         ?<div style={{padding:"80px",textAlign:"center",color:T.t3,fontSize:"15px",border:`1px dashed ${T.border}`,borderRadius:T.rl}}>Henüz proje tanımlanmamış. Önce Projeler sayfasından proje oluşturun.</div>
-        :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:"16px"}}>
+        :<div style={{display:"grid",gridTemplateColumns:tamEkran?"repeat(4,1fr)":"repeat(auto-fill,minmax(320px,1fr))",gap:tamEkran?"20px":"16px"}}>
           {projeler.map(p=>{
             const oz=projeOzet(p);
             const img=projeIlkGorsel(p);
-            return <div key={p.id} onClick={()=>{setSelProjeId(p.id);}} style={{background:"#fff",borderRadius:T.rl,border:`1px solid ${T.border}`,overflow:"hidden",cursor:"pointer",transition:"all .2s",boxShadow:T.sh}}
+            return <div key={p.id} onClick={()=>{setSelProjeId(p.id);}} style={{background:"#fff",borderRadius:T.rl,border:`1px solid ${T.border}`,overflow:"hidden",cursor:"pointer",transition:"all .2s",boxShadow:T.sh,minHeight:tamEkran?"360px":"auto"}}
               onMouseEnter={e=>e.currentTarget.style.boxShadow=T.shM} onMouseLeave={e=>e.currentTarget.style.boxShadow=T.sh}>
               {img
-                ?<div style={{height:"160px",background:`url(${img}) center/cover`,position:"relative"}}><div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,transparent 50%,rgba(0,0,0,0.6) 100%)"}}></div></div>
-                :<div style={{height:"160px",background:"linear-gradient(135deg,#e6f4ff 0%,#f9f0ff 100%)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"48px"}}>🏢</div>
+                ?<div style={{height:tamEkran?"200px":"160px",background:`url(${img}) center/cover`,position:"relative"}}><div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,transparent 50%,rgba(0,0,0,0.6) 100%)"}}></div></div>
+                :<div style={{height:tamEkran?"200px":"160px",background:"linear-gradient(135deg,#e6f4ff 0%,#f9f0ff 100%)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"56px"}}>🏢</div>
               }
-              <div style={{padding:"16px"}}>
-                <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}}>
-                  {p.projeKodu&&<span style={{fontSize:"11px",color:T.t3,fontFamily:"monospace",background:"#f5f5f5",padding:"2px 6px",borderRadius:"3px"}}>{p.projeKodu}</span>}
-                  {p.tur&&<span style={{fontSize:"11px",padding:"2px 8px",borderRadius:"3px",background:T.pBg,color:T.primary,fontWeight:500}}>{p.tur}</span>}
+              <div style={{padding:tamEkran?"18px":"16px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"8px",flexWrap:"wrap"}}>
+                  {p.projeKodu&&<span style={{fontSize:"12px",color:T.t3,fontFamily:"monospace",background:"#f5f5f5",padding:"3px 8px",borderRadius:"4px"}}>{p.projeKodu}</span>}
+                  {p.tur&&<span style={{fontSize:"12px",padding:"3px 10px",borderRadius:"4px",background:T.pBg,color:T.primary,fontWeight:600}}>{p.tur}</span>}
                 </div>
-                <div style={{fontSize:"16px",fontWeight:600,color:T.text,marginBottom:"4px"}}>{p.ad}</div>
-                <div style={{fontSize:"12px",color:T.t2,marginBottom:"12px"}}>{p.il?`${p.il}${p.ilce?` / ${p.ilce}`:""}`:"—"}{p.tahminiTeslim?` • Teslim: ${p.tahminiTeslim}`:""}</div>
+                <div style={{fontSize:tamEkran?"18px":"16px",fontWeight:700,color:T.text,marginBottom:"6px",lineHeight:1.3}}>{p.ad}</div>
+                <div style={{fontSize:"13px",color:T.t2,marginBottom:"14px"}}>{p.il?`${p.il}${p.ilce?` / ${p.ilce}`:""}`:"—"}{p.tahminiTeslim?` • Teslim: ${p.tahminiTeslim}`:""}</div>
                 {oz.toplam>0?<div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
-                  <span style={{fontSize:"11px",padding:"3px 8px",borderRadius:"3px",background:"#f6ffed",color:"#52c41a",fontWeight:600}}>{oz.musait} müsait</span>
-                  <span style={{fontSize:"11px",padding:"3px 8px",borderRadius:"3px",background:"#fff7e6",color:"#fa8c16",fontWeight:600}}>{oz.opsiyonlu} opsiyonlu</span>
-                  <span style={{fontSize:"11px",padding:"3px 8px",borderRadius:"3px",background:"#e6f4ff",color:"#1677ff",fontWeight:600}}>{oz.satildi} satıldı</span>
-                </div>:<div style={{fontSize:"11px",color:T.t3}}>Daire tanımı yok</div>}
+                  <span style={{fontSize:"12px",padding:"4px 10px",borderRadius:"4px",background:"#f6ffed",color:"#52c41a",fontWeight:700}}>{oz.musait} müsait</span>
+                  <span style={{fontSize:"12px",padding:"4px 10px",borderRadius:"4px",background:"#fff7e6",color:"#fa8c16",fontWeight:700}}>{oz.opsiyonlu} opsiyonlu</span>
+                  <span style={{fontSize:"12px",padding:"4px 10px",borderRadius:"4px",background:"#e6f4ff",color:"#1677ff",fontWeight:700}}>{oz.satildi} satıldı</span>
+                </div>:<div style={{fontSize:"12px",color:T.t3}}>Daire tanımı yok</div>}
               </div>
             </div>;
           })}
         </div>}
     </div>}
 
-    {/* ADIM 2 — PROJE TANITIM (sol: bilgi sidebar | sağ: tam yükseklik slider) */}
+    {/* ADIM 2 — PROJE TANITIM (iPad: sol 340px sidebar | sağ slider, tek ekrana sığar) */}
     {adim===2&&selProje&&(()=>{
       const pgor=projeGorselleri(selProje);
       const oz=projeOzet(selProje);
-      const sliderH="845px";
-      return <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:"20px",alignItems:"stretch"}}>
+      // iPad 13": içerik alanı yüksekliği ~1010px (1090 - üst bar). Normal modda eski 845px.
+      const sliderH=tamEkran?"1010px":"845px";
+      const sidebarW=tamEkran?"360px":"300px";
+      return <div style={{display:"grid",gridTemplateColumns:`${sidebarW} 1fr`,gap:"20px",alignItems:"stretch",flex:"1 1 auto",minHeight:0}}>
         {/* SOL: proje bilgi sidebar */}
-        <div style={{background:"#fff",borderRadius:T.rl,border:`1px solid ${T.border}`,boxShadow:T.sh,padding:"24px 20px",display:"flex",flexDirection:"column",justifyContent:"space-between",gap:"20px",minHeight:sliderH}}>
+        <div style={{background:"#fff",borderRadius:T.rl,border:`1px solid ${T.border}`,boxShadow:T.sh,padding:tamEkran?"28px 24px":"24px 20px",display:"flex",flexDirection:"column",justifyContent:"space-between",gap:"20px",height:sliderH,overflow:"hidden"}}>
           {/* Üst: proje bilgileri ortalı */}
           <div style={{textAlign:"center"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",marginBottom:"10px",flexWrap:"wrap"}}>
-              {selProje.projeKodu&&<span style={{fontSize:"11px",color:T.t3,fontFamily:"monospace",background:"#f5f5f5",padding:"2px 6px",borderRadius:"3px"}}>{selProje.projeKodu}</span>}
-              {selProje.tur&&<span style={{fontSize:"11px",padding:"2px 8px",borderRadius:"3px",background:T.pBg,color:T.primary,fontWeight:500}}>{selProje.tur}</span>}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",marginBottom:"12px",flexWrap:"wrap"}}>
+              {selProje.projeKodu&&<span style={{fontSize:"12px",color:T.t3,fontFamily:"monospace",background:"#f5f5f5",padding:"3px 8px",borderRadius:"4px"}}>{selProje.projeKodu}</span>}
+              {selProje.tur&&<span style={{fontSize:"12px",padding:"3px 10px",borderRadius:"4px",background:T.pBg,color:T.primary,fontWeight:600}}>{selProje.tur}</span>}
             </div>
-            <div style={{fontSize:"22px",fontWeight:700,color:T.text,marginBottom:"10px",lineHeight:1.2}}>{selProje.ad}</div>
-            <div style={{fontSize:"13px",color:T.t2,marginBottom:"6px",display:"flex",alignItems:"center",justifyContent:"center",gap:"6px"}}><MapPin size={14}/> {selProje.il?`${selProje.il}${selProje.ilce?` / ${selProje.ilce}`:""}`:"—"}{selProje.mahalle?` • ${selProje.mahalle}`:""}</div>
-            {selProje.tahminiTeslim&&<div style={{fontSize:"13px",color:T.t2,display:"flex",alignItems:"center",justifyContent:"center",gap:"6px"}}><Calendar size={14}/> Teslim: <strong style={{color:T.text}}>{selProje.tahminiTeslim}</strong></div>}
-            {selProje.aciklama&&<div style={{fontSize:"12px",color:T.t2,marginTop:"12px",lineHeight:"1.5",fontStyle:"italic"}}>"{selProje.aciklama}"</div>}
+            <div style={{fontSize:tamEkran?"26px":"22px",fontWeight:700,color:T.text,marginBottom:"12px",lineHeight:1.2}}>{selProje.ad}</div>
+            <div style={{fontSize:"14px",color:T.t2,marginBottom:"8px",display:"flex",alignItems:"center",justifyContent:"center",gap:"6px"}}><MapPin size={16}/> {selProje.il?`${selProje.il}${selProje.ilce?` / ${selProje.ilce}`:""}`:"—"}{selProje.mahalle?` • ${selProje.mahalle}`:""}</div>
+            {selProje.tahminiTeslim&&<div style={{fontSize:"14px",color:T.t2,display:"flex",alignItems:"center",justifyContent:"center",gap:"6px"}}><Calendar size={16}/> Teslim: <strong style={{color:T.text}}>{selProje.tahminiTeslim}</strong></div>}
+            {selProje.aciklama&&<div style={{fontSize:"13px",color:T.t2,marginTop:"14px",lineHeight:"1.5",fontStyle:"italic"}}>"{selProje.aciklama}"</div>}
           </div>
 
           {/* Orta: stat rozetleri dikey + büyütülmüş */}
-          <div style={{display:"flex",flexDirection:"column",gap:"12px"}}>
-            <div style={{padding:"18px 20px",borderRadius:T.rl,background:"#f6ffed",border:"1px solid #b7eb8f",textAlign:"center"}}>
-              <div style={{fontSize:"38px",fontWeight:700,color:"#52c41a",lineHeight:1}}>{oz.musait}</div>
-              <div style={{fontSize:"13px",color:"#52c41a",fontWeight:600,marginTop:"4px",letterSpacing:"0.5px"}}>MÜSAİT</div>
+          <div style={{display:"flex",flexDirection:"column",gap:"14px"}}>
+            <div style={{padding:tamEkran?"22px":"18px 20px",borderRadius:T.rl,background:"#f6ffed",border:"1px solid #b7eb8f",textAlign:"center"}}>
+              <div style={{fontSize:tamEkran?"44px":"38px",fontWeight:700,color:"#52c41a",lineHeight:1}}>{oz.musait}</div>
+              <div style={{fontSize:"14px",color:"#52c41a",fontWeight:700,marginTop:"6px",letterSpacing:"0.5px"}}>MÜSAİT</div>
             </div>
-            <div style={{padding:"18px 20px",borderRadius:T.rl,background:"#fff7e6",border:"1px solid #ffd591",textAlign:"center"}}>
-              <div style={{fontSize:"38px",fontWeight:700,color:"#fa8c16",lineHeight:1}}>{oz.opsiyonlu}</div>
-              <div style={{fontSize:"13px",color:"#fa8c16",fontWeight:600,marginTop:"4px",letterSpacing:"0.5px"}}>OPSİYONLU</div>
+            <div style={{padding:tamEkran?"22px":"18px 20px",borderRadius:T.rl,background:"#fff7e6",border:"1px solid #ffd591",textAlign:"center"}}>
+              <div style={{fontSize:tamEkran?"44px":"38px",fontWeight:700,color:"#fa8c16",lineHeight:1}}>{oz.opsiyonlu}</div>
+              <div style={{fontSize:"14px",color:"#fa8c16",fontWeight:700,marginTop:"6px",letterSpacing:"0.5px"}}>OPSİYONLU</div>
             </div>
-            <div style={{padding:"18px 20px",borderRadius:T.rl,background:"#e6f4ff",border:"1px solid #91caff",textAlign:"center"}}>
-              <div style={{fontSize:"38px",fontWeight:700,color:"#1677ff",lineHeight:1}}>{oz.satildi}</div>
-              <div style={{fontSize:"13px",color:"#1677ff",fontWeight:600,marginTop:"4px",letterSpacing:"0.5px"}}>SATILDI</div>
+            <div style={{padding:tamEkran?"22px":"18px 20px",borderRadius:T.rl,background:"#e6f4ff",border:"1px solid #91caff",textAlign:"center"}}>
+              <div style={{fontSize:tamEkran?"44px":"38px",fontWeight:700,color:"#1677ff",lineHeight:1}}>{oz.satildi}</div>
+              <div style={{fontSize:"14px",color:"#1677ff",fontWeight:700,marginTop:"6px",letterSpacing:"0.5px"}}>SATILDI</div>
             </div>
           </div>
 
-          {/* Alt: Bloklara Geç butonu */}
-          <button onClick={()=>setTanitimGecildi(true)} style={{width:"100%",padding:"14px 20px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"15px",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",boxShadow:T.shM}}>Bloklara Geç <ChevronRight size={18}/></button>
+          {/* Alt: Bloklara Geç butonu (touch hedefi 52px) */}
+          <button onClick={()=>setTanitimGecildi(true)} style={{width:"100%",padding:tamEkran?"18px 20px":"14px 20px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:tamEkran?"17px":"15px",fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",boxShadow:T.shM,minHeight:"52px"}}>Bloklara Geç <ChevronRight size={20}/></button>
         </div>
 
         {/* SAĞ: tam yükseklik slider */}
@@ -9023,34 +9032,34 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
       </div>;
     })()}
 
-    {/* ADIM 3 — BLOK SEÇİMİ */}
+    {/* ADIM 3 — BLOK SEÇİMİ (iPad: 5 sütun, büyütülmüş kart) */}
     {adim===3&&selProje&&<div>
-      <div style={{marginBottom:"16px",padding:"16px 20px",background:T.pBg,borderRadius:T.rl,border:`1px solid ${T.primary}33`}}>
-        <div style={{fontSize:"18px",fontWeight:600,color:T.text,marginBottom:"4px"}}>{selProje.ad}</div>
-        <div style={{fontSize:"13px",color:T.t2}}>{selProje.il||""}{selProje.ilce?` / ${selProje.ilce}`:""}{selProje.tahminiTeslim?` • Tahmini Teslim: ${selProje.tahminiTeslim}`:""}</div>
-        {selProje.aciklama&&<div style={{fontSize:"12px",color:T.t3,marginTop:"6px",fontStyle:"italic"}}>{selProje.aciklama}</div>}
+      <div style={{marginBottom:"16px",padding:tamEkran?"18px 22px":"16px 20px",background:T.pBg,borderRadius:T.rl,border:`1px solid ${T.primary}33`}}>
+        <div style={{fontSize:tamEkran?"20px":"18px",fontWeight:700,color:T.text,marginBottom:"4px"}}>{selProje.ad}</div>
+        <div style={{fontSize:"14px",color:T.t2}}>{selProje.il||""}{selProje.ilce?` / ${selProje.ilce}`:""}{selProje.tahminiTeslim?` • Tahmini Teslim: ${selProje.tahminiTeslim}`:""}</div>
+        {selProje.aciklama&&<div style={{fontSize:"13px",color:T.t3,marginTop:"6px",fontStyle:"italic"}}>{selProje.aciklama}</div>}
       </div>
       {(selProje.bloklar||[]).length===0
         ?<div style={{padding:"80px",textAlign:"center",color:T.t3,fontSize:"15px",border:`1px dashed ${T.border}`,borderRadius:T.rl}}>Bu projede blok tanımı yok.</div>
-        :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:"16px"}}>
+        :<div style={{display:"grid",gridTemplateColumns:tamEkran?"repeat(5,1fr)":"repeat(auto-fill,minmax(240px,1fr))",gap:tamEkran?"18px":"16px"}}>
           {(selProje.bloklar||[]).sort((a,b)=>(a.ad||"").localeCompare(b.ad||"","tr")).map(bl=>{
             const oz=blokOzet(bl.ad);
-            return <div key={bl.id} onClick={()=>setSelBlokAd(bl.ad)} style={{background:"#fff",borderRadius:T.rl,border:`1px solid ${T.border}`,padding:"20px",cursor:"pointer",transition:"all .2s",boxShadow:T.sh}}
+            return <div key={bl.id} onClick={()=>setSelBlokAd(bl.ad)} style={{background:"#fff",borderRadius:T.rl,border:`1px solid ${T.border}`,padding:tamEkran?"24px":"20px",cursor:"pointer",transition:"all .2s",boxShadow:T.sh,minHeight:tamEkran?"200px":"auto"}}
               onMouseEnter={e=>{e.currentTarget.style.boxShadow=T.shM;e.currentTarget.style.borderColor=T.primary;}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=T.sh;e.currentTarget.style.borderColor=T.border;}}>
-              <div style={{fontSize:"28px",fontWeight:700,color:T.primary,marginBottom:"4px"}}>{bl.ad} Blok</div>
-              <div style={{fontSize:"12px",color:T.t3,marginBottom:"14px"}}>{oz.toplam} daire</div>
-              <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
+              <div style={{fontSize:tamEkran?"32px":"28px",fontWeight:700,color:T.primary,marginBottom:"6px"}}>{bl.ad} Blok</div>
+              <div style={{fontSize:"13px",color:T.t3,marginBottom:tamEkran?"18px":"14px"}}>{oz.toplam} daire</div>
+              <div style={{display:"flex",flexDirection:"column",gap:tamEkran?"8px":"6px"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <span style={{fontSize:"12px",color:T.t2}}>🟢 Müsait</span>
-                  <span style={{fontSize:"14px",fontWeight:700,color:"#52c41a"}}>{oz.musait}</span>
+                  <span style={{fontSize:"13px",color:T.t2}}>🟢 Müsait</span>
+                  <span style={{fontSize:tamEkran?"16px":"14px",fontWeight:700,color:"#52c41a"}}>{oz.musait}</span>
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <span style={{fontSize:"12px",color:T.t2}}>🟡 Opsiyonlu</span>
-                  <span style={{fontSize:"14px",fontWeight:700,color:"#fa8c16"}}>{oz.opsiyonlu}</span>
+                  <span style={{fontSize:"13px",color:T.t2}}>🟡 Opsiyonlu</span>
+                  <span style={{fontSize:tamEkran?"16px":"14px",fontWeight:700,color:"#fa8c16"}}>{oz.opsiyonlu}</span>
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <span style={{fontSize:"12px",color:T.t2}}>🔵 Satıldı</span>
-                  <span style={{fontSize:"14px",fontWeight:700,color:"#1677ff"}}>{oz.satildi}</span>
+                  <span style={{fontSize:"13px",color:T.t2}}>🔵 Satıldı</span>
+                  <span style={{fontSize:tamEkran?"16px":"14px",fontWeight:700,color:"#1677ff"}}>{oz.satildi}</span>
                 </div>
               </div>
             </div>;
@@ -9058,31 +9067,31 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
         </div>}
     </div>}
 
-    {/* ADIM 4 — DAİRE SEÇİMİ + DETAY */}
-    {adim===4&&selProje&&selBlok&&<div style={{display:"grid",gridTemplateColumns:selBolum?"1fr 400px":"1fr",gap:"16px"}}>
-      <div>
+    {/* ADIM 4 — DAİRE SEÇİMİ + DETAY (iPad: sağ panel 460px, sol grid scroll edilebilir) */}
+    {adim===4&&selProje&&selBlok&&<div style={{display:"grid",gridTemplateColumns:selBolum?(tamEkran?"1fr 460px":"1fr 400px"):"1fr",gap:tamEkran?"18px":"16px",flex:"1 1 auto",minHeight:0,alignItems:"stretch"}}>
+      <div style={{display:"flex",flexDirection:"column",minHeight:0,overflow:"hidden"}}>
         {/* Durum filtre rozetleri */}
-        <div style={{marginBottom:"12px",padding:"12px 16px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:"20px",flexWrap:"wrap"}}>
-          <div style={{fontSize:"14px",fontWeight:600,color:T.text}}>{selBlokAd} Blok — {blokBolumler.length} daire</div>
+        <div style={{marginBottom:"12px",padding:tamEkran?"14px 18px":"12px 16px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:"20px",flexWrap:"wrap",flexShrink:0}}>
+          <div style={{fontSize:tamEkran?"15px":"14px",fontWeight:700,color:T.text}}>{selBlokAd} Blok — {blokBolumler.length} daire</div>
           <div style={{flex:1}}></div>
-          {BOLUM_DURUMLARI.map(d=><div key={d.id} style={{display:"flex",alignItems:"center",gap:"6px",fontSize:"12px"}}>
-            <div style={{width:"12px",height:"12px",borderRadius:"3px",background:d.color}}></div>
+          {BOLUM_DURUMLARI.map(d=><div key={d.id} style={{display:"flex",alignItems:"center",gap:"6px",fontSize:"13px"}}>
+            <div style={{width:"14px",height:"14px",borderRadius:"3px",background:d.color}}></div>
             <span style={{color:T.t2}}>{d.label}</span>
           </div>)}
         </div>
         {blokBolumler.length===0
           ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",border:`1px dashed ${T.border}`,borderRadius:T.rl}}>Bu blokta daire tanımı yok.</div>
-          :<div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:"12px"}}>
+          :<div style={{display:"grid",gridTemplateColumns:tamEkran?(selBolum?"repeat(5,1fr)":"repeat(6,1fr)"):"repeat(5,1fr)",gap:tamEkran?"14px":"12px",overflowY:"auto",overflowX:"hidden",alignContent:"flex-start",paddingRight:"4px"}}>
             {blokBolumler.map(b=>{
               const d=durumRenk(b.durum);
               const sec=selBolumId===b.id;
               const satildi=b.durum==="satildi";
-              return <div key={b.id} onClick={()=>setSelBolumId(b.id)} style={{background:satildi?"#f5f5f5":d.bg,border:`2px solid ${sec?d.color:(satildi?"#d9d9d9":d.color+"55")}`,borderRadius:T.rl,padding:"14px",cursor:"pointer",transition:"all .15s",position:"relative",transform:sec?"scale(1.02)":"scale(1)",boxShadow:sec?T.shM:"none",opacity:satildi?0.55:1,filter:satildi?"grayscale(0.6)":"none"}}
+              return <div key={b.id} onClick={()=>setSelBolumId(b.id)} style={{background:satildi?"#f5f5f5":d.bg,border:`2px solid ${sec?d.color:(satildi?"#d9d9d9":d.color+"55")}`,borderRadius:T.rl,padding:tamEkran?"18px 16px":"14px",cursor:"pointer",transition:"all .15s",position:"relative",transform:sec?"scale(1.02)":"scale(1)",boxShadow:sec?T.shM:"none",opacity:satildi?0.55:1,filter:satildi?"grayscale(0.6)":"none",minHeight:tamEkran?"150px":"auto"}}
                 onMouseEnter={e=>{if(!sec&&!satildi)e.currentTarget.style.transform="scale(1.02)";}} onMouseLeave={e=>{if(!sec)e.currentTarget.style.transform="scale(1)";}}>
-                <div style={{fontSize:"11px",color:T.t3,marginBottom:"4px",fontWeight:500}}>Daire No</div>
-                <div style={{fontSize:"22px",fontWeight:700,color:d.color,marginBottom:"8px"}}>{b.no||"—"}</div>
-                <div style={{fontSize:"12px",color:T.t2,marginBottom:"2px"}}>{b.odaSayisi||"—"}{b.kat?` • K:${b.kat}`:""}</div>
-                <div style={{fontSize:"12px",color:T.t2,marginBottom:"8px"}}>{b.brutM2?`${b.brutM2} m²`:"—"}</div>
+                <div style={{fontSize:"12px",color:T.t3,marginBottom:"4px",fontWeight:500}}>Daire No</div>
+                <div style={{fontSize:tamEkran?"28px":"22px",fontWeight:700,color:d.color,marginBottom:"10px"}}>{b.no||"—"}</div>
+                <div style={{fontSize:"13px",color:T.t2,marginBottom:"3px"}}>{b.odaSayisi||"—"}{b.kat?` • K:${b.kat}`:""}</div>
+                <div style={{fontSize:"13px",color:T.t2,marginBottom:"10px"}}>{b.brutM2?`${b.brutM2} m²`:"—"}</div>
                 {(()=>{
                   const lst=parseFloat(b.listeFiyatiKdvDahil)||0;
                   const sat=(parseFloat(b.satisBedeli)||0)+(parseFloat(b.plus)||0);
@@ -9090,35 +9099,35 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
                   if(tutar<=0||tamEkran)return null;
                   return <div style={{fontSize:"13px",fontWeight:700,color:T.text,marginBottom:"6px"}}>{lst>0?tutar.toLocaleString("tr-TR")+" ₺":fmtPara(sat,b.paraBirimi)}</div>;
                 })()}
-                <div style={{fontSize:"10px",padding:"3px 8px",borderRadius:"3px",background:d.color,color:"#fff",fontWeight:600,textTransform:"uppercase",display:"inline-block"}}>{d.label}</div>
+                <div style={{fontSize:"11px",padding:"4px 10px",borderRadius:"4px",background:d.color,color:"#fff",fontWeight:700,textTransform:"uppercase",display:"inline-block",letterSpacing:"0.3px"}}>{d.label}</div>
               </div>;
             })}
           </div>}
       </div>
 
-      {/* DAİRE DETAY PANEL */}
-      {selBolum&&<div style={{background:"#fff",borderRadius:T.rl,border:`1px solid ${T.border}`,overflow:"hidden",alignSelf:"start",position:"sticky",top:"16px"}}>
+      {/* DAİRE DETAY PANEL — iPad: kendi içinde scroll, panel toplam yüksekliğe sığar */}
+      {selBolum&&<div style={{background:"#fff",borderRadius:T.rl,border:`1px solid ${T.border}`,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0}}>
         {/* GÖRSEL SLIDER — daire görselleri yoksa proje görsellerine fallback */}
-        <div style={{position:"relative"}}>
+        <div style={{position:"relative",flexShrink:0}}>
           {(()=>{
             const daireG=bolumGorselleri(selBolum);
             const gorseller=daireG.length>0?daireG:projeGorselleri(selProje);
-            return <GorselSlider gorseller={gorseller} yukseklik="240px" otomatik={true} placeholderIcon="🏠" placeholderText="Bu daire için görsel yok"/>;
+            return <GorselSlider gorseller={gorseller} yukseklik={tamEkran?"280px":"240px"} otomatik={true} placeholderIcon="🏠" placeholderText="Bu daire için görsel yok"/>;
           })()}
-          <div style={{position:"absolute",top:"12px",right:"12px",padding:"4px 12px",borderRadius:"4px",background:durumRenk(selBolum.durum).color,color:"#fff",fontSize:"11px",fontWeight:700,textTransform:"uppercase",zIndex:5}}>{durumRenk(selBolum.durum).label}</div>
+          <div style={{position:"absolute",top:"12px",right:"12px",padding:"5px 14px",borderRadius:"4px",background:durumRenk(selBolum.durum).color,color:"#fff",fontSize:"12px",fontWeight:700,textTransform:"uppercase",zIndex:5,letterSpacing:"0.3px"}}>{durumRenk(selBolum.durum).label}</div>
         </div>
 
-        <div style={{padding:"16px"}}>
-          <div style={{fontSize:"11px",color:T.t3,textTransform:"uppercase",letterSpacing:"0.5px"}}>{selBlokAd} Blok</div>
-          <div style={{fontSize:"28px",fontWeight:700,color:T.text,marginBottom:"12px"}}>Daire {selBolum.no||"—"}</div>
+        <div style={{padding:tamEkran?"20px":"16px",overflowY:"auto",flex:"1 1 auto",minHeight:0}}>
+          <div style={{fontSize:"12px",color:T.t3,textTransform:"uppercase",letterSpacing:"0.5px"}}>{selBlokAd} Blok</div>
+          <div style={{fontSize:tamEkran?"32px":"28px",fontWeight:700,color:T.text,marginBottom:"14px"}}>Daire {selBolum.no||"—"}</div>
 
           {/* Özellikler */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 16px",marginBottom:"14px",padding:"12px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`}}>
-            <div><div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase"}}>Kat</div><div style={{fontSize:"14px",fontWeight:600,color:T.text}}>{selBolum.kat||"—"}</div></div>
-            <div><div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase"}}>Oda Sayısı</div><div style={{fontSize:"14px",fontWeight:600,color:T.text}}>{selBolum.odaSayisi||"—"}</div></div>
-            <div><div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase"}}>Brüt m²</div><div style={{fontSize:"14px",fontWeight:600,color:T.text}}>{selBolum.brutM2?`${selBolum.brutM2} m²`:"—"}</div></div>
-            <div><div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase"}}>Net m²</div><div style={{fontSize:"14px",fontWeight:600,color:T.text}}>{selBolum.netM2?`${selBolum.netM2} m²`:"—"}</div></div>
-            <div style={{gridColumn:"1 / -1"}}><div style={{fontSize:"10px",color:T.t3,textTransform:"uppercase"}}>Cephe</div><div style={{fontSize:"14px",fontWeight:600,color:T.text}}>{selBolum.cephe||"—"}</div></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:tamEkran?"10px 18px":"8px 16px",marginBottom:"16px",padding:tamEkran?"14px":"12px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`}}>
+            <div><div style={{fontSize:"11px",color:T.t3,textTransform:"uppercase"}}>Kat</div><div style={{fontSize:tamEkran?"16px":"14px",fontWeight:700,color:T.text}}>{selBolum.kat||"—"}</div></div>
+            <div><div style={{fontSize:"11px",color:T.t3,textTransform:"uppercase"}}>Oda Sayısı</div><div style={{fontSize:tamEkran?"16px":"14px",fontWeight:700,color:T.text}}>{selBolum.odaSayisi||"—"}</div></div>
+            <div><div style={{fontSize:"11px",color:T.t3,textTransform:"uppercase"}}>Brüt m²</div><div style={{fontSize:tamEkran?"16px":"14px",fontWeight:700,color:T.text}}>{selBolum.brutM2?`${selBolum.brutM2} m²`:"—"}</div></div>
+            <div><div style={{fontSize:"11px",color:T.t3,textTransform:"uppercase"}}>Net m²</div><div style={{fontSize:tamEkran?"16px":"14px",fontWeight:700,color:T.text}}>{selBolum.netM2?`${selBolum.netM2} m²`:"—"}</div></div>
+            <div style={{gridColumn:"1 / -1"}}><div style={{fontSize:"11px",color:T.t3,textTransform:"uppercase"}}>Cephe</div><div style={{fontSize:tamEkran?"16px":"14px",fontWeight:700,color:T.text}}>{selBolum.cephe||"—"}</div></div>
           </div>
 
           {/* FİYAT KARTI — duruma göre: satıldı/opsiyonlu → satisBedeli+plus (KDV Hariç), musait → listeFiyati */}
@@ -9132,17 +9141,17 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
               const baslik=selBolum.durum==="satildi"?"Gerçekleşen Satış":"Opsiyon Bedeli";
               const arkaplan=selBolum.durum==="satildi"?"linear-gradient(135deg,#e6f4ff 0%,#bae7ff 100%)":"linear-gradient(135deg,#fff7e6 0%,#ffe7ba 100%)";
               const renk=selBolum.durum==="satildi"?"#0050b3":"#d46b08";
-              return<div style={{padding:"14px",background:arkaplan,borderRadius:T.r,marginBottom:"14px",textAlign:"center",position:"relative"}}>
-                <div style={{fontSize:"11px",color:renk,textTransform:"uppercase",letterSpacing:"0.5px",fontWeight:600}}>{baslik}</div>
-                <div style={{fontSize:"26px",fontWeight:700,color:renk}} title={plusTl>0?`Satış Bedeli ${satBed.toLocaleString("tr-TR")} ₺ + PLUS ${plusTl.toLocaleString("tr-TR")} ₺`:""}>{satFiyat>0?satFiyat.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺":"—"}</div>
-                <div style={{fontSize:"10px",color:renk,opacity:0.75,marginTop:"2px"}}>KDV Hariç Net{plusTl>0?` (Bedel ${satBed.toLocaleString("tr-TR")} + PLUS ${plusTl.toLocaleString("tr-TR")})`:""}{listeDahil>0?` • Plan: ${listeDahil.toLocaleString("tr-TR",{maximumFractionDigits:0})} ₺`:""}</div>
+              return<div style={{padding:tamEkran?"18px":"14px",background:arkaplan,borderRadius:T.r,marginBottom:"14px",textAlign:"center",position:"relative"}}>
+                <div style={{fontSize:"12px",color:renk,textTransform:"uppercase",letterSpacing:"0.5px",fontWeight:700}}>{baslik}</div>
+                <div style={{fontSize:tamEkran?"30px":"26px",fontWeight:700,color:renk,marginTop:"4px"}} title={plusTl>0?`Satış Bedeli ${satBed.toLocaleString("tr-TR")} ₺ + PLUS ${plusTl.toLocaleString("tr-TR")} ₺`:""}>{satFiyat>0?satFiyat.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺":"—"}</div>
+                <div style={{fontSize:"11px",color:renk,opacity:0.75,marginTop:"4px"}}>KDV Hariç Net{plusTl>0?` (Bedel ${satBed.toLocaleString("tr-TR")} + PLUS ${plusTl.toLocaleString("tr-TR")})`:""}{listeDahil>0?` • Plan: ${listeDahil.toLocaleString("tr-TR",{maximumFractionDigits:0})} ₺`:""}</div>
                 {!tamEkran&&<button onClick={fiyatDuzelt} title="Satış Bedeli + PLUS düzenle" style={{position:"absolute",top:"8px",right:"8px",padding:"4px 10px",borderRadius:"4px",border:`1px solid ${renk}66`,background:"#fff",color:renk,fontSize:"11px",fontWeight:600,cursor:"pointer"}}>Fiyat Düzelt</button>}
               </div>;
             }
-            if(listeDahil>0)return<div style={{padding:"14px",background:"linear-gradient(135deg,#f6ffed 0%,#d9f7be 100%)",borderRadius:T.r,marginBottom:"14px",textAlign:"center"}}>
-              <div style={{fontSize:"11px",color:"#389e0d",textTransform:"uppercase",letterSpacing:"0.5px",fontWeight:600}}>Liste Fiyatı (Plan)</div>
-              <div style={{fontSize:"26px",fontWeight:700,color:"#389e0d"}}>{listeDahil.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺"}</div>
-              <div style={{fontSize:"10px",color:"#389e0d",opacity:0.75,marginTop:"2px"}}>{(()=>{const n=parseFloat(selBolum.netM2);const k=!isNaN(n)&&n>=150?"20":"10";return `KDV Dahil (%${k})`;})()}</div>
+            if(listeDahil>0)return<div style={{padding:tamEkran?"18px":"14px",background:"linear-gradient(135deg,#f6ffed 0%,#d9f7be 100%)",borderRadius:T.r,marginBottom:"14px",textAlign:"center"}}>
+              <div style={{fontSize:"12px",color:"#389e0d",textTransform:"uppercase",letterSpacing:"0.5px",fontWeight:700}}>Liste Fiyatı (Plan)</div>
+              <div style={{fontSize:tamEkran?"30px":"26px",fontWeight:700,color:"#389e0d",marginTop:"4px"}}>{listeDahil.toLocaleString("tr-TR",{maximumFractionDigits:0})+" ₺"}</div>
+              <div style={{fontSize:"11px",color:"#389e0d",opacity:0.75,marginTop:"4px"}}>{(()=>{const n=parseFloat(selBolum.netM2);const k=!isNaN(n)&&n>=150?"20":"10";return `KDV Dahil (%${k})`;})()}</div>
             </div>;
             return null;
           })()}
@@ -9154,36 +9163,38 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
             {selBolum.sozlesmeTarihi&&<div style={{color:T.t3,fontSize:"11px"}}>Tarih: {selBolum.sozlesmeTarihi}</div>}
           </div>}
 
-          {/* BUTONLAR */}
-          <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
+          {/* BUTONLAR — iPad touch hedefi min 50px */}
+          <div style={{display:"flex",flexDirection:"column",gap:tamEkran?"10px":"8px"}}>
             {selBolum.durum==="musait"&&<>
-              <button onClick={()=>{setPickerIslem("opsiyonla");setPickerAcik(true);}} style={{padding:"12px",borderRadius:T.r,border:"none",background:"#fa8c16",color:"#fff",fontSize:"14px",fontWeight:600,cursor:"pointer"}}>🟡 Opsiyonla</button>
-              <button onClick={()=>{setPickerIslem("satildi");setPickerAcik(true);}} style={{padding:"12px",borderRadius:T.r,border:"none",background:"#1677ff",color:"#fff",fontSize:"14px",fontWeight:600,cursor:"pointer"}}>🔵 Satıldı İşaretle</button>
+              <button onClick={()=>{setPickerIslem("opsiyonla");setPickerAcik(true);}} style={{padding:tamEkran?"16px":"12px",borderRadius:T.r,border:"none",background:"#fa8c16",color:"#fff",fontSize:tamEkran?"16px":"14px",fontWeight:700,cursor:"pointer",minHeight:tamEkran?"52px":"auto"}}>🟡 Opsiyonla</button>
+              <button onClick={()=>{setPickerIslem("satildi");setPickerAcik(true);}} style={{padding:tamEkran?"16px":"12px",borderRadius:T.r,border:"none",background:"#1677ff",color:"#fff",fontSize:tamEkran?"16px":"14px",fontWeight:700,cursor:"pointer",minHeight:tamEkran?"52px":"auto"}}>🔵 Satıldı İşaretle</button>
             </>}
             {selBolum.durum==="opsiyonlu"&&(()=>{
               const mevcutFirma=firmalar.find(f=>String(f.id)===String(selBolum.aliciFirmaId));
               const aliciMi=(mevcutFirma?.turler||[]).includes("alici");
               return <>
                 {aliciMi
-                  ?<button onClick={()=>{setPickerIslem("satildi");setPickerAcik(true);}} style={{padding:"12px",borderRadius:T.r,border:"none",background:"#1677ff",color:"#fff",fontSize:"14px",fontWeight:600,cursor:"pointer"}}>🔵 Satışa Çevir</button>
+                  ?<button onClick={()=>{setPickerIslem("satildi");setPickerAcik(true);}} style={{padding:tamEkran?"16px":"12px",borderRadius:T.r,border:"none",background:"#1677ff",color:"#fff",fontSize:tamEkran?"16px":"14px",fontWeight:700,cursor:"pointer",minHeight:tamEkran?"52px":"auto"}}>🔵 Satışa Çevir</button>
                   :<>
-                    <button disabled style={{padding:"12px",borderRadius:T.r,border:"none",background:"#d9d9d9",color:"#fff",fontSize:"14px",fontWeight:600,cursor:"not-allowed"}}>🔵 Satışa Çevir</button>
-                    <div style={{padding:"10px 12px",background:"#fff7e6",border:"1px solid #ffd591",borderRadius:T.r,fontSize:"11px",color:"#d46b08",lineHeight:1.5}}>
+                    <button disabled style={{padding:tamEkran?"16px":"12px",borderRadius:T.r,border:"none",background:"#d9d9d9",color:"#fff",fontSize:tamEkran?"16px":"14px",fontWeight:700,cursor:"not-allowed",minHeight:tamEkran?"52px":"auto"}}>🔵 Satışa Çevir</button>
+                    <div style={{padding:"10px 12px",background:"#fff7e6",border:"1px solid #ffd591",borderRadius:T.r,fontSize:"12px",color:"#d46b08",lineHeight:1.5}}>
                       ⚠ <strong>Müşteri potansiyel statüsünde.</strong> Satışa çevirmek için müşteriyi önce <strong>Alıcı</strong>'ya dönüştürüp TC/VKN, adres ve telefon gibi zorunlu bilgileri tamamlamalısınız.
                     </div>
-                    <button onClick={()=>goToFirma&&goToFirma(selBolum.aliciFirmaId)} style={{padding:"10px",borderRadius:T.r,border:"1px solid #52c41a",background:"#f6ffed",color:"#389e0d",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>Firma Kartına Git →</button>
+                    <button onClick={()=>goToFirma&&goToFirma(selBolum.aliciFirmaId)} style={{padding:tamEkran?"14px":"10px",borderRadius:T.r,border:"1px solid #52c41a",background:"#f6ffed",color:"#389e0d",fontSize:tamEkran?"15px":"13px",fontWeight:700,cursor:"pointer",minHeight:tamEkran?"48px":"auto"}}>Firma Kartına Git →</button>
                   </>
                 }
-                <button onClick={musaitYap} style={{padding:"10px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>Müsait Yap</button>
+                <button onClick={musaitYap} style={{padding:tamEkran?"14px":"10px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:tamEkran?"15px":"13px",cursor:"pointer",minHeight:tamEkran?"48px":"auto"}}>Müsait Yap</button>
               </>;
             })()}
-            {selBolum.durum==="satildi"&&<button onClick={musaitYap} style={{padding:"10px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>Müsait Yap (Satışı iptal)</button>}
+            {selBolum.durum==="satildi"&&<button onClick={musaitYap} style={{padding:tamEkran?"14px":"10px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:tamEkran?"15px":"13px",cursor:"pointer",minHeight:tamEkran?"48px":"auto"}}>Müsait Yap (Satışı iptal)</button>}
           </div>
 
           {!tamEkran&&selBolum.aliciFirmaId&&<button onClick={()=>goToFirma&&goToFirma(selBolum.aliciFirmaId)} style={{marginTop:"10px",width:"100%",padding:"8px",borderRadius:T.r,border:"none",background:"transparent",color:T.primary,fontSize:"12px",cursor:"pointer",textDecoration:"underline"}}>Müşteri Kartına Git →</button>}
         </div>
       </div>}
     </div>}
+    </div>{/* /İÇERİK ALANI */}
+    </div>{/* /iPad sabit container */}
   </div>;
 
   return content;
