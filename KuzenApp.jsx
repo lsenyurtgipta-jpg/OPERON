@@ -8734,8 +8734,9 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
   // body zoom: 0.9 olduğu için 100vh/0.9 ve 100vw/0.9 ile gerçek CSS alanını alıyoruz
   const PAD=16;                 // overlay padding
   const TOP_BAR=78;            // üst bar yüksekliği (başlık + breadcrumb + padding-bottom + 14px margin)
+  const EXTRA_PAY=100;         // Safari URL bar + home indicator için ek pay
   // Adım 2 sidebar/slider yüksekliği — Sunum Modunda viewport'a göre
-  const sunumIcerikH=`calc((100vh / 0.9) - ${PAD*2 + TOP_BAR}px)`;
+  const sunumIcerikH=`calc((100vh / 0.9) - ${PAD*2 + TOP_BAR + EXTRA_PAY}px)`;
 
   const selProje=projeler.find(p=>p.id===selProjeId);
   const selBlok=selProje?.bloklar?.find(b=>b.ad===selBlokAd);
