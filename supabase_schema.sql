@@ -320,6 +320,8 @@ CREATE TABLE bolumler (
   net_m2 NUMERIC,
   oda_sayisi TEXT,
   cephe TEXT,
+  isitma TEXT,         -- Isıtma durumu (2026-05-16)
+  banyo_sayisi TEXT,   -- Banyo sayısı (2026-05-16)
   durum TEXT DEFAULT 'musait',
   sahiplik TEXT,
   para_birimi TEXT DEFAULT 'TL',

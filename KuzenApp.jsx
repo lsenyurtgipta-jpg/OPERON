@@ -4612,6 +4612,8 @@ const bolumToLocal = (b) => ({
   netM2: b.net_m2!=null?String(b.net_m2):"",
   odaSayisi: b.oda_sayisi||"",
   cephe: b.cephe||"",
+  isitma: b.isitma||"",
+  banyoSayisi: b.banyo_sayisi||"",
   durum: b.durum||"musait",
   sahiplik: b.sahiplik||"",
   satisBedeli: b.satis_bedeli!=null?String(b.satis_bedeli):"",
@@ -4638,6 +4640,8 @@ const bolumToDb = (b, projeId) => ({
   net_m2: b.netM2!==""&&b.netM2!=null?Number(b.netM2):null,
   oda_sayisi: b.odaSayisi||"",
   cephe: b.cephe||"",
+  isitma: b.isitma||"",
+  banyo_sayisi: b.banyoSayisi||"",
   durum: b.durum||"musait",
   sahiplik: b.sahiplik||"",
   satis_bedeli: b.satisBedeli!==""&&b.satisBedeli!=null?Number(b.satisBedeli):null,
@@ -5412,13 +5416,40 @@ const SeviyeModal=({blokAd,sev,onSave,onClose,onDosyaEkle,ilgiliDosyalar=[]})=>{
 };
 
 /* --- Bağımsız Bölüm Detay Modal --- */
-const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[],anlasmaYontemi=""})=>{
+const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[],anlasmaYontemi="",projeTumDosyalar=[],onProjeDosyaEkle,onProjeDosyaSil})=>{
   const[form,setForm]=useState({...bolum});
   const u=(f,v)=>setForm(p=>({...p,[f]:v}));
   const[tab,setTab]=useState("bilgi");
   const[saved,setSaved]=useState(false);
+  const[tapuYukleniyor,setTapuYukleniyor]=useState(false);
   const save=()=>{onSave(form);setSaved(true);setTimeout(()=>setSaved(false),2000);};
   const tabs=[{id:"bilgi",label:"Bilgiler",icon:"📋"},{id:"dosyalar",label:"Dosyalar",icon:"📂"}];
+  // Tapu — daireye bağlı "Resmi Evraklar › Tapu" dosyası (merkezi tumDosyalar üzerinde, sunumda slider'a girmemesi için sunumGoster:false)
+  const tapuDosya=(projeTumDosyalar||[]).find(d=>d.altKategori==="Tapu"&&(d.bolumIds||[]).includes(form.id));
+  const tapuYukle=async(file)=>{
+    if(!file||!onProjeDosyaEkle)return;
+    setTapuYukleniyor(true);
+    const dosyaId=Date.now()+Math.floor(Math.random()*1000);
+    const path=`projeler/${dosyaId}_${safeName(file.name)}`;
+    try{
+      await sbUpload(path,file);
+      const ext=(file.name||"").split(".").pop().toLowerCase();
+      const turMap={"pdf":"PDF","doc":"Word","docx":"Word","xls":"Excel","xlsx":"Excel","csv":"Excel","dwg":"AutoCAD","dxf":"AutoCAD","jpg":"Görsel","jpeg":"Görsel","png":"Görsel","gif":"Görsel","webp":"Görsel","tif":"Taranmış Belge","tiff":"Taranmış Belge","bmp":"Görsel"};
+      onProjeDosyaEkle({
+        id:dosyaId,ad:file.name,aciklama:`Tapu — ${form.blok||""} ${form.tipi||"Daire"} ${form.no||""}`.trim(),
+        anaKategori:"Resmi Evraklar",altKategori:"Tapu",dosyaTuru:turMap[ext]||"Diğer",
+        boyut:Math.round(file.size/1024),tip:file.type,storagePath:path,data:"",
+        tarih:new Date().toISOString().split("T")[0],resim:file.type.startsWith("image/"),
+        bolumIds:[form.id],sunumGoster:false
+      });
+    }catch(err){console.error("Tapu yükleme hatası:",err);alert("Tapu yüklenemedi: "+err.message);}
+    setTapuYukleniyor(false);
+  };
+  const tapuSil=()=>{
+    if(!tapuDosya||!onProjeDosyaSil)return;
+    if(!confirm("Tapu dosyası silinsin mi?"))return;
+    onProjeDosyaSil(tapuDosya.id);
+  };
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
     <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"640px",maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <div style={{padding:"12px 20px",background:"#384248",display:"flex",alignItems:"center",gap:"16px",borderRadius:`${T.rl} ${T.rl} 0 0`}}>
@@ -5455,6 +5486,29 @@ const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[],anlasmaYontemi
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
             <div><label style={lS}>Oda Sayısı</label><select style={iS} value={form.odaSayisi||""} onChange={e=>u("odaSayisi",e.target.value)}><option value="">—</option>{["1+0","1+1","2+1","3+1","4+1","4+2","5+1","5+2","Stüdyo","Dubleks"].map(o=><option key={o}>{o}</option>)}</select></div>
             <div><label style={lS}>Cephe</label><select style={iS} value={form.cephe||""} onChange={e=>u("cephe",e.target.value)}><option value="">—</option>{["Kuzey","Güney","Doğu","Batı","Kuzey-Doğu","Kuzey-Batı","Güney-Doğu","Güney-Batı"].map(o=><option key={o}>{o}</option>)}</select></div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
+            <div><label style={lS}>Isıtma</label><select style={iS} value={form.isitma||""} onChange={e=>u("isitma",e.target.value)}><option value="">—</option>{["Doğalgaz Kombi - Yerden Isıtma","Doğalgaz Kombi - Petek Isıtma"].map(o=><option key={o}>{o}</option>)}</select></div>
+            <div><label style={lS}>Banyo Sayısı</label><input style={iS} type="number" min="0" value={form.banyoSayisi||""} onChange={e=>u("banyoSayisi",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/></div>
+          </div>
+          {/* TAPU — daireye bağlı resmi evrak (merkezi Dosya Yönetimi: Resmi Evraklar › Tapu) */}
+          <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,padding:"12px 14px",background:"#fafafa"}}>
+            <label style={{...lS,display:"block",marginBottom:"8px"}}>📄 Tapu</label>
+            {tapuDosya
+              ?<div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:"13px",color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tapuDosya.ad}</div>
+                  <div style={{fontSize:"11px",color:T.t3}}>{tapuDosya.tarih||""}</div>
+                </div>
+                <button onClick={()=>acDosya(tapuDosya)} style={{padding:"6px 12px",borderRadius:T.r,border:`1px solid ${T.primary}`,background:"#fff",color:T.primary,fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Aç</button>
+                <button onClick={tapuSil} style={{padding:"6px 12px",borderRadius:T.r,border:"1px solid #ff6b6b",background:"#fff",color:"#ff6b6b",fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Sil</button>
+              </div>
+              :<label style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",padding:"10px",borderRadius:T.r,border:`1px dashed ${T.bDark}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:tapuYukleniyor?"wait":"pointer"}}>
+                {tapuYukleniyor?"Yükleniyor...":"Tapu Dosyası Yükle (PDF / Görsel)"}
+                <input type="file" accept=".pdf,image/*" disabled={tapuYukleniyor||!onProjeDosyaEkle} style={{display:"none"}} onChange={e=>{const f=e.target.files[0];e.target.value="";tapuYukle(f);}}/>
+              </label>
+            }
+            {!onProjeDosyaEkle&&<div style={{fontSize:"11px",color:T.t3,marginTop:"6px"}}>ℹ️ Tapu yükleme yalnızca proje üzerinden açılan daire kartında kullanılabilir.</div>}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
             <div><label style={lS}>Durum</label><select style={iS} value={form.durum||"musait"} onChange={e=>u("durum",e.target.value)}>{BOLUM_DURUMLARI.map(d=><option key={d.id} value={d.id}>{d.label}</option>)}</select></div>
@@ -5585,7 +5639,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
 
   // Bölüm işlemleri
   const addBolum=()=>{
-    const yeni={id:Date.now(),tipi:"Daire",blok:"",no:"",kat:"",brutM2:"",netM2:"",odaSayisi:"",cephe:"",durum:"musait",sahiplik:"",satisBedeli:"",plus:"",paraBirimi:"TL",sozlesmeTarihi:"",aliciFirmaId:"",aliciFirmaAd:"",notlar:"",gorseller:[]};
+    const yeni={id:Date.now(),tipi:"Daire",blok:"",no:"",kat:"",brutM2:"",netM2:"",odaSayisi:"",cephe:"",isitma:"",banyoSayisi:"",durum:"musait",sahiplik:"",satisBedeli:"",plus:"",paraBirimi:"TL",sozlesmeTarihi:"",aliciFirmaId:"",aliciFirmaAd:"",notlar:"",gorseller:[]};
     setBolumModal(yeni);
   };
   const saveBolum=(b)=>{
@@ -5615,7 +5669,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
   const durumObj=PROJE_DURUMLARI.find(d=>d.label===form.durum)||null;
 
   return <div>
-    {bolumModal&&<BolumModal bolum={bolumModal} onSave={saveBolum} onDel={delBolum} onClose={()=>setBolumModal(null)} firmalar={firmalar} bloklar={form.bloklar||[]} anlasmaYontemi={form.anlasmaYontemi||""}/>}
+    {bolumModal&&<BolumModal bolum={bolumModal} onSave={saveBolum} onDel={delBolum} onClose={()=>setBolumModal(null)} firmalar={firmalar} bloklar={form.bloklar||[]} anlasmaYontemi={form.anlasmaYontemi||""} projeTumDosyalar={form.tumDosyalar||[]} onProjeDosyaEkle={(d)=>setForm(p=>{const updated={...p,tumDosyalar:[...(p.tumDosyalar||[]),d]};setTimeout(()=>onSave(updated),0);return updated;})} onProjeDosyaSil={(id)=>setForm(p=>{const updated={...p,tumDosyalar:(p.tumDosyalar||[]).filter(x=>x.id!==id)};setTimeout(()=>onSave(updated),0);return updated;})}/>}
     {/* HEADER */}
     <div style={{display:"flex",alignItems:"center",gap:"16px",marginBottom:"0",padding:"12px 20px",background:"#384248",borderRadius:"8px 8px 0 0",paddingBottom:"8px"}}>
       <button onClick={onBack} title="Geri" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={32}/></button>
@@ -5946,7 +6000,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
         };
 
         const addBolumToBlok=(blokAd)=>{
-          const yeni={id:Date.now(),tipi:"Daire",blok:blokAd,no:"",kat:"",brutM2:"",netM2:"",odaSayisi:"",cephe:"",durum:"musait",sahiplik:"",satisBedeli:"",plus:"",paraBirimi:"TL",sozlesmeTarihi:"",aliciFirmaId:"",aliciFirmaAd:"",notlar:"",gorseller:[]};
+          const yeni={id:Date.now(),tipi:"Daire",blok:blokAd,no:"",kat:"",brutM2:"",netM2:"",odaSayisi:"",cephe:"",isitma:"",banyoSayisi:"",durum:"musait",sahiplik:"",satisBedeli:"",plus:"",paraBirimi:"TL",sozlesmeTarihi:"",aliciFirmaId:"",aliciFirmaAd:"",notlar:"",gorseller:[]};
           setBolumModal(yeni);
         };
 
@@ -9376,8 +9430,16 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
             <div><div style={{fontSize:"11px",color:T.t3,textTransform:"uppercase"}}>Oda Sayısı</div><div style={{fontSize:tamEkran?"16px":"14px",fontWeight:700,color:T.text}}>{selBolum.odaSayisi||"—"}</div></div>
             <div><div style={{fontSize:"11px",color:T.t3,textTransform:"uppercase"}}>Brüt m²</div><div style={{fontSize:tamEkran?"16px":"14px",fontWeight:700,color:T.text}}>{selBolum.brutM2?`${selBolum.brutM2} m²`:"—"}</div></div>
             <div><div style={{fontSize:"11px",color:T.t3,textTransform:"uppercase"}}>Net m²</div><div style={{fontSize:tamEkran?"16px":"14px",fontWeight:700,color:T.text}}>{selBolum.netM2?`${selBolum.netM2} m²`:"—"}</div></div>
-            <div style={{gridColumn:"1 / -1"}}><div style={{fontSize:"11px",color:T.t3,textTransform:"uppercase"}}>Cephe</div><div style={{fontSize:tamEkran?"16px":"14px",fontWeight:700,color:T.text}}>{selBolum.cephe||"—"}</div></div>
+            <div><div style={{fontSize:"11px",color:T.t3,textTransform:"uppercase"}}>Cephe</div><div style={{fontSize:tamEkran?"16px":"14px",fontWeight:700,color:T.text}}>{selBolum.cephe||"—"}</div></div>
+            <div><div style={{fontSize:"11px",color:T.t3,textTransform:"uppercase"}}>Banyo Sayısı</div><div style={{fontSize:tamEkran?"16px":"14px",fontWeight:700,color:T.text}}>{selBolum.banyoSayisi||"—"}</div></div>
+            <div style={{gridColumn:"1 / -1"}}><div style={{fontSize:"11px",color:T.t3,textTransform:"uppercase"}}>Isıtma</div><div style={{fontSize:tamEkran?"16px":"14px",fontWeight:700,color:T.text}}>{selBolum.isitma||"—"}</div></div>
           </div>
+          {/* TAPU — daireye bağlı tapu dosyası varsa görüntüle */}
+          {(()=>{
+            const tapu=(selProje?.tumDosyalar||[]).find(d=>d.altKategori==="Tapu"&&(d.bolumIds||[]).includes(selBolum.id));
+            if(!tapu)return null;
+            return <button onClick={()=>acDosya(tapu)} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",width:"100%",padding:tamEkran?"14px":"10px",borderRadius:T.r,border:`1px solid ${T.primary}`,background:"#fff",color:T.primary,fontSize:tamEkran?"15px":"13px",fontWeight:700,cursor:"pointer",marginBottom:"14px"}}>📄 Tapu Görüntüle</button>;
+          })()}
 
           {/* FİYAT KARTI — duruma göre: satıldı/opsiyonlu → satisBedeli+plus (KDV Hariç), musait → listeFiyati */}
           {(()=>{
