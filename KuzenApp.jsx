@@ -86,6 +86,14 @@ const acDosya = async (d) => {
   }
 };
 const safeName = (name) => (name || "dosya").replace(/[^a-zA-Z0-9._-]/g, "_").substring(0, 80);
+const VIDEO_EXT_RE = /\.(mp4|m4v|mov|webm|ogv|mkv)$/i;
+const isVideoDosyasi = (d) => {
+  if (!d) return false;
+  if (typeof d === "string") return d.startsWith("data:video/") || VIDEO_EXT_RE.test(d);
+  const tip = (d.tip || d.dosyaTuru || "").toLowerCase();
+  if (tip.startsWith("video/")) return true;
+  return VIDEO_EXT_RE.test((d.ad || d.storagePath || d.url || "").toLowerCase());
+};
 const nTR = (s) => (s==null?"":String(s)).replace(/[İIı]/g,"i").replace(/[şŞ]/g,"s").replace(/[ğĞ]/g,"g").replace(/[üÜ]/g,"u").replace(/[öÖ]/g,"o").replace(/[çÇ]/g,"c").toLowerCase();
 
 const fmtDate=(d)=>{if(!d)return"—";const p=d.split("-");if(p.length!==3)return d;return`${p[2]}.${p[1]}.${p[0]}`;};
@@ -4908,6 +4916,13 @@ const DosyaModal=({dosya,onSave,onClose,onDel,kategoriler,getAltKatlar,bolumler=
     input.type="file";
     input.onchange=async(e)=>{
       const file=e.target.files[0];if(!file)return;
+      const vidName=/\.(mp4|m4v|mov|webm|ogv|mkv|avi|wmv|flv)$/i.test(file.name||"");
+      if((file.type||"").startsWith("video/")||vidName){
+        const mp4Ok=(file.type==="video/mp4")||/\.mp4$/i.test(file.name||"");
+        if(!mp4Ok){alert("Sadece MP4 (H.264) video kabul edilir.\nBu dosya: "+(file.type||file.name));return;}
+        const mb=file.size/(1024*1024);
+        if(mb>25){alert(`Video en fazla 25 MB olabilir.\nBu dosya: ${mb.toFixed(1)} MB.\nLütfen daha kısa veya sıkıştırılmış bir video yükleyin.`);return;}
+      }
       const dosyaId=Date.now()+Math.floor(Math.random()*1000);
       const path=`projeler/${dosyaId}_${safeName(file.name)}`;
       try{
@@ -8759,23 +8774,31 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
 };
 
 /* ---- GÖRSEL SLIDER (yeniden kullanılabilir) ---- */
+const MedyaFiltreSeg=({deger,setDeger})=>{
+  const seg=[{k:"hepsi",l:"Tümü"},{k:"resim",l:"Resim"},{k:"video",l:"Video"}];
+  return <div style={{position:"absolute",top:"12px",left:"12px",zIndex:6,display:"flex",gap:"2px",padding:"3px",borderRadius:"14px",background:"rgba(0,0,0,0.45)"}}>
+    {seg.map(s=><button key={s.k} onClick={()=>setDeger(s.k)} style={{padding:"5px 12px",borderRadius:"11px",border:"none",background:deger===s.k?"#fff":"transparent",color:deger===s.k?"#1f1f1f":"#fff",fontSize:"12px",fontWeight:deger===s.k?700:500,cursor:"pointer",transition:"all .15s"}}>{s.l}</button>)}
+  </div>;
+};
 const GorselSlider=({gorseller=[],yukseklik="380px",otomatik=true,placeholderIcon="🏢",placeholderText="Henüz görsel eklenmemiş"})=>{
   const[idx,setIdx]=useState(0);
   const[duraklat,setDuraklat]=useState(false);
   const[lightOpen,setLightOpen]=useState(false);
+  const[videoOynadi,setVideoOynadi]=useState(false);
   const touchStartX=useRef(null);
   const touchStartY=useRef(null);
   const lightTouchStartX=useRef(null);
   const lightTouchStartY=useRef(null);
   const say=gorseller.length;
 
-  useEffect(()=>{setIdx(0);setLightOpen(false);},[gorseller]);
+  useEffect(()=>{setIdx(0);setLightOpen(false);setVideoOynadi(false);},[gorseller]);
+  useEffect(()=>{setVideoOynadi(false);},[idx]);
 
   useEffect(()=>{
-    if(!otomatik||say<=1||duraklat||lightOpen)return;
+    if(!otomatik||say<=1||duraklat||lightOpen||gorseller[idx]?.video)return;
     const t=setInterval(()=>setIdx(p=>(p+1)%say),5000);
     return()=>clearInterval(t);
-  },[say,otomatik,duraklat,lightOpen]);
+  },[say,otomatik,duraklat,lightOpen,idx,gorseller]);
 
   const prev=()=>setIdx(p=>(p-1+say)%say);
   const next=()=>setIdx(p=>(p+1)%say);
@@ -8840,7 +8863,11 @@ const GorselSlider=({gorseller=[],yukseklik="380px",otomatik=true,placeholderIco
 
   return <>
     <div onMouseEnter={()=>setDuraklat(true)} onMouseLeave={()=>setDuraklat(false)} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{position:"relative",height:yukseklik,borderRadius:T.rl,overflow:"hidden",background:"#000",boxShadow:T.shM,touchAction:"pan-y"}}>
-      <div onClick={()=>setLightOpen(true)} title="Büyütmek için tıklayın" style={{position:"absolute",inset:0,background:`url(${aktif?.url||""}) center/contain no-repeat, url(${aktif?.url||""}) center/cover`,backgroundBlendMode:"normal",transition:"background-image .4s ease",cursor:"zoom-in"}}></div>
+      {aktif?.video
+        ?<video key={aktif?.url} src={aktif?.url||""} controls playsInline preload="metadata" onPlay={()=>setVideoOynadi(true)} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"contain",background:"#000"}}/>
+        :<div onClick={()=>setLightOpen(true)} title="Büyütmek için tıklayın" style={{position:"absolute",inset:0,background:`url(${aktif?.url||""}) center/contain no-repeat, url(${aktif?.url||""}) center/cover`,backgroundBlendMode:"normal",transition:"background-image .4s ease",cursor:"zoom-in"}}></div>
+      }
+      {aktif?.video&&!videoOynadi&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}><div style={{width:"84px",height:"84px",borderRadius:"50%",background:"rgba(0,0,0,0.55)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"34px",paddingLeft:"6px"}}>▶</div></div>}
       {/* Başlık varsa alt kısımda */}
       {aktif?.aciklama&&<div style={{position:"absolute",bottom:0,left:0,right:0,padding:"16px 24px",background:"linear-gradient(180deg,transparent 0%,rgba(0,0,0,0.75) 100%)",color:"#fff",fontSize:"14px",fontWeight:500,pointerEvents:"none"}}>{aktif.aciklama}</div>}
       {/* Sol / sağ oklar */}
@@ -8857,7 +8884,10 @@ const GorselSlider=({gorseller=[],yukseklik="380px",otomatik=true,placeholderIco
     </div>
     {/* LIGHTBOX — tam ekran büyüt + oklar + kapat + swipe + Esc */}
     {lightOpen&&<div onTouchStart={lightTouchStart} onTouchEnd={lightTouchEnd} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.95)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",touchAction:"pan-y"}}>
-      <img src={aktif?.url||""} alt={aktif?.aciklama||""} style={{maxWidth:"95vw",maxHeight:"90vh",objectFit:"contain",userSelect:"none"}}/>
+      {aktif?.video
+        ?<video src={aktif?.url||""} controls playsInline autoPlay style={{maxWidth:"95vw",maxHeight:"90vh",objectFit:"contain"}}/>
+        :<img src={aktif?.url||""} alt={aktif?.aciklama||""} style={{maxWidth:"95vw",maxHeight:"90vh",objectFit:"contain",userSelect:"none"}}/>
+      }
       {aktif?.aciklama&&<div style={{position:"fixed",bottom:"40px",left:"50%",transform:"translateX(-50%)",padding:"10px 22px",background:"rgba(0,0,0,0.65)",color:"#fff",fontSize:"16px",fontWeight:500,borderRadius:"24px",maxWidth:"80vw",textAlign:"center"}}>{aktif.aciklama}</div>}
       {/* Kapat */}
       <button onClick={()=>setLightOpen(false)} title="Kapat (Esc)" style={{position:"fixed",top:"20px",right:"24px",width:"52px",height:"52px",borderRadius:"50%",border:"none",background:"rgba(255,255,255,0.15)",color:"#fff",fontSize:"28px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.3)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.15)"}>×</button>
@@ -9016,6 +9046,8 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
   const[tamEkran,setTamEkran]=useState(true); // iPad Pro 13" odaklı: sayfaya girince otomatik Sunum Modu
   const[pickerAcik,setPickerAcik]=useState(false);
   const[pickerIslem,setPickerIslem]=useState(null); // "opsiyonla" | "satildi"
+  const[medyaFiltre,setMedyaFiltre]=useState("hepsi"); // sunum slider filtresi: hepsi | resim | video
+  const filtreUygula=(arr)=>medyaFiltre==="resim"?(arr||[]).filter(x=>!x.video):medyaFiltre==="video"?(arr||[]).filter(x=>x.video):(arr||[]);
 
   // iPad Sunum Modu — dinamik viewport ebatları (Safari URL bar + alt çubuğu hesaba katar)
   // body zoom: 0.9 olduğu için 100vh/0.9 ve 100vw/0.9 ile gerçek CSS alanını alıyoruz
@@ -9075,8 +9107,8 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
       if(d.sunumGoster===false)return;
       const dosyaSrc=dosyaUrl(d);
       if(!dosyaSrc)return;
-      if(d.anaKategori==="Proje Görselleri"||isResimDosyasi(d)){
-        items.push({url:dosyaSrc,aciklama:d.aciklama||d.ad||"",sira:parseInt(d.sunumSira)||0});
+      if(d.anaKategori==="Proje Görselleri"||isResimDosyasi(d)||isVideoDosyasi(d)){
+        items.push({url:dosyaSrc,aciklama:d.aciklama||d.ad||"",sira:parseInt(d.sunumSira)||0,video:isVideoDosyasi(d)});
       }
     });
     // 2) Eski alan: proje.gorseller
@@ -9084,7 +9116,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
       if(g.sunumGoster===false)return;
       const src=g.url||dosyaUrl(g);
       if(!src)return;
-      if(!items.some(x=>x.url===src))items.push({url:src,aciklama:g.aciklama||g.ad||"",sira:parseInt(g.sunumSira)||0});
+      if(!items.some(x=>x.url===src))items.push({url:src,aciklama:g.aciklama||g.ad||"",sira:parseInt(g.sunumSira)||0,video:isVideoDosyasi(g)});
     });
     // Sıralama: sira>0 olanlar önce (ascending), 0/boş olanlar sona
     items.sort((a,b)=>{
@@ -9092,7 +9124,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
       const bSira=b.sira||Infinity;
       return aSira-bSira;
     });
-    return items.map(({url,aciklama})=>({url,aciklama}));
+    return items.map(({url,aciklama,video})=>({url,aciklama,video}));
   };
   // Daire görselleri
   // 1) Yeni sistem: tumDosyalar içinde bolumIds bu daireyi içeren görseller (sunumGoster=true, sunumSira artan)
@@ -9105,20 +9137,20 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
       if(d.sunumGoster===false)return;
       const src=dosyaUrl(d);
       if(!src)return;
-      items.push({url:src,aciklama:d.aciklama||d.ad||"",sira:parseInt(d.sunumSira)||0});
+      items.push({url:src,aciklama:d.aciklama||d.ad||"",sira:parseInt(d.sunumSira)||0,video:isVideoDosyasi(d)});
     });
     (bolum?.gorseller||[]).forEach(g=>{
       const src=g.url||dosyaUrl(g);
       if(!src)return;
       if(items.some(x=>x.url===src))return;
-      items.push({url:src,aciklama:g.aciklama||g.ad||"",sira:0});
+      items.push({url:src,aciklama:g.aciklama||g.ad||"",sira:0,video:isVideoDosyasi(g)});
     });
     items.sort((a,b)=>{
       const aS=a.sira||Infinity;
       const bS=b.sira||Infinity;
       return aS-bS;
     });
-    return items.map(({url,aciklama})=>({url,aciklama}));
+    return items.map(({url,aciklama,video})=>({url,aciklama,video}));
   };
   // İlk görsel (kart için) — önce tumDosyalar içinde kapakMi=true, yoksa eski kapakGorseli, yoksa sunum ilk
   const projeIlkGorsel=(proje)=>{
@@ -9327,8 +9359,9 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
       const sliderH=tamEkran?sunumIcerikH:"845px";
       return <div style={{flex:"1 1 auto",minHeight:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
         {/* 3:2 sabit oran slider — görsel yükleme ebadı: 1800×1200 px (önerilen 2700×1800 retina) */}
-        <div style={{aspectRatio:"3/2",maxHeight:sliderH,width:"100%"}}>
-          <GorselSlider gorseller={pgor} yukseklik="100%" otomatik={true} placeholderIcon="🏢" placeholderText="Bu proje için henüz tanıtım görseli eklenmemiş"/>
+        <div style={{aspectRatio:"3/2",maxHeight:sliderH,width:"100%",position:"relative"}}>
+          <MedyaFiltreSeg deger={medyaFiltre} setDeger={setMedyaFiltre}/>
+          <GorselSlider gorseller={filtreUygula(pgor)} yukseklik="100%" otomatik={true} placeholderIcon="🏢" placeholderText="Bu proje için henüz tanıtım görseli/videosu eklenmemiş"/>
         </div>
       </div>;
     })()}
@@ -9413,8 +9446,9 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
           {(()=>{
             const daireG=bolumGorselleri(selBolum);
             // 3:2 sabit oran — sadece daireye atanmış görseller (proje tanıtım görselleri fallback kaldırıldı)
-            return <div style={{aspectRatio:"3/2",width:"100%"}}>
-              <GorselSlider gorseller={daireG} yukseklik="100%" otomatik={true} placeholderIcon="🏠" placeholderText="Bu daireye henüz görsel atanmamış (Dosya Yönetimi → Proje Görselleri → Daire Detayları)"/>
+            return <div style={{aspectRatio:"3/2",width:"100%",position:"relative"}}>
+              <MedyaFiltreSeg deger={medyaFiltre} setDeger={setMedyaFiltre}/>
+              <GorselSlider gorseller={filtreUygula(daireG)} yukseklik="100%" otomatik={true} placeholderIcon="🏠" placeholderText="Bu daireye henüz görsel/video atanmamış (Dosya Yönetimi → Proje Görselleri → Daire Detayları)"/>
             </div>;
           })()}
           <div style={{position:"absolute",top:"12px",right:"12px",padding:"5px 14px",borderRadius:"4px",background:durumRenk(selBolum.durum).color,color:"#fff",fontSize:"12px",fontWeight:700,textTransform:"uppercase",zIndex:5,letterSpacing:"0.3px"}}>{durumRenk(selBolum.durum).label}</div>
