@@ -258,6 +258,8 @@ CREATE TABLE projeler (
   ilce TEXT DEFAULT '',
   mahalle TEXT DEFAULT '',
   adres TEXT DEFAULT '',
+  enlem TEXT DEFAULT '',   -- Konum enlem/latitude (2026-05-16)
+  boylam TEXT DEFAULT '',  -- Konum boylam/longitude (2026-05-16)
   ada TEXT DEFAULT '',
   parsel TEXT DEFAULT '',
   baslangic_tarihi TEXT DEFAULT '',

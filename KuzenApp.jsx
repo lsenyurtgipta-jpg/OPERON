@@ -94,6 +94,14 @@ const isVideoDosyasi = (d) => {
   if (tip.startsWith("video/")) return true;
   return VIDEO_EXT_RE.test((d.ad || d.storagePath || d.url || "").toLowerCase());
 };
+const projeHaritaUrl = (p) => {
+  if (!p) return "";
+  const lat = parseFloat(String(p.enlem || "").replace(",", ".").trim());
+  const lng = parseFloat(String(p.boylam || "").replace(",", ".").trim());
+  if (!isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0)) return `https://www.google.com/maps?q=${lat},${lng}`;
+  const parts = [p.adres, p.mahalle, p.ilce, p.il].filter(Boolean).join(", ");
+  return parts ? `https://www.google.com/maps/search/${encodeURIComponent(parts)}` : "";
+};
 const nTR = (s) => (s==null?"":String(s)).replace(/[İIı]/g,"i").replace(/[şŞ]/g,"s").replace(/[ğĞ]/g,"g").replace(/[üÜ]/g,"u").replace(/[öÖ]/g,"o").replace(/[çÇ]/g,"c").toLowerCase();
 
 const fmtDate=(d)=>{if(!d)return"—";const p=d.split("-");if(p.length!==3)return d;return`${p[2]}.${p[1]}.${p[0]}`;};
@@ -4363,6 +4371,7 @@ const projeToLocal = (p) => ({
   id: p.id, projeKodu: p.proje_kodu||"", ad: p.ad||"", kisaAd: p.kisa_ad||"",
   tur: p.tur||"", durum: p.durum||"", aktif: p.aktif!==false,
   il: p.il||"", ilce: p.ilce||"", mahalle: p.mahalle||"", adres: p.adres||"",
+  enlem: p.enlem||"", boylam: p.boylam||"",
   ada: p.ada||"", parsel: p.parsel||"",
   baslangicTarihi: p.baslangic_tarihi||"", tahminiTeslim: p.tahmini_teslim||"", fiiliTeslim: p.fiili_teslim||"",
   toplamM2: p.toplam_m2||"", katSayisi: p.kat_sayisi||"", toplamBolum: p.toplam_bolum||"",
@@ -4392,6 +4401,7 @@ const projeToDb = (p) => ({
   proje_kodu: p.projeKodu||"", ad: p.ad||"", kisa_ad: p.kisaAd||"",
   tur: p.tur||"", durum: p.durum||"", aktif: p.aktif!==false,
   il: p.il||"", ilce: p.ilce||"", mahalle: p.mahalle||"", adres: p.adres||"",
+  enlem: p.enlem||"", boylam: p.boylam||"",
   ada: p.ada||"", parsel: p.parsel||"",
   baslangic_tarihi: p.baslangicTarihi||"", tahmini_teslim: p.tahminiTeslim||"", fiili_teslim: p.fiiliTeslim||"",
   toplam_m2: p.toplamM2||"", kat_sayisi: p.katSayisi||"", toplam_bolum: p.toplamBolum||"",
@@ -5578,7 +5588,7 @@ const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[],anlasmaYontemi
 const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,goToFirma,malzemeler=[],bagimsizBolumKartiAc,tumMuteahhitDairelerineKartAc})=>{
   const emptyProje={
     id:null,projeKodu:"",ad:"",kisaAd:"",tur:"",durum:"",aktif:true,
-    il:"",ilce:"",mahalle:"",adres:"",ada:"",parsel:"",
+    il:"",ilce:"",mahalle:"",adres:"",enlem:"",boylam:"",ada:"",parsel:"",
     baslangicTarihi:"",tahminiTeslim:"",fiiliTeslim:"",
     toplamM2:"",katSayisi:"",toplamBolum:"",
     arsaM2:"",emsal:"",toplamEmsal:"",
@@ -5743,10 +5753,26 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
           <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Adres</label>
           <input style={iS} value={form.adres||""} onChange={e=>u("adres",toTitleCase(e.target.value))} placeholder="Adres ve Sokak Bilgileri" onFocus={foc} onBlur={blr}/>
           <button onClick={()=>{
-            const parts=[form.adres,form.mahalle,form.ilce,form.il].filter(Boolean).join(", ");
-            if(parts)window.open(`https://www.google.com/maps/search/${encodeURIComponent(parts)}`,"_blank");
-            else alert("Adres bilgisi giriniz.");
+            const url=projeHaritaUrl(form);
+            if(url)window.open(url,"_blank");
+            else alert("Adres veya koordinat giriniz.");
           }} title="Haritada Göster" style={{padding:"0",border:"none",background:"transparent",color:"#384248",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"flex-end"}}><Map size={28}/></button>
+        </div>
+        {/* KOORDİNAT — tam pin için (girilirse harita tam noktaya gider, yoksa adres metnine düşer) */}
+        <div style={{display:"grid",gridTemplateColumns:"120px 1fr 1fr 35px",gap:"8px",alignItems:"center"}}>
+          <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Koordinat</label>
+          <input style={iS} value={form.enlem||""} onChange={e=>u("enlem",e.target.value)} placeholder="Enlem (41.204261)" onFocus={foc} onBlur={blr}/>
+          <input style={iS} value={form.boylam||""} onChange={e=>u("boylam",e.target.value)} placeholder="Boylam (36.977834)" onFocus={foc} onBlur={blr}/>
+          <button onClick={()=>{
+            const lat=parseFloat(String(form.enlem||"").replace(",",".").trim());
+            const lng=parseFloat(String(form.boylam||"").replace(",",".").trim());
+            if(!isNaN(lat)&&!isNaN(lng)&&(lat!==0||lng!==0))window.open(`https://www.google.com/maps?q=${lat},${lng}`,"_blank");
+            else alert("Geçerli Enlem ve Boylam giriniz (örn: 41.204261 ve 36.977834).");
+          }} title="Koordinatı Haritada Aç" style={{padding:"0",border:"none",background:"transparent",color:"#384248",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"flex-end"}}><Map size={28}/></button>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px"}}>
+          <div></div>
+          <div style={{fontSize:"11px",color:T.t3,marginTop:"-6px"}}>ℹ️ Google Maps'te konuma sağ tık → çıkan koordinatı (örn <b>41.204261, 36.977834</b>) kopyalayıp Enlem ve Boylam'a yazın. Girilirse harita tam o noktaya gider.</div>
         </div>
         {/* PROJE TÜRÜ */}
         <div style={{display:"grid",gridTemplateColumns:"120px 1fr 35px",gap:"8px",alignItems:"start"}}>
@@ -9303,9 +9329,9 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
         </div>
         {/* Konum ikonu — tıklanınca proje adresi Google Maps'te yeni sekmede açılır */}
         {selProje&&(()=>{
-          const parts=[selProje.adres,selProje.mahalle,selProje.ilce,selProje.il].filter(Boolean).join(", ");
-          if(!parts)return null;
-          return <button onClick={()=>window.open(`https://www.google.com/maps/search/${encodeURIComponent(parts)}`,"_blank")} title={`Haritada Göster: ${parts}`} style={{display:"flex",alignItems:"center",justifyContent:"center",width:"44px",height:"44px",borderRadius:"50%",border:`1px solid ${T.border}`,background:"#fff",color:T.primary,cursor:"pointer",flexShrink:0,transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.background=T.pBg;e.currentTarget.style.borderColor=T.primary;}} onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.borderColor=T.border;}}><MapPin size={22}/></button>;
+          const url=projeHaritaUrl(selProje);
+          if(!url)return null;
+          return <button onClick={()=>window.open(url,"_blank")} title="Haritada Göster" style={{display:"flex",alignItems:"center",justifyContent:"center",width:"44px",height:"44px",borderRadius:"50%",border:`1px solid ${T.border}`,background:"#fff",color:T.primary,cursor:"pointer",flexShrink:0,transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.background=T.pBg;e.currentTarget.style.borderColor=T.primary;}} onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.borderColor=T.border;}}><MapPin size={22}/></button>;
         })()}
         {breadcrumb}
       </div>
