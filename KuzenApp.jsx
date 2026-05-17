@@ -9071,12 +9071,12 @@ const SatisRaporPage=({projeler})=>{
 
 
 /* ---- SATIŞ SUNUM PAGE ---- */
-const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage,goToFirma})=>{
+const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage,goToFirma,gomulu=false})=>{
   const[selProjeId,setSelProjeId]=useState(null);
   const[tanitimGecildi,setTanitimGecildi]=useState(false);
   const[selBlokAd,setSelBlokAd]=useState(null);
   const[selBolumId,setSelBolumId]=useState(null);
-  const[tamEkran,setTamEkran]=useState(true); // iPad Pro 13" odaklı: sayfaya girince otomatik Sunum Modu
+  const[tamEkran,setTamEkran]=useState(!gomulu); // gomulu (satıcı): overlay yok, ana ekranda akar; admin: otomatik Sunum Modu
   const[pickerAcik,setPickerAcik]=useState(false);
   const[pickerIslem,setPickerIslem]=useState(null); // "opsiyonla" | "satildi"
   const[medyaFiltre,setMedyaFiltre]=useState("hepsi"); // sunum slider filtresi: hepsi | resim | video
@@ -9334,13 +9334,13 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
         })()}
         {breadcrumb}
       </div>
-      <div style={{display:"flex",alignItems:"center",gap:"10px",flexShrink:0}}>
+      {!gomulu&&<div style={{display:"flex",alignItems:"center",gap:"10px",flexShrink:0}}>
         <label style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",padding:"10px 16px",borderRadius:"24px",border:`1px solid ${tamEkran?T.primary:T.border}`,background:tamEkran?T.pBg:"#fff",color:tamEkran?T.primary:T.t2,fontSize:"14px",fontWeight:600,minHeight:"44px",boxSizing:"border-box"}}>
           <input type="checkbox" checked={tamEkran} onChange={e=>setTamEkran(e.target.checked)} style={{cursor:"pointer",width:"16px",height:"16px"}}/>
           🖥️ Sunum
         </label>
         {tamEkran&&<button onClick={()=>setTamEkran(false)} style={{padding:"10px 18px",borderRadius:"24px",border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"14px",fontWeight:500,cursor:"pointer",minHeight:"44px"}}>✕ Kapat</button>}
-      </div>
+      </div>}
     </div>
 
     {/* İÇERİK ALANI — sabit yükseklik, gerektiğinde iç scroll */}
@@ -9705,6 +9705,7 @@ export default function App(){
   const[goToId,setGoToId]=useState(null);
   const goToFirma=(firmaId)=>{setGoToId(firmaId);setPage("firmalar");};
   const[sbOpen,setSbOpen]=useState(true);
+  const[saticiMenu,setSaticiMenu]=useState(false); // satıcı üst-bar açılır menü
   const[loading,setLoading]=useState(true);
   const[toast,setToast]=useState(null);
   const showToast = useCallback((msg) => {
@@ -10859,15 +10860,34 @@ export default function App(){
   if(showSifreDegistir) return <SifreDegistirPage user={currentUser} onDone={handleSifreDegisti} onCancel={()=>setShowSifreDegistir(false)}/>;
 
   const adminOnly = isAdmin(currentUser);
+  const satici = isSatici(currentUser);
   const avatarHarf = (currentUser.kullaniciAdi||"?").charAt(0).toUpperCase();
 
   return <div style={{display:"flex",height:"100%",width:"100%",background:T.bg,fontFamily:T.f,overflow:"hidden"}}>
-    <Sidebar page={page} setPage={(p)=>{setEditMode(false);setPage(p);}} open={sbOpen} editMode={editMode} currentUser={currentUser}/>
+    {!satici&&<Sidebar page={page} setPage={(p)=>{setEditMode(false);setPage(p);}} open={sbOpen} editMode={editMode} currentUser={currentUser}/>}
     <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-      <div style={{height:"56px",minHeight:"56px",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",background:"#fff",borderBottom:`1px solid ${T.border}`,boxShadow:T.sh}}>
-        <button onClick={()=>setSbOpen(!sbOpen)} style={{background:"none",border:"none",color:T.t2,cursor:"pointer",padding:"6px",fontSize:"18px",borderRadius:"6px"}} onMouseEnter={e=>e.currentTarget.style.background="#f5f5f5"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>☰</button>
+      <div style={{height:satici?"84px":"56px",minHeight:satici?"84px":"56px",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",background:"#fff",borderBottom:`1px solid ${T.border}`,boxShadow:T.sh}}>
+        <div style={{width:"100%",height:"100%",maxWidth:satici?"1518px":"none",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        {satici
+          ? <div style={{display:"flex",alignItems:"center",gap:"50px"}}>
+              <div role="img" aria-label="OPERON" style={{height:"60px",width:"360px",backgroundColor:"#384248",WebkitMaskImage:`url(${operonLogo})`,maskImage:`url(${operonLogo})`,WebkitMaskRepeat:"no-repeat",maskRepeat:"no-repeat",WebkitMaskSize:"contain",maskSize:"contain",WebkitMaskPosition:"left center",maskPosition:"left center"}}/>
+              <div style={{position:"relative"}}>
+                <button onClick={()=>setSaticiMenu(v=>!v)} style={{display:"flex",alignItems:"center",gap:"8px",padding:"8px 16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff",color:T.text,fontSize:"14px",fontWeight:600,cursor:"pointer",minHeight:"40px"}}>☰ Menü ▾</button>
+                {saticiMenu&&<>
+                  <div onClick={()=>setSaticiMenu(false)} style={{position:"fixed",inset:0,zIndex:50}}/>
+                  <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,zIndex:51,minWidth:"220px",background:"#fff",border:`1px solid ${T.border}`,borderRadius:"10px",boxShadow:T.shM,padding:"6px"}}>
+                    <button onClick={()=>{setEditMode(false);setPage("firmalar");setSaticiMenu(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"10px 14px",border:"none",background:page==="firmalar"?T.pBg:"#fff",color:page==="firmalar"?T.primary:T.text,fontSize:"14px",fontWeight:page==="firmalar"?700:500,cursor:"pointer",borderRadius:"6px"}}>Firmalar</button>
+                    <div style={{fontSize:"11px",fontWeight:700,color:T.t3,textTransform:"uppercase",letterSpacing:"0.4px",padding:"8px 14px 4px"}}>Satış</div>
+                    <button onClick={()=>{setEditMode(false);setPage("satis_sunum");setSaticiMenu(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"10px 14px 10px 24px",border:"none",background:page==="satis_sunum"?T.pBg:"#fff",color:page==="satis_sunum"?T.primary:T.text,fontSize:"14px",fontWeight:page==="satis_sunum"?700:500,cursor:"pointer",borderRadius:"6px"}}>Sunum</button>
+                    <button onClick={()=>{setEditMode(false);setPage("satis_rapor");setSaticiMenu(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"10px 14px 10px 24px",border:"none",background:page==="satis_rapor"?T.pBg:"#fff",color:page==="satis_rapor"?T.primary:T.text,fontSize:"14px",fontWeight:page==="satis_rapor"?700:500,cursor:"pointer",borderRadius:"6px"}}>Raporlar</button>
+                  </div>
+                </>}
+              </div>
+            </div>
+          : <button onClick={()=>setSbOpen(!sbOpen)} style={{background:"none",border:"none",color:T.t2,cursor:"pointer",padding:"6px",fontSize:"18px",borderRadius:"6px"}} onMouseEnter={e=>e.currentTarget.style.background="#f5f5f5"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>☰</button>
+        }
         <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
-          <div style={{padding:"6px 14px",borderRadius:"6px",border:`1px solid ${T.border}`,fontSize:"13px",color:T.t3,display:"flex",alignItems:"center",gap:"6px"}}>🗄️ Supabase Bağlı</div>
+          {!satici&&<div style={{padding:"6px 14px",borderRadius:"6px",border:`1px solid ${T.border}`,fontSize:"13px",color:T.t3,display:"flex",alignItems:"center",gap:"6px"}}>🗄️ Supabase Bağlı</div>}
           <div style={{display:"flex",alignItems:"center",gap:"8px",padding:"4px 10px 4px 4px",borderRadius:"20px",border:`1px solid ${T.border}`,background:"#fafafa"}}>
             <div style={{width:"28px",height:"28px",borderRadius:"50%",background:T.primary,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:600,fontSize:"12px"}}>{avatarHarf}</div>
             <div style={{fontSize:"13px",color:T.text,fontWeight:500}}>{currentUser.kullaniciAdi}</div>
@@ -10875,6 +10895,7 @@ export default function App(){
           </div>
           <button onClick={()=>setShowSifreDegistir(true)} title="Şifre Değiştir" style={{background:"none",border:`1px solid ${T.border}`,color:T.t2,cursor:"pointer",padding:"6px 10px",fontSize:"12px",borderRadius:"6px",display:"flex",alignItems:"center",gap:"4px"}}><Lock size={14}/></button>
           <button onClick={()=>{ if(confirm("Çıkış yapılsın mı?")) handleLogout(); }} title="Çıkış" style={{background:"none",border:`1px solid ${T.border}`,color:T.t2,cursor:"pointer",padding:"6px 10px",fontSize:"12px",borderRadius:"6px",display:"flex",alignItems:"center",gap:"4px"}}><LogOut size={14}/></button>
+        </div>
         </div>
       </div>
       <div style={{flex:1,overflow:"auto",padding:"24px"}}>
@@ -10887,7 +10908,7 @@ export default function App(){
         {page==="satinalma"&&<SatinalmaSiparisleriPage siparisler={siparisler} setSiparisler={setSiparisler} onSave={saveSiparis} onDel={delSiparis} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler} butceKalemleri={butceKalemleri} faturalar={faturalar}/>}
         {page==="alis_fatura"&&<AlisFaturalariPage faturalar={faturalar} setFaturalar={setFaturalar} onSave={saveFatura} onDel={delFatura} siparisler={siparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler} butceKalemleri={butceKalemleri}/>}
         {page==="maliyet"&&<MaliyetPage projeler={projeler} setProjeler={setProjeler} malzemeler={malzemeler} faturalar={faturalar} siparisler={siparisler} firmalar={firmalar} butceKalemleri={butceKalemleri} saveButceKalemi={saveButceKalemi} delButceKalemi={delButceKalemi} bulkSaveButceKalemleri={bulkSaveButceKalemleri}/>}
-        {page==="satis_sunum"&&<SatisSunumPage projeler={projeler} setProjeler={setProjeler} firmalar={firmalar} saveProje={saveProje} saveFirma={saveFirma} setPage={setPage} goToFirma={goToFirma}/>}
+        {page==="satis_sunum"&&<SatisSunumPage projeler={projeler} setProjeler={setProjeler} firmalar={firmalar} saveProje={saveProje} saveFirma={saveFirma} setPage={setPage} goToFirma={goToFirma} gomulu={satici}/>}
         {page==="satis_rapor"&&<SatisRaporPage projeler={projeler}/>}
         {page==="kullanicilar"&&adminOnly&&<KullanicilarPage currentUser={currentUser}/>}
       </div>
