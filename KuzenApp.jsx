@@ -9135,21 +9135,13 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
   // Sıralama: d.sunumSira artan (boş/0 → sona)
   const projeGorselleri=(proje)=>{
     const items=[];
-    // 1) tumDosyalar'dan "Proje Görselleri" kategorisi
+    // Sadece "Proje Görselleri › Genel Görseller" (kullanıcı talebi 2026-05-17) — diğer alt kategoriler ve eski gorseller[] hariç
     (proje?.tumDosyalar||[]).forEach(d=>{
       if(d.sunumGoster===false)return;
+      if(d.anaKategori!=="Proje Görselleri"||d.altKategori!=="Genel Görseller")return;
       const dosyaSrc=dosyaUrl(d);
       if(!dosyaSrc)return;
-      if(d.anaKategori==="Proje Görselleri"||isResimDosyasi(d)||isVideoDosyasi(d)){
-        items.push({url:dosyaSrc,aciklama:d.aciklama||d.ad||"",sira:parseInt(d.sunumSira)||0,video:isVideoDosyasi(d)});
-      }
-    });
-    // 2) Eski alan: proje.gorseller
-    (proje?.gorseller||[]).forEach(g=>{
-      if(g.sunumGoster===false)return;
-      const src=g.url||dosyaUrl(g);
-      if(!src)return;
-      if(!items.some(x=>x.url===src))items.push({url:src,aciklama:g.aciklama||g.ad||"",sira:parseInt(g.sunumSira)||0,video:isVideoDosyasi(g)});
+      items.push({url:dosyaSrc,aciklama:d.aciklama||d.ad||"",sira:parseInt(d.sunumSira)||0,video:isVideoDosyasi(d)});
     });
     // Sıralama: sira>0 olanlar önce (ascending), 0/boş olanlar sona
     items.sort((a,b)=>{
