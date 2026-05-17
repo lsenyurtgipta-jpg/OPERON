@@ -10866,8 +10866,8 @@ export default function App(){
   return <div style={{display:"flex",height:"100%",width:"100%",background:T.bg,fontFamily:T.f,overflow:"hidden"}}>
     {!satici&&<Sidebar page={page} setPage={(p)=>{setEditMode(false);setPage(p);}} open={sbOpen} editMode={editMode} currentUser={currentUser}/>}
     <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-      <div style={{height:satici?"84px":"56px",minHeight:satici?"84px":"56px",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",background:"#fff",borderBottom:`1px solid ${T.border}`,boxShadow:T.sh}}>
-        <div style={{width:"100%",height:"100%",maxWidth:satici?"1518px":"none",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <div style={{height:satici?"67px":"56px",minHeight:satici?"67px":"56px",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",background:"#fff",borderBottom:`1px solid ${T.border}`,boxShadow:T.sh}}>
+        <div style={{width:"100%",height:"100%",maxWidth:satici?"1266px":"none",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         {satici
           ? <div style={{display:"flex",alignItems:"center",gap:"50px"}}>
               <div role="img" aria-label="OPERON" style={{height:"60px",width:"360px",backgroundColor:"#384248",WebkitMaskImage:`url(${operonLogo})`,maskImage:`url(${operonLogo})`,WebkitMaskRepeat:"no-repeat",maskRepeat:"no-repeat",WebkitMaskSize:"contain",maskSize:"contain",WebkitMaskPosition:"left center",maskPosition:"left center"}}/>
@@ -10886,7 +10886,7 @@ export default function App(){
             </div>
           : <button onClick={()=>setSbOpen(!sbOpen)} style={{background:"none",border:"none",color:T.t2,cursor:"pointer",padding:"6px",fontSize:"18px",borderRadius:"6px"}} onMouseEnter={e=>e.currentTarget.style.background="#f5f5f5"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>☰</button>
         }
-        <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px",marginRight:satici?"50px":"0"}}>
           {!satici&&<div style={{padding:"6px 14px",borderRadius:"6px",border:`1px solid ${T.border}`,fontSize:"13px",color:T.t3,display:"flex",alignItems:"center",gap:"6px"}}>🗄️ Supabase Bağlı</div>}
           <div style={{display:"flex",alignItems:"center",gap:"8px",padding:"4px 10px 4px 4px",borderRadius:"20px",border:`1px solid ${T.border}`,background:"#fafafa"}}>
             <div style={{width:"28px",height:"28px",borderRadius:"50%",background:T.primary,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:600,fontSize:"12px"}}>{avatarHarf}</div>
