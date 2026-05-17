@@ -9381,7 +9381,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     {/* ADIM 2 — PROJE TANITIM (sidebar kaldırıldı; stat & blok geçişi ADIM 3 ve breadcrumb'tan; slider 16:9 tam alan) */}
     {adim===2&&selProje&&(()=>{
       const pgor=projeGorselleri(selProje);
-      const sliderH=tamEkran?sunumIcerikH:"845px";
+      const sliderH=tamEkran?sunumIcerikH:"700px";
       return <div style={{flex:"1 1 auto",minHeight:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
         {/* 3:2 sabit oran slider — görsel yükleme ebadı: 1800×1200 px (önerilen 2700×1800 retina) */}
         <div style={{aspectRatio:"3/2",maxHeight:sliderH,width:"100%",position:"relative"}}>
