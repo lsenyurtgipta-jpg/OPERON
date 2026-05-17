@@ -791,6 +791,7 @@ const SATICI_UI={
   rightShift:50,       // sağ grup (avatar/şifre/çıkış) sola kayma
   sunumSliderH:700,    // Satış Sunumu › Tanıtım slider yüksekliği (satıcı/gomulu)
   daireEkranH:600,     // Satış Sunumu › ADIM 4 (Daire) ekranı maxHeight (satıcı/gomulu)
+  daireEkranW:1186,    // Satış Sunumu › ADIM 4 (Daire) ekranı maxWidth, ortalı (satıcı/gomulu)
 };
 const foc=(e)=>{e.target.style.borderColor=T.primary;e.target.style.boxShadow=`0 0 0 2px ${T.primary}1a`;};
 const blr=(e)=>{e.target.style.borderColor=T.bDark;e.target.style.boxShadow="none";};
@@ -9441,7 +9442,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     </div>}
 
     {/* ADIM 4 — DAİRE SEÇİMİ + DETAY (iPad: sağ panel 460px, sol grid scroll edilebilir) */}
-    {adim===4&&selProje&&selBlok&&<div style={{display:"grid",gridTemplateColumns:selBolum?(tamEkran?"1fr 460px":"1fr 400px"):"1fr",gap:tamEkran?"18px":"16px",flex:"1 1 auto",minHeight:0,alignItems:"stretch",maxHeight:gomulu?`${SATICI_UI.daireEkranH}px`:undefined}}>
+    {adim===4&&selProje&&selBlok&&<div style={{display:"grid",gridTemplateColumns:selBolum?(tamEkran?"1fr 460px":"1fr 400px"):"1fr",gap:tamEkran?"18px":"16px",flex:"1 1 auto",minHeight:0,alignItems:"stretch",maxHeight:gomulu?`${SATICI_UI.daireEkranH}px`:undefined,maxWidth:gomulu?`${SATICI_UI.daireEkranW}px`:undefined,marginLeft:gomulu?"auto":undefined,marginRight:gomulu?"auto":undefined,width:gomulu?"100%":undefined}}>
       <div style={{display:"flex",flexDirection:"column",minHeight:0,overflow:"hidden"}}>
         {/* Durum filtre rozetleri */}
         <div style={{marginBottom:"12px",padding:tamEkran?"14px 18px":"12px 16px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:"20px",flexWrap:"wrap",flexShrink:0}}>
