@@ -5476,7 +5476,7 @@ const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[],anlasmaYontemi
     onProjeDosyaSil(tapuDosya.id);
   };
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-    <div style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"640px",maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+    <div style={{background:"#fff",borderRadius:T.rl,width:"1000px",height:"800px",display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <div style={{padding:"12px 20px",background:"#384248",display:"flex",alignItems:"center",gap:"16px",borderRadius:`${T.rl} ${T.rl} 0 0`}}>
         <button onClick={onClose} title="Kapat" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={28}/></button>
         <div style={{flex:1,textAlign:"center"}}>
@@ -5491,31 +5491,37 @@ const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[],anlasmaYontemi
         {tabs.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"6px 14px",borderRadius:"6px 6px 0 0",border:`1px solid ${tab===t.id?T.primary:T.border}`,borderBottom:tab===t.id?"none":"",background:tab===t.id?"#fff":T.bg,color:tab===t.id?T.primary:T.t2,fontWeight:tab===t.id?600:400,fontSize:"13px",cursor:"pointer",marginBottom:"-1px"}}>{t.icon} {t.label}</button>)}
       </div>
       <div style={{flex:1,overflow:"auto",padding:"20px"}}>
-        {tab==="bilgi"&&<div style={{display:"flex",flexDirection:"column",gap:"14px"}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px"}}>
-            <div><label style={lS}>Tip</label><select style={iS} value={form.tipi||""} onChange={e=>u("tipi",e.target.value)}>{BOLUM_TURLERI.map(t=><option key={t}>{t}</option>)}</select></div>
-            <div><label style={lS}>Blok</label>{bloklar.length>0
-              ?<select style={iS} value={form.blok||""} onChange={e=>u("blok",e.target.value)}>
-                <option value="">— Blok seçiniz —</option>
+        {tab==="bilgi"&&<div style={{display:"flex",flexDirection:"column",gap:"18px"}}>
+          {/* ÜST SATIR — Grup 1 / Grup 2 / Grup 3 yan yana */}
+          <div style={{display:"flex",gap:"20px",alignItems:"flex-start"}}>
+          {/* GRUP 1 — Tip/Blok/No/Kat dikey; etiket solda, dikey ortalı; 95px */}
+          <div style={{display:"flex",flexDirection:"column",gap:"10px",flexShrink:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:"8px"}}><label style={{width:"38px",textAlign:"right",fontSize:"13px",fontWeight:600,color:T.text,flexShrink:0}}>Tip</label><select style={{...iS,width:"95px"}} value={form.tipi||""} onChange={e=>u("tipi",e.target.value)}>{BOLUM_TURLERI.map(t=><option key={t}>{t}</option>)}</select></div>
+            <div style={{display:"flex",alignItems:"center",gap:"8px"}}><label style={{width:"38px",textAlign:"right",fontSize:"13px",fontWeight:600,color:T.text,flexShrink:0}}>Blok</label>{bloklar.length>0
+              ?<select style={{...iS,width:"95px"}} value={form.blok||""} onChange={e=>u("blok",e.target.value)}>
+                <option value="">—</option>
                 {bloklar.map(b=><option key={b.id} value={b.ad}>{b.ad}</option>)}
               </select>
-              :<input style={iS} value={form.blok||""} onChange={e=>u("blok",toTitleCase(e.target.value))} placeholder="A, B, C..." onFocus={foc} onBlur={blr}/>
+              :<input style={{...iS,width:"95px"}} value={form.blok||""} onChange={e=>u("blok",toTitleCase(e.target.value))} placeholder="A,B,C" onFocus={foc} onBlur={blr}/>
             }</div>
-            <div><label style={lS}>No</label><input style={iS} value={form.no||""} onChange={e=>u("no",e.target.value)} placeholder="1, 2A..." onFocus={foc} onBlur={blr}/></div>
+            <div style={{display:"flex",alignItems:"center",gap:"8px"}}><label style={{width:"38px",textAlign:"right",fontSize:"13px",fontWeight:600,color:T.text,flexShrink:0}}>No</label><input style={{...iS,width:"95px"}} value={form.no||""} onChange={e=>u("no",e.target.value)} placeholder="1, 2A" onFocus={foc} onBlur={blr}/></div>
+            <div style={{display:"flex",alignItems:"center",gap:"8px"}}><label style={{width:"38px",textAlign:"right",fontSize:"13px",fontWeight:600,color:T.text,flexShrink:0}}>Kat</label><input style={{...iS,width:"95px"}} type="number" value={form.kat||""} onChange={e=>u("kat",e.target.value)} placeholder="1" onFocus={foc} onBlur={blr}/></div>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px"}}>
-            <div><label style={lS}>Kat</label><input style={iS} type="number" value={form.kat||""} onChange={e=>u("kat",e.target.value)} placeholder="1" onFocus={foc} onBlur={blr}/></div>
-            <div><label style={lS}>Brüt m²</label><input style={iS} type="number" value={form.brutM2||""} onChange={e=>u("brutM2",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/></div>
-            <div><label style={lS}>Net m²</label><input style={iS} type="number" value={form.netM2||""} onChange={e=>u("netM2",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/></div>
+          {/* GRUP 2 — Brüt / Net / Oda Sayısı dikey; etiket solda, dikey ortalı; 95px */}
+          <div style={{display:"flex",flexDirection:"column",gap:"10px",flexShrink:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:"8px"}}><label style={{width:"66px",textAlign:"right",fontSize:"13px",fontWeight:600,color:T.text,flexShrink:0,whiteSpace:"nowrap"}}>Brüt m²</label><input style={{...iS,width:"95px"}} type="number" value={form.brutM2||""} onChange={e=>u("brutM2",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/></div>
+            <div style={{display:"flex",alignItems:"center",gap:"8px"}}><label style={{width:"66px",textAlign:"right",fontSize:"13px",fontWeight:600,color:T.text,flexShrink:0,whiteSpace:"nowrap"}}>Net m²</label><input style={{...iS,width:"95px"}} type="number" value={form.netM2||""} onChange={e=>u("netM2",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/></div>
+            <div style={{display:"flex",alignItems:"center",gap:"8px"}}><label style={{width:"66px",textAlign:"right",fontSize:"13px",fontWeight:600,color:T.text,flexShrink:0,whiteSpace:"nowrap"}}>Oda Sayısı</label><select style={{...iS,width:"95px"}} value={form.odaSayisi||""} onChange={e=>u("odaSayisi",e.target.value)}><option value="">—</option>{["1+0","1+1","2+1","3+1","4+1","4+2","5+1","5+2","Stüdyo","Dubleks"].map(o=><option key={o}>{o}</option>)}</select></div>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
-            <div><label style={lS}>Oda Sayısı</label><select style={iS} value={form.odaSayisi||""} onChange={e=>u("odaSayisi",e.target.value)}><option value="">—</option>{["1+0","1+1","2+1","3+1","4+1","4+2","5+1","5+2","Stüdyo","Dubleks"].map(o=><option key={o}>{o}</option>)}</select></div>
-            <div><label style={lS}>Cephe</label><select style={iS} value={form.cephe||""} onChange={e=>u("cephe",e.target.value)}><option value="">—</option>{["Kuzey","Güney","Doğu","Batı","Kuzey-Doğu","Kuzey-Batı","Güney-Doğu","Güney-Batı"].map(o=><option key={o}>{o}</option>)}</select></div>
+          {/* GRUP 3 — Isıtma / Banyo Sayısı / Cephe dikey; etiket solda, dikey ortalı; 275px */}
+          <div style={{display:"flex",flexDirection:"column",gap:"10px",flexShrink:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:"8px"}}><label style={{width:"84px",textAlign:"right",fontSize:"13px",fontWeight:600,color:T.text,flexShrink:0,whiteSpace:"nowrap"}}>Isıtma</label><select style={{...iS,width:"275px"}} value={form.isitma||""} onChange={e=>u("isitma",e.target.value)}><option value="">—</option>{["Doğalgaz Kombi - Yerden Isıtma","Doğalgaz Kombi - Petek Isıtma"].map(o=><option key={o}>{o}</option>)}</select></div>
+            <div style={{display:"flex",alignItems:"center",gap:"8px"}}><label style={{width:"84px",textAlign:"right",fontSize:"13px",fontWeight:600,color:T.text,flexShrink:0,whiteSpace:"nowrap"}}>Banyo Sayısı</label><input style={{...iS,width:"275px"}} type="number" min="0" value={form.banyoSayisi||""} onChange={e=>u("banyoSayisi",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/></div>
+            <div style={{display:"flex",alignItems:"center",gap:"8px"}}><label style={{width:"84px",textAlign:"right",fontSize:"13px",fontWeight:600,color:T.text,flexShrink:0,whiteSpace:"nowrap"}}>Cephe</label><select style={{...iS,width:"275px"}} value={form.cephe||""} onChange={e=>u("cephe",e.target.value)}><option value="">—</option>{["Kuzey","Güney","Doğu","Batı","Kuzey-Doğu","Kuzey-Batı","Güney-Doğu","Güney-Batı"].map(o=><option key={o}>{o}</option>)}</select></div>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
-            <div><label style={lS}>Isıtma</label><select style={iS} value={form.isitma||""} onChange={e=>u("isitma",e.target.value)}><option value="">—</option>{["Doğalgaz Kombi - Yerden Isıtma","Doğalgaz Kombi - Petek Isıtma"].map(o=><option key={o}>{o}</option>)}</select></div>
-            <div><label style={lS}>Banyo Sayısı</label><input style={iS} type="number" min="0" value={form.banyoSayisi||""} onChange={e=>u("banyoSayisi",e.target.value)} placeholder="0" onFocus={foc} onBlur={blr}/></div>
-          </div>
+          </div>{/* /ÜST SATIR */}
+          {/* ALT BÖLGE — kalan alanlar grupların ALTINDA, tam genişlik */}
+          <div style={{display:"flex",flexDirection:"column",gap:"14px"}}>
           {/* TAPU — daireye bağlı resmi evrak (merkezi Dosya Yönetimi: Resmi Evraklar › Tapu) */}
           <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,padding:"12px 14px",background:"#fafafa"}}>
             <label style={{...lS,display:"block",marginBottom:"8px"}}>📄 Tapu</label>
@@ -5573,6 +5579,7 @@ const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[],anlasmaYontemi
             </div>
           </div>
           <div><label style={lS}>Notlar</label><textarea style={{...iS,height:"72px",resize:"vertical"}} value={form.notlar||""} onChange={e=>u("notlar",e.target.value)} onFocus={foc} onBlur={blr}/></div>
+          </div>{/* /ALT BÖLGE */}
         </div>}
         {tab==="dosyalar"&&<div style={{padding:"20px",textAlign:"center",color:T.t3}}>
           <div style={{fontSize:"32px",marginBottom:"8px"}}>📂</div>
