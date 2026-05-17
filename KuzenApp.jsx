@@ -778,6 +778,19 @@ const Badge=({type})=>{const t=FIRMA_TURLERI.find(f=>f.id===type);if(!t)return n
 const PBadge=({pb})=>{const p=PARA_BIRIMLERI.find(x=>x.id===pb);if(!p)return null;return <span style={{display:"inline-flex",alignItems:"center",padding:"0 8px",height:"22px",borderRadius:"4px",fontSize:"12px",fontWeight:600,color:"#389e0d",background:"#f6ffed",border:"1px solid #b7eb8f",lineHeight:"22px"}}>{p.symbol} {p.id}</span>;};
 const iS={width:"100%",height:"36px",padding:"0 11px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"16px",outline:"none",transition:"all .3s",boxSizing:"border-box",lineHeight:"36px"};
 const lS={display:"block",color:T.text,fontSize:"14px",fontWeight:500,marginBottom:"8px"};
+// ── SATICI (sales) GÖRSEL ÖLÇÜ CONFIG'İ ──────────────────────────────────────
+// Satıcı UI'sının TÜM ayarlanabilir ölçüleri burada (tek nokta). Görsel ince
+// ayar = sadece bu bloktaki sayıları değiştir; render bunları okur. iPad baz: 1266×827.
+const SATICI_UI={
+  headerH:67,          // üst bar yüksekliği (px)
+  maxW:1266,           // header iç sarmalayıcı max genişlik (iPad çalışma baz'ı)
+  logoH:60,            // OPERON logo yüksekliği
+  logoW:360,           // OPERON logo kutu genişliği (mask contain)
+  logoColor:"#384248", // OPERON logo (mask) rengi
+  navGap:50,           // OPERON ↔ Menü arası boşluk
+  rightShift:50,       // sağ grup (avatar/şifre/çıkış) sola kayma
+  sunumSliderH:700,    // Satış Sunumu › Tanıtım slider yüksekliği (satıcı/gomulu)
+};
 const foc=(e)=>{e.target.style.borderColor=T.primary;e.target.style.boxShadow=`0 0 0 2px ${T.primary}1a`;};
 const blr=(e)=>{e.target.style.borderColor=T.bDark;e.target.style.boxShadow="none";};
 
@@ -9381,7 +9394,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     {/* ADIM 2 — PROJE TANITIM (sidebar kaldırıldı; stat & blok geçişi ADIM 3 ve breadcrumb'tan; slider 16:9 tam alan) */}
     {adim===2&&selProje&&(()=>{
       const pgor=projeGorselleri(selProje);
-      const sliderH=tamEkran?sunumIcerikH:"700px";
+      const sliderH=tamEkran?sunumIcerikH:`${SATICI_UI.sunumSliderH}px`;
       return <div style={{flex:"1 1 auto",minHeight:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
         {/* 3:2 sabit oran slider — görsel yükleme ebadı: 1800×1200 px (önerilen 2700×1800 retina) */}
         <div style={{aspectRatio:"3/2",maxHeight:sliderH,width:"100%",position:"relative"}}>
@@ -10866,11 +10879,11 @@ export default function App(){
   return <div style={{display:"flex",height:"100%",width:"100%",background:T.bg,fontFamily:T.f,overflow:"hidden"}}>
     {!satici&&<Sidebar page={page} setPage={(p)=>{setEditMode(false);setPage(p);}} open={sbOpen} editMode={editMode} currentUser={currentUser}/>}
     <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-      <div style={{height:satici?"67px":"56px",minHeight:satici?"67px":"56px",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",background:"#fff",borderBottom:`1px solid ${T.border}`,boxShadow:T.sh}}>
-        <div style={{width:"100%",height:"100%",maxWidth:satici?"1266px":"none",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <div style={{height:satici?`${SATICI_UI.headerH}px`:"56px",minHeight:satici?`${SATICI_UI.headerH}px`:"56px",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",background:"#fff",borderBottom:`1px solid ${T.border}`,boxShadow:T.sh}}>
+        <div style={{width:"100%",height:"100%",maxWidth:satici?`${SATICI_UI.maxW}px`:"none",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         {satici
-          ? <div style={{display:"flex",alignItems:"center",gap:"50px"}}>
-              <div role="img" aria-label="OPERON" style={{height:"60px",width:"360px",backgroundColor:"#384248",WebkitMaskImage:`url(${operonLogo})`,maskImage:`url(${operonLogo})`,WebkitMaskRepeat:"no-repeat",maskRepeat:"no-repeat",WebkitMaskSize:"contain",maskSize:"contain",WebkitMaskPosition:"left center",maskPosition:"left center"}}/>
+          ? <div style={{display:"flex",alignItems:"center",gap:`${SATICI_UI.navGap}px`}}>
+              <div role="img" aria-label="OPERON" style={{height:`${SATICI_UI.logoH}px`,width:`${SATICI_UI.logoW}px`,backgroundColor:SATICI_UI.logoColor,WebkitMaskImage:`url(${operonLogo})`,maskImage:`url(${operonLogo})`,WebkitMaskRepeat:"no-repeat",maskRepeat:"no-repeat",WebkitMaskSize:"contain",maskSize:"contain",WebkitMaskPosition:"left center",maskPosition:"left center"}}/>
               <div style={{position:"relative"}}>
                 <button onClick={()=>setSaticiMenu(v=>!v)} style={{display:"flex",alignItems:"center",gap:"8px",padding:"8px 16px",borderRadius:"8px",border:`1px solid ${T.border}`,background:"#fff",color:T.text,fontSize:"14px",fontWeight:600,cursor:"pointer",minHeight:"40px"}}>☰ Menü ▾</button>
                 {saticiMenu&&<>
@@ -10886,7 +10899,7 @@ export default function App(){
             </div>
           : <button onClick={()=>setSbOpen(!sbOpen)} style={{background:"none",border:"none",color:T.t2,cursor:"pointer",padding:"6px",fontSize:"18px",borderRadius:"6px"}} onMouseEnter={e=>e.currentTarget.style.background="#f5f5f5"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>☰</button>
         }
-        <div style={{display:"flex",alignItems:"center",gap:"12px",marginRight:satici?"50px":"0"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px",marginRight:satici?`${SATICI_UI.rightShift}px`:"0"}}>
           {!satici&&<div style={{padding:"6px 14px",borderRadius:"6px",border:`1px solid ${T.border}`,fontSize:"13px",color:T.t3,display:"flex",alignItems:"center",gap:"6px"}}>🗄️ Supabase Bağlı</div>}
           <div style={{display:"flex",alignItems:"center",gap:"8px",padding:"4px 10px 4px 4px",borderRadius:"20px",border:`1px solid ${T.border}`,background:"#fafafa"}}>
             <div style={{width:"28px",height:"28px",borderRadius:"50%",background:T.primary,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:600,fontSize:"12px"}}>{avatarHarf}</div>
