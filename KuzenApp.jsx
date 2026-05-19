@@ -784,6 +784,7 @@ const lS={display:"block",color:T.text,fontSize:"14px",fontWeight:500,marginBott
 // ayar = sadece bu bloktaki sayıları değiştir; render bunları okur.
 // iPad baz: YATAY 1366×1024 (body zoom:0.9 → layout ≈1518×1138; gerçek iPad'de daha az).
 // ADIM 4 daire ekranı artık sabit-yükseklik flex (iç scroll) — yükseklik magic number YOK.
+// Tanıtım slider: min(sunumSliderMaxH, calc viewport) — index.html zoom:0.9 ile uyumlu.
 const SATICI_UI={
   headerH:67,             // üst bar yüksekliği (px)
   maxW:1266,              // header iç sarmalayıcı max genişlik
@@ -793,7 +794,9 @@ const SATICI_UI={
   logoColor:"#384248",    // OPERON logo (mask) rengi
   navGap:50,              // OPERON ↔ Menü arası boşluk
   rightShift:50,          // sağ grup (avatar/şifre/çıkış) sola kayma
-  sunumSliderH:700,       // Satış Sunumu › Tanıtım slider yüksekliği (satıcı/gomulu)
+  sunumSliderMaxH:700,    // Tanıtım slider üst sınır (px); calc daha küçükse onu kullanır
+  sunumTanitimBarH:110,   // Satış Sunumu başlık + breadcrumb (px)
+  mainPadV:48,            // App main padding üst+alt (24+24)
   daireEkranW:1186,       // Satış Sunumu › ADIM 4 (Daire) ekranı maxWidth, ortalı (satıcı/gomulu)
 };
 const foc=(e)=>{e.target.style.borderColor=T.primary;e.target.style.boxShadow=`0 0 0 2px ${T.primary}1a`;};
@@ -8980,7 +8983,7 @@ const GorselSlider=({gorseller=[],yukseklik="380px",otomatik=true,placeholderIco
     <div onMouseEnter={()=>setDuraklat(true)} onMouseLeave={()=>setDuraklat(false)} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{position:"relative",height:yukseklik,borderRadius:T.rl,overflow:"hidden",background:"#000",boxShadow:T.shM,touchAction:"pan-y"}}>
       {aktif?.video
         ?<video key={aktif?.url} src={aktif?.url||""} controls playsInline preload="metadata" onPlay={()=>setVideoOynadi(true)} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"contain",background:"#000"}}/>
-        :<div onClick={()=>setLightOpen(true)} title="Büyütmek için tıklayın" style={{position:"absolute",inset:0,background:`url(${aktif?.url||""}) center/contain no-repeat, url(${aktif?.url||""}) center/cover`,backgroundBlendMode:"normal",transition:"background-image .4s ease",cursor:"zoom-in"}}></div>
+        :<img src={aktif?.url||""} alt={aktif?.aciklama||""} onClick={()=>setLightOpen(true)} title="Büyütmek için tıklayın" draggable={false} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"contain",background:"#000",cursor:"zoom-in",userSelect:"none"}}/>
       }
       {aktif?.video&&!videoOynadi&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}><div style={{width:"84px",height:"84px",borderRadius:"50%",background:"rgba(0,0,0,0.55)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"34px",paddingLeft:"6px"}}>▶</div></div>}
       {/* Başlık varsa alt kısımda */}
@@ -9171,6 +9174,8 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
   const EXTRA_PAY=228;         // Safari URL bar + tab bar + home indicator için ek pay (+28 = ADIM 2 sayfa scroll fix, slider 828→800)
   // Adım 2 sidebar/slider yüksekliği — Sunum Modunda viewport'a göre
   const sunumIcerikH=`calc((100vh / 0.9) - ${PAD*2 + TOP_BAR + EXTRA_PAY}px)`;
+  // Satıcı (iPad): Tanıtım slider — viewport'a göre, üst sınır SATICI_UI.sunumSliderMaxH
+  const tanitimSliderH=`min(${SATICI_UI.sunumSliderMaxH}px, calc((100vh / 0.9) - ${SATICI_UI.headerH + SATICI_UI.mainPadV + SATICI_UI.sunumTanitimBarH}px))`;
 
   const selProje=projeler.find(p=>p.id===selProjeId);
   const selBlok=selProje?.bloklar?.find(b=>b.ad===selBlokAd);
@@ -9483,10 +9488,10 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     {/* ADIM 2 — PROJE TANITIM (sidebar kaldırıldı; stat & blok geçişi ADIM 3 ve breadcrumb'tan; slider 16:9 tam alan) */}
     {adim===2&&selProje&&(()=>{
       const pgor=projeGorselleri(selProje);
-      const sliderH=tamEkran?sunumIcerikH:`${SATICI_UI.sunumSliderH}px`;
-      return <div style={{flex:"1 1 auto",minHeight:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-        {/* 3:2 sabit oran slider — görsel yükleme ebadı: 1800×1200 px (önerilen 2700×1800 retina) */}
-        <div style={{aspectRatio:"3/2",maxHeight:sliderH,width:"100%",position:"relative"}}>
+      const sliderH=tamEkran?sunumIcerikH:tanitimSliderH;
+      return <div style={{flex:"1 1 auto",minHeight:0,display:"flex",alignItems:"center",justifyContent:"center",width:"100%"}}>
+        {/* 3:2 — yükleme 1800×1200 (retina 2700×1800) */}
+        <div style={{aspectRatio:"3/2",maxHeight:sliderH,width:"100%",maxWidth:`${SATICI_UI.maxW}px`,margin:"0 auto",position:"relative"}}>
           <MedyaFiltreSeg deger={medyaFiltre} setDeger={setMedyaFiltre}/>
           <GorselSlider gorseller={filtreUygula(pgor)} yukseklik="100%" otomatik={true} placeholderIcon="🏢" placeholderText="Bu proje için henüz tanıtım görseli/videosu eklenmemiş"/>
         </div>
