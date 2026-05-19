@@ -780,18 +780,20 @@ const iS={width:"100%",height:"36px",padding:"0 11px",borderRadius:T.r,border:`1
 const lS={display:"block",color:T.text,fontSize:"14px",fontWeight:500,marginBottom:"8px"};
 // ── SATICI (sales) GÖRSEL ÖLÇÜ CONFIG'İ ──────────────────────────────────────
 // Satıcı UI'sının TÜM ayarlanabilir ölçüleri burada (tek nokta). Görsel ince
-// ayar = sadece bu bloktaki sayıları değiştir; render bunları okur. iPad baz: 1266×827.
+// ayar = sadece bu bloktaki sayıları değiştir; render bunları okur.
+// iPad baz: YATAY 1366×1024 (body zoom:0.9 → layout ≈1518×1138; gerçek iPad'de daha az).
+// ADIM 4 daire ekranı artık sabit-yükseklik flex (iç scroll) — yükseklik magic number YOK.
 const SATICI_UI={
-  headerH:67,          // üst bar yüksekliği (px)
-  maxW:1266,           // header iç sarmalayıcı max genişlik (iPad çalışma baz'ı)
-  logoH:60,            // OPERON logo yüksekliği
-  logoW:250,           // OPERON logo kutu genişliği (mask contain)
-  logoColor:"#384248", // OPERON logo (mask) rengi
-  navGap:50,           // OPERON ↔ Menü arası boşluk
-  rightShift:50,       // sağ grup (avatar/şifre/çıkış) sola kayma
-  sunumSliderH:700,    // Satış Sunumu › Tanıtım slider yüksekliği (satıcı/gomulu)
-  daireEkranH:600,     // Satış Sunumu › ADIM 4 (Daire) ekranı maxHeight (satıcı/gomulu)
-  daireEkranW:1186,    // Satış Sunumu › ADIM 4 (Daire) ekranı maxWidth, ortalı (satıcı/gomulu)
+  headerH:67,             // üst bar yüksekliği (px)
+  maxW:1266,              // header iç sarmalayıcı max genişlik
+  contentPad:"12px 24px", // App içerik alanı padding (satıcı) — dikey daraltıldı, yatay 24
+  logoH:60,               // OPERON logo yüksekliği
+  logoW:250,              // OPERON logo kutu genişliği (mask contain)
+  logoColor:"#384248",    // OPERON logo (mask) rengi
+  navGap:50,              // OPERON ↔ Menü arası boşluk
+  rightShift:50,          // sağ grup (avatar/şifre/çıkış) sola kayma
+  sunumSliderH:700,       // Satış Sunumu › Tanıtım slider yüksekliği (satıcı/gomulu)
+  daireEkranW:1186,       // Satış Sunumu › ADIM 4 (Daire) ekranı maxWidth, ortalı (satıcı/gomulu)
 };
 const foc=(e)=>{e.target.style.borderColor=T.primary;e.target.style.boxShadow=`0 0 0 2px ${T.primary}1a`;};
 const blr=(e)=>{e.target.style.borderColor=T.bDark;e.target.style.boxShadow="none";};
@@ -9323,8 +9325,8 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
   // TAM EKRAN overlay (position:fixed) — iPad landscape için dinamik viewport
   // iPad Pro 13" landscape (1366 fiziksel / 0.9 zoom = 1518 CSS-px) — PC'de de aynı tuval, sağ/sol beyaz boşluk kalır
   const SUNUM_MAX_W=1518;
-  const content=<div style={tamEkran?{position:"fixed",inset:0,background:"#fff",zIndex:900,padding:`${PAD}px`,overflow:"hidden",display:"flex",justifyContent:"center",alignItems:"stretch"}:{}}>
-    <div style={tamEkran?{width:"100%",maxWidth:`${SUNUM_MAX_W}px`,height:"100%",display:"flex",flexDirection:"column",overflow:"hidden"}:{width:"100%"}}>
+  const content=<div style={tamEkran?{position:"fixed",inset:0,background:"#fff",zIndex:900,padding:`${PAD}px`,overflow:"hidden",display:"flex",justifyContent:"center",alignItems:"stretch"}:(gomulu?{height:"100%",display:"flex",flexDirection:"column",overflow:"hidden"}:{})}>
+    <div style={tamEkran?{width:"100%",maxWidth:`${SUNUM_MAX_W}px`,height:"100%",display:"flex",flexDirection:"column",overflow:"hidden"}:(gomulu?{width:"100%",height:"100%",display:"flex",flexDirection:"column",overflow:"hidden",minHeight:0}:{width:"100%"})}>
     {pickerAcik&&(()=>{
       // Opsiyonludan Satışa Çevir: müşteri zaten bağlı, direkt onay ekranına geç + mevcut fiyatı pre-fill
       const opsiyonluSatisaCevir=pickerIslem==="satildi"&&selBolum?.durum==="opsiyonlu"&&selBolum?.aliciFirmaId;
@@ -9442,7 +9444,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     </div>}
 
     {/* ADIM 4 — DAİRE SEÇİMİ + DETAY (iPad: sağ panel 460px, sol grid scroll edilebilir) */}
-    {adim===4&&selProje&&selBlok&&<div style={{display:"grid",gridTemplateColumns:selBolum?(tamEkran?"1fr 460px":"1fr 400px"):"1fr",gap:tamEkran?"18px":"16px",flex:"1 1 auto",minHeight:0,alignItems:"stretch",maxHeight:gomulu?`${SATICI_UI.daireEkranH}px`:undefined,maxWidth:gomulu?`${SATICI_UI.daireEkranW}px`:undefined,marginLeft:gomulu?"auto":undefined,marginRight:gomulu?"auto":undefined,width:gomulu?"100%":undefined}}>
+    {adim===4&&selProje&&selBlok&&<div style={{display:"grid",gridTemplateColumns:selBolum?(tamEkran?"1fr 460px":"1fr 400px"):"1fr",gap:tamEkran?"18px":"16px",flex:"1 1 auto",minHeight:0,overflow:"hidden",alignItems:"stretch",maxWidth:gomulu?`${SATICI_UI.daireEkranW}px`:undefined,marginLeft:gomulu?"auto":undefined,marginRight:gomulu?"auto":undefined,width:gomulu?"100%":undefined}}>
       <div style={{display:"flex",flexDirection:"column",minHeight:0,overflow:"hidden"}}>
         {/* Durum filtre rozetleri */}
         <div style={{marginBottom:"12px",padding:tamEkran?"14px 18px":"12px 16px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:"20px",flexWrap:"wrap",flexShrink:0}}>
@@ -10913,7 +10915,7 @@ export default function App(){
         </div>
         </div>
       </div>
-      <div style={{flex:1,overflow:"auto",padding:"24px"}}>
+      <div style={{flex:1,overflow:satici?"hidden":"auto",padding:satici?SATICI_UI.contentPad:"24px"}}>
         {page==="dashboard"&&<DashPage firmalar={firmalar} malzemeler={malzemeler} teklifler={teklifler} setPage={setPage}/>}
         {page==="firmalar"&&<FirmalarPage firmalar={firmalar} setFirmalar={setFirmalar} onSave={saveFirma} onDel={delFirma} addNote={addNote} initialFirmaId={goToId} onClearInitial={()=>setGoToId(null)} projeler={projeler} setPage={setPage} setEditMode={setEditMode} kisitliTurler={isSatici(currentUser)?['potansiyel','alici']:null} currentUser={currentUser}/>}
         {page==="malzemeler"&&<MalzemelerPage malzemeler={malzemeler} setMalzemeler={setMalzemeler} onSaveMalzeme={saveMalzeme} onDelMalzeme={delMalzeme} firmalar={firmalar} altKategoriler={altKategoriler} setAltKategoriler={setAltKategoriler} altGruplar={altGruplar} setAltGruplar={setAltGruplar} teklifler={teklifler} setTeklifler={setTeklifler} onSaveKat={saveKat} onDelKat={delKat} onSaveAltGrp={saveAltGrp} onDelAltGrp={delAltGrp} onSaveTeklif={saveTeklif} onDelTeklif={delTeklif} projeler={projeler} setEditMode={setEditMode}/>}
