@@ -8695,12 +8695,12 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
     }
   };
 
-  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1100,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-    <div style={{background:"#fff",borderRadius:T.rl,width:"800px",height:"400px",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1100,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"24px 20px"}}>
+    <div style={{background:"#fff",borderRadius:T.rl,width:"900px",height:"500px",display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <div style={{padding:"12px 20px",background:"#384248",display:"flex",alignItems:"center",gap:"16px",borderRadius:`${T.rl} ${T.rl} 0 0`}}>
         <button onClick={onClose} style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={24}/></button>
         <span style={{fontSize:"15px",fontWeight:600,color:"#fff",flex:1,textAlign:"center"}}>{baslik}</span>
-        <div style={{width:"24px"}}></div>
+        {mode==="list"?<button onClick={()=>setMode("yeni")} title="Yeni Potansiyel Müşteri Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={26}/></button>:<div style={{width:"24px"}}></div>}
       </div>
 
       {mode==="list"?<>
@@ -8730,9 +8730,8 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
             })
           }
         </div>
-        <div style={{padding:"12px 16px",borderTop:`1px solid ${T.border}`,background:"#fafafa"}}>
-          <button onClick={()=>setMode("yeni")} style={{width:"100%",padding:"10px",borderRadius:T.r,border:`1px dashed ${T.primary}`,background:"#fff",color:T.primary,fontSize:"14px",fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px"}}><Plus size={16}/> Yeni Potansiyel Müşteri Ekle</button>
-          <div style={{fontSize:"10px",color:T.t3,textAlign:"center",marginTop:"6px"}}>Yeni eklenenler otomatik "Potansiyel" olarak kaydedilir. Satışa çevirirken Alıcı bilgileri tamamlanmalı.</div>
+        <div style={{padding:"10px 16px",borderTop:`1px solid ${T.border}`,background:"#fafafa"}}>
+          <div style={{fontSize:"10px",color:T.t3,textAlign:"center"}}>Yeni eklenenler otomatik "Potansiyel" olarak kaydedilir. Satışa çevirirken Alıcı bilgileri tamamlanmalı.</div>
         </div>
       </>:mode==="yeni"?<>
         <div style={{padding:"16px 20px",flex:1,overflow:"auto",display:"flex",flexDirection:"column",gap:"12px"}}>
