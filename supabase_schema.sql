@@ -458,6 +458,30 @@ CREATE POLICY "anon_all_alis_faturalari" ON alis_faturalari FOR ALL USING (true)
 CREATE POLICY "anon_all_alis_fatura_kalemleri" ON alis_fatura_kalemleri FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================
+-- SUNUMLAR (2026-05-19) — opsiyon öncesi ilk görüşme / lead kaydı.
+-- Daireyi KİLİTLEMEZ (durum değişmez), 1 daire → N sunum.
+-- satici_id → kullanicilar(id): kullanicilar tablosu supabase_migration_kullanicilar.sql ile oluşur.
+-- ============================================
+CREATE TABLE sunumlar (
+  id BIGSERIAL PRIMARY KEY,
+  proje_id BIGINT REFERENCES projeler(id) ON DELETE CASCADE,
+  bolum_id BIGINT REFERENCES bolumler(id) ON DELETE CASCADE,
+  firma_id BIGINT REFERENCES firmalar(id) ON DELETE SET NULL,
+  firma_ad TEXT DEFAULT '',
+  telefon TEXT DEFAULT '',
+  tarih DATE DEFAULT CURRENT_DATE,
+  liste_fiyati NUMERIC,
+  gorusulen_fiyat NUMERIC,
+  notlar TEXT DEFAULT '',
+  satici_id BIGINT REFERENCES kullanicilar(id) ON DELETE SET NULL,
+  satici_ad TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE sunumlar ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "anon_all_sunumlar" ON sunumlar FOR ALL USING (true) WITH CHECK (true);
+ALTER PUBLICATION supabase_realtime ADD TABLE sunumlar;
+
+-- ============================================
 -- TAMAMLANDI
--- 17 tablo oluşturuldu + RLS politikaları ayarlandı
+-- 17 ana tablo + sunumlar + RLS politikaları ayarlandı
 -- ============================================
