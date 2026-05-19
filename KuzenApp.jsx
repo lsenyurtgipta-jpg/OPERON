@@ -794,9 +794,10 @@ const SATICI_UI={
   logoColor:"#384248",    // OPERON logo (mask) rengi
   navGap:50,              // OPERON ↔ Menü arası boşluk
   rightShift:50,          // sağ grup (avatar/şifre/çıkış) sola kayma
-  sunumSliderMaxH:700,    // Tanıtım slider üst sınır (px); calc daha küçükse onu kullanır
-  sunumTanitimBarH:110,   // Satış Sunumu başlık + breadcrumb (px)
-  mainPadV:48,            // App main padding üst+alt (24+24)
+  contentPadV:24,         // contentPad "12px 24px" → dikey 24px (satıcı main)
+  sunumSliderMaxH:520,    // Tanıtım slider üst sınır — 700 iPad'te hep doluyordu, görünür küçülme yoktu
+  sunumTanitimBarH:132,   // SATIŞ SUNUMU üst bar (başlık + breadcrumb + margin)
+  sunumDaireSliderMaxH:300, // ADIM 4 sağ panel üst görsel (satıcı)
   daireEkranW:1186,       // Satış Sunumu › ADIM 4 (Daire) ekranı maxWidth, ortalı (satıcı/gomulu)
 };
 const foc=(e)=>{e.target.style.borderColor=T.primary;e.target.style.boxShadow=`0 0 0 2px ${T.primary}1a`;};
@@ -9174,8 +9175,11 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
   const EXTRA_PAY=228;         // Safari URL bar + tab bar + home indicator için ek pay (+28 = ADIM 2 sayfa scroll fix, slider 828→800)
   // Adım 2 sidebar/slider yüksekliği — Sunum Modunda viewport'a göre
   const sunumIcerikH=`calc((100vh / 0.9) - ${PAD*2 + TOP_BAR + EXTRA_PAY}px)`;
-  // Satıcı (iPad): Tanıtım slider — viewport'a göre, üst sınır SATICI_UI.sunumSliderMaxH
-  const tanitimSliderH=`min(${SATICI_UI.sunumSliderMaxH}px, calc((100vh / 0.9) - ${SATICI_UI.headerH + SATICI_UI.mainPadV + SATICI_UI.sunumTanitimBarH}px))`;
+  // Satıcı (gomulu/iPad): gerçek chrome = App header + contentPadV + sunum üst bar; 100dvh Safari çubuğu
+  const tanitimSliderH=gomulu
+    ?`min(${SATICI_UI.sunumSliderMaxH}px, calc((100dvh / 0.9) - ${SATICI_UI.headerH + SATICI_UI.contentPadV + SATICI_UI.sunumTanitimBarH}px))`
+    :`min(700px, calc((100vh / 0.9) - 220px))`;
+  const daireSliderH=gomulu?`min(${SATICI_UI.sunumDaireSliderMaxH}px, calc((100dvh / 0.9) - ${SATICI_UI.headerH + SATICI_UI.contentPadV + 200}px))`:"auto";
 
   const selProje=projeler.find(p=>p.id===selProjeId);
   const selBlok=selProje?.bloklar?.find(b=>b.ad===selBlokAd);
@@ -9451,7 +9455,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     </div>
 
     {/* İÇERİK ALANI — sabit yükseklik, gerektiğinde iç scroll */}
-    <div style={{flex:"1 1 auto",minHeight:0,overflowY:"auto",overflowX:"hidden",display:"flex",flexDirection:"column"}}>
+    <div style={{flex:"1 1 auto",minHeight:0,overflowY:gomulu&&(adim===2||adim===4)?"hidden":"auto",overflowX:"hidden",display:"flex",flexDirection:"column"}}>
 
     {/* ADIM 1 — PROJE SEÇİMİ (iPad: 4 sütun, büyütülmüş kart) */}
     {adim===1&&<div>
@@ -9489,9 +9493,11 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     {adim===2&&selProje&&(()=>{
       const pgor=projeGorselleri(selProje);
       const sliderH=tamEkran?sunumIcerikH:tanitimSliderH;
-      return <div style={{flex:"1 1 auto",minHeight:0,display:"flex",alignItems:"center",justifyContent:"center",width:"100%"}}>
-        {/* 3:2 — yükleme 1800×1200 (retina 2700×1800) */}
-        <div style={{aspectRatio:"3/2",maxHeight:sliderH,width:"100%",maxWidth:`${SATICI_UI.maxW}px`,margin:"0 auto",position:"relative"}}>
+      const kutStil=gomulu
+        ?{height:sliderH,maxHeight:sliderH,width:"100%",maxWidth:`${SATICI_UI.maxW}px`,margin:"0 auto",position:"relative",flexShrink:0}
+        :{aspectRatio:"3/2",maxHeight:sliderH,width:"100%",maxWidth:`${SATICI_UI.maxW}px`,margin:"0 auto",position:"relative"};
+      return <div style={{flex:"1 1 auto",minHeight:0,display:"flex",alignItems:"center",justifyContent:"center",width:"100%",overflow:"hidden"}}>
+        <div style={kutStil}>
           <MedyaFiltreSeg deger={medyaFiltre} setDeger={setMedyaFiltre}/>
           <GorselSlider gorseller={filtreUygula(pgor)} yukseklik="100%" otomatik={true} placeholderIcon="🏢" placeholderText="Bu proje için henüz tanıtım görseli/videosu eklenmemiş"/>
         </div>
@@ -9580,7 +9586,10 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
           {(()=>{
             const daireG=bolumGorselleri(selBolum);
             // 3:2 sabit oran — sadece daireye atanmış görseller (proje tanıtım görselleri fallback kaldırıldı)
-            return <div style={{aspectRatio:"3/2",width:"100%",position:"relative"}}>
+            const daireKut=gomulu
+              ?{height:daireSliderH,maxHeight:daireSliderH,width:"100%",position:"relative",flexShrink:0}
+              :{aspectRatio:"3/2",width:"100%",position:"relative"};
+            return <div style={daireKut}>
               <MedyaFiltreSeg deger={medyaFiltre} setDeger={setMedyaFiltre}/>
               <GorselSlider gorseller={filtreUygula(daireG)} yukseklik="100%" otomatik={true} placeholderIcon="🏠" placeholderText="Bu daireye henüz görsel/video atanmamış (Dosya Yönetimi → Proje Görselleri → Daire Detayları)"/>
             </div>;
