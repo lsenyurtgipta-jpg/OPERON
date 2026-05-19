@@ -57,6 +57,8 @@ CREATE TABLE firmalar (
   ilgi_seviyesi TEXT DEFAULT '',        -- "yuksek" | "orta" | "dusuk"
   son_temas_tarihi TEXT DEFAULT '',     -- YYYY-MM-DD
   kaynak_kanal TEXT DEFAULT '',         -- "Tavsiye" | "Sosyal Medya" | "Tabela" | vs.
+  -- Müşteri sınıflandırma (2026-05-19) — Satış Sunumu müşteri modalı + Firma detay formu ortak
+  musteri_tipi TEXT DEFAULT '',         -- "Oturum amaçlı" | "Yatırım amaçlı" | "Ticari yatırımcı" | "Yabancı yatırımcı"
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -65,6 +67,7 @@ CREATE TABLE firmalar (
 -- ALTER TABLE firmalar ADD COLUMN IF NOT EXISTS ilgi_seviyesi TEXT DEFAULT '';
 -- ALTER TABLE firmalar ADD COLUMN IF NOT EXISTS son_temas_tarihi TEXT DEFAULT '';
 -- ALTER TABLE firmalar ADD COLUMN IF NOT EXISTS kaynak_kanal TEXT DEFAULT '';
+-- ALTER TABLE firmalar ADD COLUMN IF NOT EXISTS musteri_tipi TEXT DEFAULT '';
 
 -- 2.2 KİŞİLER
 CREATE TABLE kisiler (

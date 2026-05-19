@@ -121,6 +121,7 @@ const phoneErr=(v)=>{const l=phoneDigits(v);if(l===0||l===11)return"";return l<1
 const FIRMA_TURLERI=[{id:"potansiyel",label:"Potansiyel",color:"#fa8c16",bg:"#fff7e6",icon:"👤",kod:"119"},{id:"alici",label:"Alıcı",color:"#1677ff",bg:"#e6f4ff",icon:"🏠",kod:"120"},{id:"tedarikci",label:"Tedarikçi",color:"#52c41a",bg:"#f6ffed",icon:"📦",kod:"320"},{id:"taseron",label:"Taşeron",color:"#fa8c16",bg:"#fff7e6",icon:"👷",kod:"321"},{id:"resmi",label:"Resmi Kurum",color:"#f5222d",bg:"#fff1f0",icon:"🏛️",kod:"322"}];
 const ILGI_SEVIYELERI=[{id:"yuksek",label:"Yüksek",color:"#ff4d4f",bg:"#fff1f0"},{id:"orta",label:"Orta",color:"#fa8c16",bg:"#fff7e6"},{id:"dusuk",label:"Düşük",color:"#8c8c8c",bg:"#f5f5f5"}];
 const KAYNAK_KANALLARI=["Tavsiye","Sosyal Medya","Tabela / Dış Mekân","Web Sitesi","Sahibinden","Aracı / Emlakçı","Referans","Telefon","Diğer"];
+const MUSTERI_TIPLERI=["Oturum amaçlı","Yatırım amaçlı","Ticari yatırımcı","Yabancı yatırımcı"];
 const PARA_BIRIMLERI=[{id:"TL",label:"₺ Türk Lirası (TL)",kod:"1",symbol:"₺"},{id:"USD",label:"$ Amerikan Doları (USD)",kod:"2",symbol:"$"},{id:"EUR",label:"€ Euro (EUR)",kod:"3",symbol:"€"}];
 /* ========== MALZEME SABİTLERİ ========== */
 const MLZ_TIPLER=[{id:"M",label:"Mamül",color:"#52c41a",bg:"#f6ffed",icon:"✅"},{id:"H",label:"Hizmet",color:"#f5222d",bg:"#fff1f0",icon:"🔧"},{id:"R",label:"Hammadde",color:"#1677ff",bg:"#e6f4ff",icon:"📦"},{id:"Y",label:"Yarı Mamül",color:"#fa8c16",bg:"#fff7e6",icon:"🔄"},{id:"B",label:"Bağımsız Bölüm",color:"#722ed1",bg:"#f9f0ff",icon:"🏠"}];
@@ -1587,6 +1588,15 @@ const FirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,projele
                 <div><label style={{...lS,fontSize:"12px"}}>Mahalle</label><input style={{...iS,fontSize:"13px"}} value={form.mahalle} onChange={e=>u("mahalle",e.target.value)} placeholder="Mahalle" onFocus={foc} onBlur={blr}/></div>
                 <div><label style={{...lS,fontSize:"12px"}}>Açık Adres</label><input style={{...iS,fontSize:"13px"}} value={form.adres} onChange={e=>u("adres",e.target.value)} placeholder="Cadde, sokak, no" onFocus={foc} onBlur={blr}/></div>
                 <div><label style={{...lS,fontSize:"12px"}}>Posta Kodu</label><input style={{...iS,fontSize:"13px"}} value={form.postaKodu||""} onChange={e=>u("postaKodu",e.target.value)} placeholder="00000" onFocus={foc} onBlur={blr}/></div>
+              </div>
+              {/* Müşteri sınıflandırma — Satış Sunumu modalıyla ortak sabit */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}}>
+                <div><label style={{...lS,fontSize:"12px"}}>Müşteri Tipi</label>
+                  <select style={{...iS,fontSize:"13px",cursor:"pointer"}} value={form.musteriTipi||""} onChange={e=>u("musteriTipi",e.target.value)} onFocus={foc} onBlur={blr}>
+                    <option value="">—</option>
+                    {MUSTERI_TIPLERI.map(m=><option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -4317,6 +4327,7 @@ const firmaToLocal = (f) => ({
   ilgiSeviyesi: f.ilgi_seviyesi||"",
   sonTemasTarihi: f.son_temas_tarihi||"",
   kaynakKanal: f.kaynak_kanal||"",
+  musteriTipi: f.musteri_tipi||"",
   kisiler: [], notlar: [], belgeler: [], subeler: [], bankalar: [], iletisimler: [], adresler: [],
   createdAt: f.created_at ? f.created_at.split("T")[0] : new Date().toISOString().split("T")[0]
 });
@@ -4333,7 +4344,8 @@ const firmaToDb = (f) => ({
   ilgilendigi_projeler: f.ilgilendigiProjeler||[],
   ilgi_seviyesi: f.ilgiSeviyesi||"",
   son_temas_tarihi: f.sonTemasTarihi||"",
-  kaynak_kanal: f.kaynakKanal||""
+  kaynak_kanal: f.kaynakKanal||"",
+  musteri_tipi: f.musteriTipi||""
 });
 const kisiToLocal = (k) => ({
   id: k.id, firmaId: k.firma_id, cinsiyet: k.cinsiyet||"", ad: k.ad||"",
@@ -8594,7 +8606,7 @@ const DosyaKategoriYonetim=({dosyaKategorileri,setDosyaKategorileri})=>{
 const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTERİ SEÇ",pickerIslem="satildi",listeFiyatiOneri="",initialFirma=null,initialSatisBedeli="",initialPlus="",bolum=null})=>{
   const[src,setSrc]=useState("");
   const[mode,setMode]=useState(initialFirma?"onay":"list"); // list | yeni | onay
-  const[yeniForm,setYeniForm]=useState({ad:"",telefon:"",eposta:"",kanal:"",ilgiSeviyesi:"orta",sonTemasTarihi:new Date().toISOString().split("T")[0],not:""});
+  const[yeniForm,setYeniForm]=useState({tip:"sahis",ad:"",tcKimlikNo:"",vergiNo:"",vergiDairesi:"",yetkiliAd:"",yetkiliTel:"",telefon:"",eposta:"",musteriTipi:"",kanal:"",ilgiSeviyesi:"orta",sonTemasTarihi:new Date().toISOString().split("T")[0],not:""});
   const[secilenFirma,setSecilenFirma]=useState(initialFirma||null);
   const[satisBedeli,setSatisBedeli]=useState(initialSatisBedeli?String(initialSatisBedeli):"");
   const[plus,setPlus]=useState(initialPlus?String(initialPlus):"");
@@ -8657,7 +8669,7 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
 
   const kaydetVeSec=async()=>{
     if(kaydediyor)return;
-    if(!yeniForm.ad.trim()){alert("Müşteri adı zorunludur!");return;}
+    if(!yeniForm.ad.trim()){alert(yeniForm.tip==="tuzel"?"Firma adı zorunludur!":"Ad Soyad zorunludur!");return;}
     if(pickerIslem==="sunum"&&(yeniForm.telefon||"").replace(/\D/g,"").length!==11){alert("Sunum için 11 haneli telefon zorunludur.");return;}
     if(yeniForm.telefon&&!phoneOk(yeniForm.telefon)){alert("Telefon 11 hane olmalı veya boş!");return;}
     // Telefon duplicate kontrolü
@@ -8669,10 +8681,11 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
       }
     }
     setKaydediyor(true);
+    const _tuzel=yeniForm.tip==="tuzel";
     const yeniFirma={
       id:Date.now(),firmaKodu:getNextKod(),ad:yeniForm.ad.trim(),kisaAd:"",aciklama:yeniForm.not||"",
-      turler:["potansiyel"],paraBirimi:"TL",firmaKisiTipi:"sahis",
-      vergiDairesiIl:"",vergiDairesi:"",vergiNo:"",tcKimlikNo:"",sicilNo:"",kategori:"",
+      turler:["potansiyel"],paraBirimi:"TL",firmaKisiTipi:yeniForm.tip,
+      vergiDairesiIl:"",vergiDairesi:_tuzel?(yeniForm.vergiDairesi||""):"",vergiNo:_tuzel?(yeniForm.vergiNo||""):"",tcKimlikNo:_tuzel?"":(yeniForm.tcKimlikNo||""),sicilNo:"",kategori:"",
       telefon:yeniForm.telefon||"",sabitTelefon:"",telefon2:"",webAdresi:"",eposta:yeniForm.eposta||"",
       mahalle:"",adres:"",il:"",ilce:"",postaKodu:"",
       bankaAdi:"",iban:"",aktif:true,
@@ -8680,7 +8693,9 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
       ilgiSeviyesi:yeniForm.ilgiSeviyesi||"orta",
       sonTemasTarihi:yeniForm.sonTemasTarihi||new Date().toISOString().split("T")[0],
       kaynakKanal:yeniForm.kanal||"",
-      kisiler:[],notlar:yeniForm.not?[{id:Date.now(),tarih:new Date().toISOString().split("T")[0],yazar:"Admin",metin:`[${yeniForm.kanal||"Kanal?"}] ${yeniForm.not}`}]:[],
+      musteriTipi:yeniForm.musteriTipi||"",
+      kisiler:(_tuzel&&yeniForm.yetkiliAd.trim())?[{id:Date.now(),cinsiyet:"",ad:yeniForm.yetkiliAd.trim(),soyad:"",unvan:"",departman:"",telefon:"",isTel:"",isTelDahili:"",cep:(yeniForm.yetkiliTel||"").replace(/\D/g,""),eposta:"",sosyal1:"",sosyal2:"",sosyal3:"",dogumTarihi:"",notlar:"",resim:""}]:[],
+      notlar:yeniForm.not?[{id:Date.now(),tarih:new Date().toISOString().split("T")[0],yazar:"Admin",metin:`[${yeniForm.kanal||"Kanal?"}] ${yeniForm.not}`}]:[],
       belgeler:[],subeler:[],bankalar:[],iletisimler:[],adresler:[],
       createdAt:new Date().toISOString().split("T")[0],
       _isNew:true
@@ -8700,7 +8715,7 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
       <div style={{padding:"12px 20px",background:"#384248",display:"flex",alignItems:"center",gap:"16px",borderRadius:`${T.rl} ${T.rl} 0 0`}}>
         <button onClick={onClose} style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={24}/></button>
         <span style={{fontSize:"15px",fontWeight:600,color:"#fff",flex:1,textAlign:"center"}}>{baslik}</span>
-        {mode==="list"?<button onClick={()=>setMode("yeni")} title="Yeni Potansiyel Müşteri Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={26}/></button>:<div style={{width:"24px"}}></div>}
+        {mode==="list"?<button onClick={()=>setMode("yeni")} title="Yeni Potansiyel Müşteri Ekle" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={30}/></button>:<div style={{width:"24px"}}></div>}
       </div>
 
       {mode==="list"?<>
@@ -8735,26 +8750,36 @@ const MusteriPickerModal=({firmalar,onSelect,onSaveFirma,onClose,baslik="MÜŞTE
         </div>
       </>:mode==="yeni"?<>
         <div style={{padding:"16px 20px",flex:1,overflow:"auto",display:"flex",flexDirection:"column",gap:"12px"}}>
-          <div><label style={lS}>Ad Soyad <span style={{color:T.err}}>*</span></label><input style={iS} value={yeniForm.ad} onChange={e=>setYeniForm(p=>({...p,ad:toTitleCase(e.target.value)}))} placeholder="Örn. Ahmet Yılmaz" autoFocus onFocus={foc} onBlur={blr}/></div>
-          <div><label style={lS}>Telefon</label><input style={iS} value={yeniForm.telefon} onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,11);setYeniForm(p=>({...p,telefon:v}));}} placeholder="05XXXXXXXXX" onFocus={foc} onBlur={blr}/></div>
-          <div><label style={lS}>E-posta <span style={{color:T.t3,fontSize:"11px"}}>(opsiyonel)</span></label><input style={iS} type="email" value={yeniForm.eposta} onChange={e=>setYeniForm(p=>({...p,eposta:e.target.value}))} placeholder="ornek@mail.com" onFocus={foc} onBlur={blr}/></div>
-          <div><label style={lS}>Bize Nasıl Ulaştınız?</label>
-            <select style={iS} value={yeniForm.kanal} onChange={e=>setYeniForm(p=>({...p,kanal:e.target.value}))}>
-              <option value="">—</option>
-              {KAYNAK_KANALLARI.map(k=><option key={k} value={k}>{k}</option>)}
-            </select>
+          <div style={{display:"flex",gap:"8px"}}>
+            {[{k:"sahis",l:"👤 Şahıs"},{k:"tuzel",l:"🏢 Kurumsal"}].map(o=>(
+              <button key={o.k} type="button" onClick={()=>setYeniForm(p=>({...p,tip:o.k}))} style={{flex:1,padding:"9px 0",borderRadius:T.r,border:`1px solid ${yeniForm.tip===o.k?T.primary:T.bDark}`,background:yeniForm.tip===o.k?T.pBg:"#fff",color:yeniForm.tip===o.k?T.primary:T.t2,fontSize:"13px",fontWeight:yeniForm.tip===o.k?700:500,cursor:"pointer"}}>{o.l}</button>
+            ))}
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"}}>
-            <div><label style={lS}>İlgi Seviyesi</label>
-              <select style={iS} value={yeniForm.ilgiSeviyesi} onChange={e=>setYeniForm(p=>({...p,ilgiSeviyesi:e.target.value}))}>
-                {ILGI_SEVIYELERI.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
-              </select>
+          <div style={{display:"flex",gap:"8px",alignItems:"flex-start"}}>
+            {/* SOL KOLON — Şahıs butonu altı: kimlik + iletişim */}
+            <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:"12px"}}>
+              {yeniForm.tip==="sahis"?<>
+                <div style={{display:"flex",alignItems:"center",gap:"12px"}}><label style={{...lS,marginBottom:0,width:"120px",flexShrink:0}}>Ad Soyad <span style={{color:T.err}}>*</span></label><input style={{...iS,flex:1,minWidth:0,height:"35px"}} value={yeniForm.ad} onChange={e=>setYeniForm(p=>({...p,ad:toTitleCase(e.target.value)}))} placeholder="Örn. Ahmet Yılmaz" autoFocus onFocus={foc} onBlur={blr}/></div>
+                <div style={{display:"flex",alignItems:"center",gap:"12px"}}><label style={{...lS,marginBottom:0,width:"120px",flexShrink:0}}>TC Kimlik No <span style={{color:T.t3,fontSize:"11px"}}>(opsiyonel)</span></label><input style={{...iS,flex:1,minWidth:0,height:"35px"}} value={yeniForm.tcKimlikNo} onChange={e=>setYeniForm(p=>({...p,tcKimlikNo:e.target.value.replace(/\D/g,"").slice(0,11)}))} placeholder="11 hane" onFocus={foc} onBlur={blr}/></div>
+              </>:<>
+                <div style={{display:"flex",alignItems:"center",gap:"12px"}}><label style={{...lS,marginBottom:0,width:"120px",flexShrink:0}}>Firma Adı <span style={{color:T.err}}>*</span></label><input style={{...iS,flex:1,minWidth:0,height:"35px"}} value={yeniForm.ad} onChange={e=>setYeniForm(p=>({...p,ad:e.target.value}))} placeholder="Örn. Yılmaz İnşaat A.Ş." autoFocus onFocus={foc} onBlur={blr}/></div>
+                <div style={{display:"flex",alignItems:"center",gap:"12px"}}><label style={{...lS,marginBottom:0,width:"120px",flexShrink:0}}>Vergi No <span style={{color:T.t3,fontSize:"11px"}}>(ops.)</span></label><input style={{...iS,flex:1,minWidth:0,height:"35px"}} value={yeniForm.vergiNo} onChange={e=>setYeniForm(p=>({...p,vergiNo:e.target.value.replace(/\D/g,"").slice(0,11)}))} placeholder="VKN" onFocus={foc} onBlur={blr}/></div>
+                <div style={{display:"flex",alignItems:"center",gap:"12px"}}><label style={{...lS,marginBottom:0,width:"120px",flexShrink:0}}>Vergi Dairesi <span style={{color:T.t3,fontSize:"11px"}}>(ops.)</span></label><input style={{...iS,flex:1,minWidth:0,height:"35px"}} value={yeniForm.vergiDairesi} onChange={e=>setYeniForm(p=>({...p,vergiDairesi:e.target.value}))} placeholder="—" onFocus={foc} onBlur={blr}/></div>
+                <div style={{display:"flex",alignItems:"center",gap:"12px"}}><label style={{...lS,marginBottom:0,width:"120px",flexShrink:0}}>Yetkili Kişi <span style={{color:T.t3,fontSize:"11px"}}>(ops.)</span></label><input style={{...iS,flex:1,minWidth:0,height:"35px"}} value={yeniForm.yetkiliAd} onChange={e=>setYeniForm(p=>({...p,yetkiliAd:toTitleCase(e.target.value)}))} placeholder="Ad Soyad" onFocus={foc} onBlur={blr}/></div>
+                <div style={{display:"flex",alignItems:"center",gap:"12px"}}><label style={{...lS,marginBottom:0,width:"120px",flexShrink:0}}>Yetkili Telefon <span style={{color:T.t3,fontSize:"11px"}}>(ops.)</span></label><input style={{...iS,flex:1,minWidth:0,height:"35px"}} value={yeniForm.yetkiliTel} onChange={e=>setYeniForm(p=>({...p,yetkiliTel:e.target.value.replace(/\D/g,"").slice(0,11)}))} placeholder="05XXXXXXXXX" onFocus={foc} onBlur={blr}/></div>
+              </>}
+              <div style={{display:"flex",alignItems:"center",gap:"12px"}}><label style={{...lS,marginBottom:0,width:"120px",flexShrink:0}}>Telefon</label><input style={{...iS,flex:1,minWidth:0,height:"35px"}} value={yeniForm.telefon} onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,11);setYeniForm(p=>({...p,telefon:v}));}} placeholder="05XXXXXXXXX" onFocus={foc} onBlur={blr}/></div>
+              <div style={{display:"flex",alignItems:"center",gap:"12px"}}><label style={{...lS,marginBottom:0,width:"120px",flexShrink:0}}>E-posta <span style={{color:T.t3,fontSize:"11px"}}>(opsiyonel)</span></label><input style={{...iS,flex:1,minWidth:0,height:"35px"}} type="email" value={yeniForm.eposta} onChange={e=>setYeniForm(p=>({...p,eposta:e.target.value}))} placeholder="ornek@mail.com" onFocus={foc} onBlur={blr}/></div>
+              <div style={{display:"flex",alignItems:"center",gap:"12px"}}><label style={{...lS,marginBottom:0,width:"120px",flexShrink:0}}>Müşteri Tipi</label><select style={{...iS,flex:1,minWidth:0,height:"35px",cursor:"pointer"}} value={yeniForm.musteriTipi} onChange={e=>setYeniForm(p=>({...p,musteriTipi:e.target.value}))} onFocus={foc} onBlur={blr}><option value="">—</option>{MUSTERI_TIPLERI.map(m=><option key={m} value={m}>{m}</option>)}</select></div>
             </div>
-            <div><label style={lS}>Son Temas Tarihi</label>
-              <input type="date" style={iS} value={yeniForm.sonTemasTarihi} onChange={e=>setYeniForm(p=>({...p,sonTemasTarihi:e.target.value}))}/>
+            {/* SAĞ KOLON — Kurumsal butonu altı: CRM */}
+            <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:"12px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:"12px"}}><label style={{...lS,marginBottom:0,width:"120px",flexShrink:0}}>Bize Nasıl Ulaştınız?</label><select style={{...iS,flex:1,minWidth:0,height:"35px",cursor:"pointer"}} value={yeniForm.kanal} onChange={e=>setYeniForm(p=>({...p,kanal:e.target.value}))} onFocus={foc} onBlur={blr}><option value="">—</option>{KAYNAK_KANALLARI.map(k=><option key={k} value={k}>{k}</option>)}</select></div>
+              <div style={{display:"flex",alignItems:"center",gap:"12px"}}><label style={{...lS,marginBottom:0,width:"120px",flexShrink:0}}>İlgi Seviyesi</label><select style={{...iS,flex:1,minWidth:0,height:"35px",cursor:"pointer"}} value={yeniForm.ilgiSeviyesi} onChange={e=>setYeniForm(p=>({...p,ilgiSeviyesi:e.target.value}))} onFocus={foc} onBlur={blr}>{ILGI_SEVIYELERI.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
+              <div style={{display:"flex",alignItems:"center",gap:"12px"}}><label style={{...lS,marginBottom:0,width:"120px",flexShrink:0}}>Son Temas Tarihi</label><input type="date" style={{...iS,flex:1,minWidth:0,height:"35px"}} value={yeniForm.sonTemasTarihi} onChange={e=>setYeniForm(p=>({...p,sonTemasTarihi:e.target.value}))}/></div>
             </div>
           </div>
-          <div><label style={lS}>Not</label><textarea style={{...iS,height:"60px",resize:"vertical"}} value={yeniForm.not} onChange={e=>setYeniForm(p=>({...p,not:e.target.value}))} placeholder="İlk temas notu..." onFocus={foc} onBlur={blr}/></div>
+          <div style={{display:"flex",alignItems:"center",gap:"12px"}}><label style={{...lS,marginBottom:0,width:"120px",flexShrink:0}}>Not</label><textarea style={{...iS,width:"600px",height:"80px",resize:"vertical"}} value={yeniForm.not} onChange={e=>setYeniForm(p=>({...p,not:e.target.value}))} placeholder="İlk temas notu..." onFocus={foc} onBlur={blr}/></div>
         </div>
         <div style={{padding:"12px 16px",borderTop:`1px solid ${T.border}`,background:"#fafafa",display:"flex",gap:"8px",justifyContent:"flex-end"}}>
           <button onClick={()=>setMode("list")} style={{padding:"8px 16px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>← Listeye Dön</button>
