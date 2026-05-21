@@ -799,6 +799,11 @@ const SATICI_UI={
   // görsel object-fit:contain ile sınırlanır. iPad/desktop fark etmez — magic number yok.
   sunumDaireSliderMaxH:300, // ADIM 4 sağ panel üst görsel (satıcı)
   daireEkranW:1186,       // Satış Sunumu › ADIM 4 (Daire) ekranı maxWidth, ortalı (satıcı/gomulu)
+  // ── Satıcı FİRMA KARTI (iPad, sade) ──
+  kartMaxW:980,           // firma kartı max genişlik (iPad'de ortalı; dar ekranda %100)
+  kartInpH:44,            // input/dokunma yüksekliği (Apple HIG min 44px)
+  kartGap:14,             // bölüm kartları arası boşluk
+  kartMinCol:220,         // alan grid'i min kolon (auto-fit → parent-fit, sabit kolon yok)
 };
 const foc=(e)=>{e.target.style.borderColor=T.primary;e.target.style.boxShadow=`0 0 0 2px ${T.primary}1a`;};
 const blr=(e)=>{e.target.style.borderColor=T.bDark;e.target.style.boxShadow="none";};
@@ -2115,6 +2120,232 @@ const FirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,projele
         {/* NOTLAR */}
       </div>
     </div>
+  </div>;
+};
+
+/* ========== SATICI FİRMA KARTI (iPad — sadeleştirilmiş) ==========
+   Admin FirmaKarti'ye DOKUNMADAN, sales rolü için tek-kolon parent-fit kart.
+   Ölçüler SATICI_UI.kart* config'inden okunur (magic number dağıtılmaz).
+   Görünür: müşteri/iletişim/adres/yakınları/satış-sunum/notlar.
+   Katlanır: Resmi-Vergi (tüzel↔şahıs koşullu; alıcıya dönüştürmek için gerekli).
+   Gizli: banka, şube, çoklu adres, web, sicil no. */
+const SaticiFirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,projeler=[],setPage,sunumlar=[]})=>{
+  const[form,setForm]=useState(()=>firma?{...firma}:{
+    id:Date.now(),firmaKodu:initData?.firmaKodu||"",ad:"",kisaAd:"",aciklama:"",turler:initData?.turler||["potansiyel"],paraBirimi:initData?.paraBirimi||"TL",
+    firmaKisiTipi:"sahis",
+    vergiDairesiIl:"",vergiDairesi:"",vergiNo:"",tcKimlikNo:"",sicilNo:"",kategori:"",musteriTipi:"",
+    telefon:"",sabitTelefon:"",telefon2:"",webAdresi:"",eposta:"",
+    mahalle:"",adres:"",il:"",ilce:"",postaKodu:"",
+    bankaAdi:"",iban:"",aktif:true,
+    ilgilendigiProjeler:[],kisiler:[],notlar:[],belgeler:[],subeler:[],bankalar:[],iletisimler:[],adresler:[],
+    createdAt:new Date().toISOString().split("T")[0]
+  });
+  const[saved,setSaved]=useState(false);
+  const[resmiOpen,setResmiOpen]=useState(false);
+  const[nn,setNn]=useState("");
+  const ilceler=useMemo(()=>ILLER_ILCELER[form.il]||[],[form.il]);
+  const u=(f,v)=>setForm(p=>({...p,[f]:v}));
+
+  // Yakınlar (kisiler[]) — "yakınlık derecesi" mevcut `unvan` alanına yazılır (Supabase değişmez)
+  const addYakin=()=>setForm(p=>({...p,kisiler:[...(p.kisiler||[]),{id:Date.now(),cinsiyet:"",ad:"",soyad:"",unvan:"",departman:"",telefon:"",isTel:"",isTelDahili:"",cep:"",eposta:"",sosyal1:"",sosyal2:"",sosyal3:"",dogumTarihi:"",notlar:"",resim:""}]}));
+  const upYakin=(i,f,v)=>setForm(p=>{const k=[...(p.kisiler||[])];k[i]={...k[i],[f]:v};return{...p,kisiler:k};});
+  const rmYakin=(i)=>setForm(p=>({...p,kisiler:(p.kisiler||[]).filter((_,j)=>j!==i)}));
+
+  const addN=()=>{if(!nn.trim())return;if(onAddNote&&firma){onAddNote(firma.id,nn);}else{const n={id:Date.now(),tarih:new Date().toISOString().split("T")[0],yazar:"Satıcı",metin:nn};setForm(p=>({...p,notlar:[...(p.notlar||[]),n]}));}setNn("");};
+
+  const save=()=>{
+    if(!form.ad.trim()){alert("Müşteri adı zorunludur!");return;}
+    if(!phoneOk(form.telefon)){alert("Cep telefonu hatalı! (boş veya 11 hane olmalı)");return;}
+    if(!phoneOk(form.sabitTelefon)){alert("Sabit telefon hatalı! (boş veya 11 hane olmalı)");return;}
+    const badK=(form.kisiler||[]).find(k=>k.telefon&&!phoneOk(k.telefon));
+    if(badK){alert(`Yakın "${badK.ad||"?"} ${badK.soyad||""}" telefonu hatalı!`);return;}
+    onSave(form);
+    setSaved(true);setTimeout(()=>setSaved(false),2000);
+  };
+
+  const isAlici=(form.turler||[]).includes("alici");
+  const sadecePotansiyel=(form.turler||[]).includes("potansiyel")&&!isAlici;
+  const aliciValidasyon=()=>{
+    const eksik=[];
+    if(!form.ad.trim())eksik.push(form.firmaKisiTipi==="sahis"?"Ad Soyad":"Ünvan");
+    if(!form.telefon||!phoneOk(form.telefon))eksik.push("Telefon (11 hane)");
+    if(!form.adres||!form.adres.trim())eksik.push("Adres");
+    if(!form.il||!form.il.trim())eksik.push("İl");
+    if(form.firmaKisiTipi==="sahis"){if(!form.tcKimlikNo||!/^\d{11}$/.test(form.tcKimlikNo))eksik.push("TC Kimlik No (11 hane)");}
+    else{if(!form.vergiNo||!/^\d{10}$/.test(form.vergiNo))eksik.push("Vergi No (10 hane)");if(!form.vergiDairesi||!form.vergiDairesi.trim())eksik.push("Vergi Dairesi");}
+    return eksik;
+  };
+  const aliciyaDonustur=()=>{
+    const eksik=aliciValidasyon();
+    if(eksik.length>0){setResmiOpen(true);alert("Alıcıya dönüştürmek için eksik/hatalı zorunlu alanlar:\n\n• "+eksik.join("\n• ")+"\n\nBilgileri tamamlayıp tekrar deneyin.");return;}
+    if(!confirm(`"${form.ad}" müşterisini ALICI statüsüne yükseltmek istiyor musunuz?\n\nPotansiyel rolü korunacak (izlenebilirlik için).`))return;
+    const yeniTurler=[...(form.turler||[]),"alici"];const yeniForm={...form,turler:yeniTurler};
+    u("turler",yeniTurler);onSave(yeniForm);
+    alert("✓ Müşteri alıcı statüsüne geçirildi.");
+  };
+
+  const opsiyonluDaireler=useMemo(()=>{if(!isAlici||!form.id)return[];const out=[];projeler.forEach(p=>{(p.bolumler||[]).forEach(b=>{if(b.aliciFirmaId===form.id&&b.durum==="opsiyonlu")out.push({...b,projeId:p.id,projeAd:p.ad});});});return out;},[projeler,form.id,isAlici]);
+  const satinAlinanDaireler=useMemo(()=>{if(!isAlici||!form.id)return[];const out=[];projeler.forEach(p=>{(p.bolumler||[]).forEach(b=>{if(b.aliciFirmaId===form.id&&b.durum==="satildi")out.push({...b,projeId:p.id,projeAd:p.ad});});});return out;},[projeler,form.id,isAlici]);
+  const firmaSunumlari=useMemo(()=>(sunumlar||[]).filter(s=>String(s.firmaId)===String(form.id)).sort((a,b)=>String(b.tarih||"").localeCompare(String(a.tarih||""))),[sunumlar,form.id]);
+  const projeAdOf=(pid)=>(projeler.find(p=>String(p.id)===String(pid))?.ad)||"";
+  const daireAdOf=(pid,bid)=>{const p=projeler.find(p=>String(p.id)===String(pid));const b=(p?.bolumler||[]).find(bb=>String(bb.id)===String(bid));return b?`${b.blok?b.blok+" Blok • ":""}Daire ${b.no||"?"}`:"";};
+  const bedelOf=(d)=>{const n=(parseFloat(d.satisBedeli)||0)+(parseFloat(d.plus)||0);return n>0?n.toLocaleString("tr-TR")+" ₺":"—";};
+  const sonucEt={ilgileniyor:{l:"İlgileniyor",c:"#52c41a",bg:"#f6ffed"},dusunuyor:{l:"Düşünüyor",c:"#fa8c16",bg:"#fff7e6"},pas_gecti:{l:"Pas geçti",c:"#8c8c8c",bg:"#f5f5f5"}};
+  const ilgiEt={yuksek:{l:"Yüksek ilgi",c:"#ff4d4f",bg:"#fff1f0"},orta:{l:"Orta ilgi",c:"#fa8c16",bg:"#fff7e6"},dusuk:{l:"Düşük ilgi",c:"#8c8c8c",bg:"#f5f5f5"}};
+
+  // stiller (ölçüler config'ten — magic number dağıtma)
+  const inp={...iS,height:SATICI_UI.kartInpH+"px",lineHeight:SATICI_UI.kartInpH+"px"};
+  const fl={display:"block",fontSize:"13px",fontWeight:600,color:T.t2,marginBottom:"6px"};
+  const kart={background:"#fff",border:`1px solid ${T.border}`,borderRadius:T.rl,padding:"16px",boxShadow:T.sh};
+  const grid={display:"grid",gridTemplateColumns:`repeat(auto-fit,minmax(${SATICI_UI.kartMinCol}px,1fr))`,gap:"12px"};
+  const secBas={fontSize:"15px",fontWeight:700,marginBottom:"12px",display:"flex",alignItems:"center",gap:"8px"};
+
+  return <div style={{maxWidth:SATICI_UI.kartMaxW+"px",width:"100%",margin:"0 auto",boxSizing:"border-box",display:"flex",flexDirection:"column",gap:SATICI_UI.kartGap+"px"}}>
+
+    {/* HEADER */}
+    <div style={{display:"flex",alignItems:"center",gap:"12px",padding:"12px 16px",background:T.sidebar,borderRadius:T.rl}}>
+      <button onClick={onBack} title="Geri" style={{padding:0,border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",flexShrink:0}}><MoveLeft size={30}/></button>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:"18px",fontWeight:700,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{form.ad||"Yeni Müşteri"}</div>
+        {form.firmaKodu&&<div style={{fontSize:"12px",color:"#8799a3",fontFamily:"monospace"}}>{form.firmaKodu}</div>}
+      </div>
+      <div style={{flexShrink:0}}><AktifPasifToggle aktif={form.aktif!==false} onChange={v=>u("aktif",v)}/></div>
+      <button onClick={save} title={saved?"Kaydedildi":"Kaydet"} style={{padding:0,border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",flexShrink:0,transition:"color .3s"}}><Save size={30}/></button>
+    </div>
+
+    {/* DURUM BANDI */}
+    <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"10px",padding:"0 4px"}}>
+      {(form.turler||[]).map(t=><Badge key={t} type={t}/>)}
+      {form.createdAt&&<span style={{fontSize:"12px",color:T.t3}}>📅 {fmtDate(form.createdAt)}</span>}
+      <span style={{flex:1}}/>
+      {sadecePotansiyel&&<button onClick={aliciyaDonustur} title="Potansiyel müşteriyi Alıcı statüsüne yükselt" style={{padding:"10px 18px",borderRadius:T.r,border:"1px solid #52c41a",background:"#f6ffed",color:"#389e0d",fontSize:"14px",fontWeight:700,cursor:"pointer"}}>✓ Alıcıya Dönüştür</button>}
+    </div>
+
+    {/* MÜŞTERİ BİLGİLERİ */}
+    <div style={kart}>
+      <div style={{...secBas,color:T.primary}}>👤 Müşteri Bilgileri</div>
+      <div style={grid}>
+        <div><label style={fl}>Müşteri Adı <span style={{color:T.err}}>*</span></label><input style={{...inp,fontWeight:500}} value={form.ad} onChange={e=>u("ad",toTitleCase(e.target.value))} placeholder="Ad / Ünvan" onFocus={foc} onBlur={blr}/></div>
+        <div><label style={fl}>Kısa Ad</label><input style={inp} value={form.kisaAd||""} onChange={e=>u("kisaAd",e.target.value)} placeholder="Kısa ad" onFocus={foc} onBlur={blr}/></div>
+        <div><label style={fl}>Müşteri Tipi</label><select style={{...inp,cursor:"pointer"}} value={form.musteriTipi||""} onChange={e=>u("musteriTipi",e.target.value)} onFocus={foc} onBlur={blr}><option value="">—</option>{MUSTERI_TIPLERI.map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+        <div style={{gridColumn:"1/-1"}}><label style={fl}>Açıklama</label><input style={inp} value={form.aciklama||""} onChange={e=>u("aciklama",e.target.value)} placeholder="Kısa açıklama..." onFocus={foc} onBlur={blr}/></div>
+      </div>
+    </div>
+
+    {/* İLETİŞİM */}
+    <div style={kart}>
+      <div style={{...secBas,color:T.primary}}>📞 İletişim</div>
+      <div style={grid}>
+        <div><label style={fl}>Cep Telefonu</label><input style={{...inp,borderColor:phoneOk(form.telefon)?T.bDark:T.err}} value={form.telefon} onChange={e=>u("telefon",fmtPhone(e.target.value))} placeholder="0532 000 00 00" inputMode="numeric" onFocus={foc} onBlur={blr}/></div>
+        <div><label style={fl}>Sabit Telefon</label><input style={{...inp,borderColor:phoneOk(form.sabitTelefon)?T.bDark:T.err}} value={form.sabitTelefon} onChange={e=>u("sabitTelefon",fmtPhone(e.target.value))} placeholder="0362 000 00 00" inputMode="numeric" onFocus={foc} onBlur={blr}/></div>
+        <div><label style={fl}>Telefon 2</label><input style={inp} value={form.telefon2||""} onChange={e=>u("telefon2",fmtPhone(e.target.value))} placeholder="0532 000 00 00" inputMode="numeric" onFocus={foc} onBlur={blr}/></div>
+        <div><label style={fl}>E-posta</label><input style={inp} value={form.eposta} onChange={e=>u("eposta",e.target.value)} placeholder="ornek@mail.com" inputMode="email" onFocus={foc} onBlur={blr}/></div>
+      </div>
+    </div>
+
+    {/* ADRES */}
+    <div style={kart}>
+      <div style={{...secBas,color:T.primary}}>📍 Adres</div>
+      <div style={grid}>
+        <div><label style={fl}>İl</label><select style={{...inp,cursor:"pointer"}} value={form.il} onChange={e=>{u("il",e.target.value);u("ilce","");}} onFocus={foc} onBlur={blr}><option value="">İl seçiniz</option>{IL_LISTESI.map(il=><option key={il} value={il}>{il}</option>)}</select></div>
+        <div><label style={fl}>İlçe</label><select style={{...inp,cursor:"pointer",background:!form.il?"#f5f5f5":"#fff"}} value={form.ilce} onChange={e=>u("ilce",e.target.value)} disabled={!form.il} onFocus={foc} onBlur={blr}><option value="">{form.il?"İlçe seçiniz":"Önce il seçiniz"}</option>{ilceler.map(i=><option key={i} value={i}>{i}</option>)}</select></div>
+        <div><label style={fl}>Mahalle</label><input style={inp} value={form.mahalle} onChange={e=>u("mahalle",e.target.value)} placeholder="Mahalle" onFocus={foc} onBlur={blr}/></div>
+        <div style={{gridColumn:"1/-1"}}><label style={fl}>Açık Adres</label><input style={inp} value={form.adres} onChange={e=>u("adres",e.target.value)} placeholder="Cadde, sokak, no" onFocus={foc} onBlur={blr}/></div>
+      </div>
+    </div>
+
+    {/* YAKINLARI */}
+    <div style={kart}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px",gap:"10px",flexWrap:"wrap"}}>
+        <div style={{...secBas,color:T.primary,marginBottom:0}}>👨‍👩‍👧 Yakınları <span style={{color:T.t3,fontWeight:400,fontSize:"12px"}}>({(form.kisiler||[]).length})</span></div>
+        <button onClick={addYakin} style={{padding:"8px 16px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",cursor:"pointer",fontWeight:600,fontSize:"14px"}}>+ Yakın Ekle</button>
+      </div>
+      {(form.kisiler||[]).length===0
+        ?<div style={{textAlign:"center",padding:"20px",color:T.t3,fontSize:"14px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`}}>Henüz yakın eklenmemiş (eş, çocuk, kardeş...)</div>
+        :(form.kisiler||[]).map((k,i)=><div key={k.id} style={{border:`1px solid ${T.border}`,borderRadius:T.r,padding:"12px",marginBottom:"10px",background:"#fafafa"}}>
+          <div style={grid}>
+            <div><label style={fl}>Ad</label><input style={inp} value={k.ad||""} onChange={e=>upYakin(i,"ad",toTitleCase(e.target.value))} placeholder="Ad" onFocus={foc} onBlur={blr}/></div>
+            <div><label style={fl}>Soyad</label><input style={inp} value={k.soyad||""} onChange={e=>upYakin(i,"soyad",toTitleCase(e.target.value))} placeholder="Soyad" onFocus={foc} onBlur={blr}/></div>
+            <div><label style={fl}>Yakınlık</label><input style={inp} value={k.unvan||""} onChange={e=>upYakin(i,"unvan",e.target.value)} placeholder="Eş, çocuk, kardeş..." onFocus={foc} onBlur={blr}/></div>
+            <div><label style={fl}>Cep</label><input style={{...inp,borderColor:phoneOk(k.telefon)?T.bDark:T.err}} value={k.telefon||""} onChange={e=>upYakin(i,"telefon",fmtPhone(e.target.value))} placeholder="0532 000 00 00" inputMode="numeric" onFocus={foc} onBlur={blr}/></div>
+            <div><label style={fl}>E-posta</label><input style={inp} value={k.eposta||""} onChange={e=>upYakin(i,"eposta",e.target.value)} placeholder="ornek@mail.com" inputMode="email" onFocus={foc} onBlur={blr}/></div>
+          </div>
+          <div style={{display:"flex",justifyContent:"flex-end",marginTop:"8px"}}><button onClick={()=>rmYakin(i)} style={{padding:"6px 14px",borderRadius:T.r,border:`1px solid ${T.err}`,background:"#fff1f0",color:T.err,cursor:"pointer",fontSize:"13px",fontWeight:600,display:"flex",alignItems:"center",gap:"6px"}}><Trash2 size={14}/> Sil</button></div>
+        </div>)}
+    </div>
+
+    {/* RESMİ / VERGİ (KATLANIR) */}
+    <div style={kart}>
+      <button onClick={()=>setResmiOpen(!resmiOpen)} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",border:"none",background:"transparent",cursor:"pointer",padding:0}}>
+        <span style={{...secBas,marginBottom:0,color:T.t2}}>🧾 Resmi / Vergi Bilgileri</span>
+        <span style={{fontSize:"12px",color:T.t3,display:"flex",alignItems:"center",gap:"8px"}}>{!isAlici&&<span>Alıcıya dönüştürmek için gerekli</span>}<span style={{fontSize:"14px"}}>{resmiOpen?"▲":"▼"}</span></span>
+      </button>
+      {resmiOpen&&<div style={{marginTop:"14px",display:"flex",flexDirection:"column",gap:"12px"}}>
+        <div style={{display:"flex",gap:"24px",alignItems:"center",padding:"10px 14px",background:T.pBg,borderRadius:T.r,flexWrap:"wrap"}}>
+          <span style={{fontSize:"13px",fontWeight:600,color:T.t2}}>Tip:</span>
+          <label style={{display:"flex",alignItems:"center",gap:"6px",cursor:"pointer",fontSize:"15px",fontWeight:form.firmaKisiTipi==="sahis"?700:400,color:form.firmaKisiTipi==="sahis"?T.primary:T.text}}><input type="radio" name="sfk_tip" checked={form.firmaKisiTipi==="sahis"} onChange={()=>{u("firmaKisiTipi","sahis");u("vergiNo","");u("vergiDairesi","");u("vergiDairesiIl","");}}/>Şahıs</label>
+          <label style={{display:"flex",alignItems:"center",gap:"6px",cursor:"pointer",fontSize:"15px",fontWeight:form.firmaKisiTipi==="tuzel"?700:400,color:form.firmaKisiTipi==="tuzel"?T.primary:T.text}}><input type="radio" name="sfk_tip" checked={form.firmaKisiTipi==="tuzel"} onChange={()=>{u("firmaKisiTipi","tuzel");u("tcKimlikNo","");}}/>Tüzel Kişi</label>
+        </div>
+        {form.firmaKisiTipi==="sahis"
+          ?<div style={grid}>
+            <div><label style={fl}>TC Kimlik No <span style={{color:T.t3,fontWeight:400}}>(11 hane)</span></label><input style={{...inp,borderColor:form.tcKimlikNo&&form.tcKimlikNo.replace(/\D/g,"").length!==11?T.err:T.bDark}} value={form.tcKimlikNo||""} onChange={e=>u("tcKimlikNo",e.target.value.replace(/\D/g,"").slice(0,11))} placeholder="00000000000" inputMode="numeric" onFocus={foc} onBlur={blr}/></div>
+          </div>
+          :<div style={grid}>
+            <div><label style={fl}>Vergi Dairesi İli</label><select style={{...inp,cursor:"pointer"}} value={form.vergiDairesiIl||""} onChange={e=>{u("vergiDairesiIl",e.target.value);u("vergiDairesi","");}} onFocus={foc} onBlur={blr}><option value="">İl seçiniz</option>{IL_LISTESI.map(il=><option key={il} value={il}>{il}</option>)}</select></div>
+            <div><label style={fl}>Vergi Dairesi</label><select style={{...inp,cursor:"pointer",background:!form.vergiDairesiIl?"#f5f5f5":"#fff"}} value={form.vergiDairesi||""} onChange={e=>u("vergiDairesi",e.target.value)} disabled={!form.vergiDairesiIl} onFocus={foc} onBlur={blr}><option value="">{form.vergiDairesiIl?"Vergi dairesi seçiniz":"Önce il seçiniz"}</option>{(VERGI_DAIRELERI[form.vergiDairesiIl]||[]).map(vd=><option key={vd} value={vd}>{vd}</option>)}</select></div>
+            <div><label style={fl}>Vergi No <span style={{color:T.t3,fontWeight:400}}>(10 hane)</span></label><input style={{...inp,borderColor:form.vergiNo&&form.vergiNo.replace(/\D/g,"").length!==10?T.err:T.bDark}} value={form.vergiNo||""} onChange={e=>u("vergiNo",e.target.value.replace(/\D/g,"").slice(0,10))} placeholder="0000000000" inputMode="numeric" onFocus={foc} onBlur={blr}/></div>
+          </div>}
+        <div style={grid}>
+          <div><label style={fl}>Para Birimi</label><select style={{...inp,cursor:"pointer"}} value={form.paraBirimi||"TL"} onChange={e=>u("paraBirimi",e.target.value)} onFocus={foc} onBlur={blr}>{PARA_BIRIMLERI.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></div>
+          <div><label style={fl}>Posta Kodu</label><input style={inp} value={form.postaKodu||""} onChange={e=>u("postaKodu",e.target.value)} placeholder="00000" inputMode="numeric" onFocus={foc} onBlur={blr}/></div>
+        </div>
+      </div>}
+    </div>
+
+    {/* SATIŞ & SUNUM */}
+    <div style={kart}>
+      <div style={{...secBas,color:"#722ed1"}}>📋 Satış & Sunum</div>
+      <div style={{marginBottom:"16px"}}>
+        <div style={{fontSize:"13px",fontWeight:600,color:T.t2,marginBottom:"8px"}}>Sunum Geçmişi <span style={{color:T.t3,fontWeight:400}}>({firmaSunumlari.length})</span></div>
+        {firmaSunumlari.length===0
+          ?<div style={{textAlign:"center",padding:"16px",color:T.t3,background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`,fontSize:"13px"}}>Müşteriye henüz sunum yapılmamış.</div>
+          :<div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>{firmaSunumlari.map((s,idx)=>{const sonuc=sonucEt[s.sonuc];const ilgi=ilgiEt[s.ilgiSeviyesi];return <div key={s.id} style={{display:"flex",gap:"12px",padding:"12px 14px",background:idx%2===0?"#fff":"#fafafa",borderBottom:idx<firmaSunumlari.length-1?`1px solid ${T.border}`:"none"}}>
+            <div style={{width:"66px",flexShrink:0,fontSize:"12px",fontWeight:700,color:"#722ed1",textAlign:"center",background:"#f9f0ff",borderRadius:"6px",padding:"6px 4px",height:"fit-content"}}>{s.tarih?s.tarih.split("-").reverse().join("."):"—"}</div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:"13px",fontWeight:600,color:T.text}}>{projeAdOf(s.projeId)}{daireAdOf(s.projeId,s.bolumId)?` • ${daireAdOf(s.projeId,s.bolumId)}`:""}</div>
+              <div style={{display:"flex",gap:"6px",flexWrap:"wrap",marginTop:"4px"}}>{sonuc&&<span style={{fontSize:"11px",fontWeight:600,color:sonuc.c,background:sonuc.bg,padding:"2px 8px",borderRadius:"10px"}}>{sonuc.l}</span>}{ilgi&&<span style={{fontSize:"11px",fontWeight:600,color:ilgi.c,background:ilgi.bg,padding:"2px 8px",borderRadius:"10px"}}>{ilgi.l}</span>}</div>
+              {s.notlar&&<div style={{fontSize:"12px",color:T.t2,fontStyle:"italic",marginTop:"4px"}}>"{s.notlar}"</div>}
+            </div>
+          </div>;})}</div>}
+      </div>
+      <div style={{marginBottom:(opsiyonluDaireler.length>0||satinAlinanDaireler.length>0)?"16px":0}}>
+        <div style={{fontSize:"13px",fontWeight:600,color:T.t2,marginBottom:"8px"}}>🏢 İlgilendiği Projeler <span style={{color:T.t3,fontWeight:400}}>({(form.ilgilendigiProjeler||[]).length})</span></div>
+        {(form.ilgilendigiProjeler||[]).length===0
+          ?<div style={{textAlign:"center",padding:"16px",color:T.t3,background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`,fontSize:"13px"}}>Opsiyon/satış yapıldığında burada listelenir.</div>
+          :<div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>{(form.ilgilendigiProjeler||[]).map((ilgi,idx)=><div key={idx} style={{display:"flex",alignItems:"center",gap:"12px",padding:"10px 14px",background:idx%2===0?"#fff":"#fafafa"}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:"14px",fontWeight:500,color:T.text}}>{ilgi.projeAd||"—"}</div>{ilgi.not&&<div style={{fontSize:"11px",color:T.t2,fontStyle:"italic"}}>"{ilgi.not}"</div>}</div><button onClick={()=>setForm(p=>({...p,ilgilendigiProjeler:(p.ilgilendigiProjeler||[]).filter((_,i)=>i!==idx)}))} style={{background:"none",border:"none",color:T.err,cursor:"pointer",flexShrink:0}}><Trash2 size={16}/></button></div>)}</div>}
+      </div>
+      {opsiyonluDaireler.length>0&&<div style={{marginBottom:satinAlinanDaireler.length>0?"16px":0}}>
+        <div style={{fontSize:"13px",fontWeight:600,color:"#fa8c16",marginBottom:"8px"}}>🟡 Opsiyonladığı Daireler ({opsiyonluDaireler.length})</div>
+        <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>{opsiyonluDaireler.map((d,idx)=><div key={`${d.projeId}_${d.id}`} onClick={()=>setPage&&setPage("satis_sunum")} style={{display:"flex",justifyContent:"space-between",gap:"10px",padding:"10px 14px",background:idx%2===0?"#fffbe6":"#fff",cursor:"pointer",alignItems:"center"}}><div style={{fontSize:"13px",color:T.text}}>{d.projeAd} • {d.blok||"—"} Blok • Daire {d.no||"—"}</div><div style={{fontSize:"13px",fontWeight:600,color:"#fa8c16",whiteSpace:"nowrap"}}>{bedelOf(d)}</div></div>)}</div>
+      </div>}
+      {satinAlinanDaireler.length>0&&<div>
+        <div style={{fontSize:"13px",fontWeight:600,color:"#1677ff",marginBottom:"8px"}}>🔵 Satın Alınan Daireler ({satinAlinanDaireler.length})</div>
+        <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>{satinAlinanDaireler.map((d,idx)=><div key={`${d.projeId}_${d.id}`} onClick={()=>setPage&&setPage("satis_sunum")} style={{display:"flex",justifyContent:"space-between",gap:"10px",padding:"10px 14px",background:idx%2===0?"#e6f4ff":"#fff",cursor:"pointer",alignItems:"center"}}><div style={{fontSize:"13px",color:T.text}}>{d.projeAd} • {d.blok||"—"} Blok • Daire {d.no||"—"}</div><div style={{fontSize:"13px",fontWeight:700,color:"#1677ff",whiteSpace:"nowrap"}}>{bedelOf(d)}</div></div>)}</div>
+      </div>}
+    </div>
+
+    {/* NOTLAR */}
+    <div style={kart}>
+      <div style={{...secBas,color:T.primary}}>📝 Notlar</div>
+      <div style={{display:"flex",gap:"8px",marginBottom:"12px"}}>
+        <input style={{...inp,flex:1}} value={nn} onChange={e=>setNn(e.target.value)} placeholder="Yeni not yazın..." onKeyDown={e=>e.key==="Enter"&&addN()} onFocus={foc} onBlur={blr}/>
+        <button onClick={addN} style={{padding:"0 20px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",cursor:"pointer",fontWeight:600,fontSize:"14px",whiteSpace:"nowrap",flexShrink:0}}>+ Ekle</button>
+      </div>
+      {(form.notlar||[]).length===0
+        ?<div style={{textAlign:"center",padding:"14px",color:T.t3,fontSize:"13px"}}>Henüz not yok</div>
+        :(form.notlar||[]).slice().reverse().map(n=><div key={n.id} style={{padding:"10px 14px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`,marginBottom:"6px",borderLeft:`3px solid ${T.primary}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:"4px"}}><span style={{color:T.primary,fontSize:"12px",fontWeight:600}}>{n.yazar}</span><span style={{color:T.t3,fontSize:"12px"}}>{fmtDate(n.tarih)}</span></div><div style={{color:T.text,fontSize:"14px",lineHeight:1.5}}>{n.metin}</div></div>)}
+    </div>
+
   </div>;
 };
 
@@ -4262,9 +4493,10 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
 
   const onAddNote_local=(fid,txt)=>{const n={id:Date.now(),tarih:new Date().toISOString().split("T")[0],yazar:"Admin",metin:txt};setFirmalar(p=>p.map(f=>f.id===fid?{...f,notlar:[...f.notlar,n]}:f));};
 
-  /* FIRMA KARTI (TAM SAYFA FORM) - YENİ veya DÜZENLE */
+  /* FIRMA KARTI — satıcı(sales) için sadeleştirilmiş iPad kartı; diğer roller tam kart */
+  const KartComp = isSatici(currentUser) ? SaticiFirmaKarti : FirmaKarti;
   if(view==="form-new"){
-    return <FirmaKarti
+    return <KartComp
       firma={null}
       initData={initData}
       isNew={true}
@@ -4280,7 +4512,7 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
 
   if(view==="form-edit"&&activeFirma){
     const liveFirma=firmalar.find(f=>f.id===activeFirma.id)||activeFirma;
-    return <FirmaKarti
+    return <KartComp
       firma={liveFirma}
       initData={{firmaKodu:liveFirma.firmaKodu,turler:liveFirma.turler,paraBirimi:liveFirma.paraBirimi}}
       isNew={false}
