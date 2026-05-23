@@ -2346,21 +2346,10 @@ const SaticiFirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,p
     {/* SATIŞ SEKMESİ */}
     {tab==="satis"&&<>
     <div style={kart}>
-      <div style={{...secBas,color:"#1677ff"}}>🔵 Satış İlişkileri</div>
-      <div style={{marginBottom:(opsiyonluDaireler.length>0||satinAlinanDaireler.length>0)?"16px":0}}>
-        <div style={{fontSize:"13px",fontWeight:600,color:T.t2,marginBottom:"8px"}}>🏢 İlgilendiği Projeler <span style={{color:T.t3,fontWeight:400}}>({(form.ilgilendigiProjeler||[]).length})</span></div>
-        {(form.ilgilendigiProjeler||[]).length===0
-          ?<div style={{textAlign:"center",padding:"16px",color:T.t3,background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`,fontSize:"13px"}}>Opsiyon/satış yapıldığında burada listelenir.</div>
-          :<div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>{(form.ilgilendigiProjeler||[]).map((ilgi,idx)=><div key={idx} style={{display:"flex",alignItems:"center",gap:"12px",padding:"10px 14px",background:idx%2===0?"#fff":"#fafafa"}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:"14px",fontWeight:500,color:T.text}}>{ilgi.projeAd||"—"}</div>{ilgi.not&&<div style={{fontSize:"11px",color:T.t2,fontStyle:"italic"}}>"{ilgi.not}"</div>}</div><button onClick={()=>setForm(p=>({...p,ilgilendigiProjeler:(p.ilgilendigiProjeler||[]).filter((_,i)=>i!==idx)}))} style={{background:"none",border:"none",color:T.err,cursor:"pointer",flexShrink:0}}><Trash2 size={16}/></button></div>)}</div>}
-      </div>
-      {opsiyonluDaireler.length>0&&<div style={{marginBottom:satinAlinanDaireler.length>0?"16px":0}}>
-        <div style={{fontSize:"13px",fontWeight:600,color:"#fa8c16",marginBottom:"8px"}}>🟡 Opsiyonladığı Daireler ({opsiyonluDaireler.length})</div>
-        <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>{opsiyonluDaireler.map((d,idx)=><div key={`${d.projeId}_${d.id}`} onClick={()=>setPage&&setPage("satis_sunum")} style={{display:"flex",justifyContent:"space-between",gap:"10px",padding:"10px 14px",background:idx%2===0?"#fffbe6":"#fff",cursor:"pointer",alignItems:"center"}}><div style={{fontSize:"13px",color:T.text}}>{d.projeAd} • {d.blok||"—"} Blok • Daire {d.no||"—"}</div><div style={{fontSize:"13px",fontWeight:600,color:"#fa8c16",whiteSpace:"nowrap"}}>{bedelOf(d)}</div></div>)}</div>
-      </div>}
-      {satinAlinanDaireler.length>0&&<div>
-        <div style={{fontSize:"13px",fontWeight:600,color:"#1677ff",marginBottom:"8px"}}>🔵 Satın Alınan Daireler ({satinAlinanDaireler.length})</div>
-        <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>{satinAlinanDaireler.map((d,idx)=><div key={`${d.projeId}_${d.id}`} onClick={()=>setPage&&setPage("satis_sunum")} style={{display:"flex",justifyContent:"space-between",gap:"10px",padding:"10px 14px",background:idx%2===0?"#e6f4ff":"#fff",cursor:"pointer",alignItems:"center"}}><div style={{fontSize:"13px",color:T.text}}>{d.projeAd} • {d.blok||"—"} Blok • Daire {d.no||"—"}</div><div style={{fontSize:"13px",fontWeight:700,color:"#1677ff",whiteSpace:"nowrap"}}>{bedelOf(d)}</div></div>)}</div>
-      </div>}
+      <div style={{...secBas,color:"#1677ff"}}>🔵 Satın Alınan Daireler <span style={{color:T.t3,fontWeight:400,fontSize:"12px"}}>({satinAlinanDaireler.length})</span></div>
+      {satinAlinanDaireler.length===0
+        ?<div style={{textAlign:"center",padding:"16px",color:T.t3,background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`,fontSize:"13px"}}>Henüz kesinleşmiş satış yok. Satış faturaları modülü bağlanınca fatura bilgileri burada görünecek.</div>
+        :<div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>{satinAlinanDaireler.map((d,idx)=><div key={`${d.projeId}_${d.id}`} onClick={()=>setPage&&setPage("satis_sunum")} style={{display:"flex",justifyContent:"space-between",gap:"10px",padding:"10px 14px",background:idx%2===0?"#e6f4ff":"#fff",cursor:"pointer",alignItems:"center"}}><div style={{fontSize:"13px",color:T.text}}>{d.projeAd} • {d.blok||"—"} Blok • Daire {d.no||"—"}</div><div style={{fontSize:"13px",fontWeight:700,color:"#1677ff",whiteSpace:"nowrap"}}>{bedelOf(d)}</div></div>)}</div>}
     </div>
     </>}
 
