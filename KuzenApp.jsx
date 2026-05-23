@@ -5328,7 +5328,7 @@ const DosyaModal=({dosya,onSave,onClose,onDel,kategoriler,getAltKatlar,bolumler=
         {/* ANA KATEGORİ */}
         <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
           <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Ana Kategori</label>
-          <select style={iS} value={form.anaKategori||""} onChange={e=>{u("anaKategori",e.target.value);u("altKategori","");}}>
+          <select style={iS} value={form.anaKategori||""} onChange={e=>{u("anaKategori",e.target.value);u("altKategori","");u("bolumIds",[]);}}>
             <option value="">— Seçiniz —</option>
             {kategoriler.map(k=><option key={k.id} value={k.ad}>{k.ad}</option>)}
           </select>
@@ -5336,7 +5336,7 @@ const DosyaModal=({dosya,onSave,onClose,onDel,kategoriler,getAltKatlar,bolumler=
         {/* ALT KATEGORİ */}
         {altKatlar.length>0&&<div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:"12px",alignItems:"center"}}>
           <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Alt Kategori</label>
-          <select style={iS} value={form.altKategori||""} onChange={e=>u("altKategori",e.target.value)}>
+          <select style={iS} value={form.altKategori||""} onChange={e=>{const v=e.target.value;u("altKategori",v);if(v!=="Daire Detayları")u("bolumIds",[]);}}>
             <option value="">— Seçiniz —</option>
             {altKatlar.map(a=><option key={a} value={a}>{a}</option>)}
           </select>
@@ -9590,6 +9590,8 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     if(!bolum)return[];
     const items=[];
     (selProje?.tumDosyalar||[]).forEach(d=>{
+      // Sadece "Proje Görselleri › Daire Detayları" — Genel Görseller vb. daire sayfasında çıkmaz
+      if(d.anaKategori!=="Proje Görselleri"||d.altKategori!=="Daire Detayları")return;
       if(!d.bolumIds||!d.bolumIds.includes(bolum.id))return;
       if(d.sunumGoster===false)return;
       const src=dosyaUrl(d);
