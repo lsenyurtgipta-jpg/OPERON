@@ -2206,6 +2206,11 @@ const SaticiFirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,p
   const kart={background:"#fff",border:`1px solid ${T.border}`,borderRadius:T.rl,padding:"16px",boxShadow:T.sh};
   const grid={display:"grid",gridTemplateColumns:`repeat(auto-fit,minmax(${SATICI_UI.kartMinCol}px,1fr))`,gap:"12px"};
   const secBas={fontSize:"15px",fontWeight:700,marginBottom:"12px",display:"flex",alignItems:"center",gap:"8px"};
+  // Sol-hizalı satır: label solda + dikey ortalı (sabit genişlik), input 250x36
+  const fRow={display:"flex",alignItems:"center",gap:"12px",marginBottom:"6px"};
+  const fLbl={width:"110px",flexShrink:0,fontSize:"13px",fontWeight:600,color:T.t2};
+  const inpSabit={...iS,width:"275px",height:"36px",lineHeight:"36px",flexShrink:0}; // Müşteri Bilgileri grubu
+  const inpAdres={...inpSabit,width:"325px"}; // Adres grubu (+ Müşteri Tipi)
 
   return <div style={{maxWidth:SATICI_UI.kartMaxW+"px",width:"100%",margin:"0 auto",boxSizing:"border-box",display:"flex",flexDirection:"column",gap:SATICI_UI.kartGap+"px"}}>
 
@@ -2228,36 +2233,38 @@ const SaticiFirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,p
       {sadecePotansiyel&&<button onClick={aliciyaDonustur} title="Potansiyel müşteriyi Alıcı statüsüne yükselt" style={{padding:"10px 18px",borderRadius:T.r,border:"1px solid #52c41a",background:"#f6ffed",color:"#389e0d",fontSize:"14px",fontWeight:700,cursor:"pointer"}}>✓ Alıcıya Dönüştür</button>}
     </div>
 
-    {/* MÜŞTERİ BİLGİLERİ */}
+    {/* MÜŞTERİ BİLGİLERİ + ADRES — yan yana (sol: müşteri bilgileri, sağ: adres) */}
+    <div style={{display:"flex",gap:"16px",alignItems:"stretch",flexWrap:"wrap"}}>
+      {/* SOL — Müşteri Bilgileri */}
+      <div style={{...kart,width:"fit-content",padding:"12px"}}>
+        <div style={{...secBas,color:T.primary}}>👤 Müşteri Bilgileri</div>
+        <div style={fRow}><label style={fLbl}>Müşteri Adı <span style={{color:T.err}}>*</span></label><input style={{...inpSabit,fontWeight:500}} value={form.ad} onChange={e=>u("ad",toTitleCase(e.target.value))} placeholder="Ad / Ünvan" onFocus={foc} onBlur={blr}/></div>
+        <div style={fRow}><label style={fLbl}>Kısa Ad</label><input style={inpSabit} value={form.kisaAd||""} onChange={e=>u("kisaAd",e.target.value)} placeholder="Kısa ad" onFocus={foc} onBlur={blr}/></div>
+        <div style={fRow}><label style={fLbl}>Cep Telefonu</label><input style={{...inpSabit,borderColor:phoneOk(form.telefon)?T.bDark:T.err}} value={form.telefon} onChange={e=>u("telefon",fmtPhone(e.target.value))} placeholder="0532 000 00 00" inputMode="numeric" onFocus={foc} onBlur={blr}/></div>
+        <div style={fRow}><label style={fLbl}>Sabit Telefon</label><input style={{...inpSabit,borderColor:phoneOk(form.sabitTelefon)?T.bDark:T.err}} value={form.sabitTelefon} onChange={e=>u("sabitTelefon",fmtPhone(e.target.value))} placeholder="0362 000 00 00" inputMode="numeric" onFocus={foc} onBlur={blr}/></div>
+        <div style={fRow}><label style={fLbl}>Telefon 2</label><input style={inpSabit} value={form.telefon2||""} onChange={e=>u("telefon2",fmtPhone(e.target.value))} placeholder="0532 000 00 00" inputMode="numeric" onFocus={foc} onBlur={blr}/></div>
+        <div style={{...fRow,marginBottom:0}}><label style={fLbl}>E-posta</label><input style={inpSabit} value={form.eposta} onChange={e=>u("eposta",e.target.value)} placeholder="ornek@mail.com" inputMode="email" onFocus={foc} onBlur={blr}/></div>
+      </div>
+      {/* SAĞ — dikey stack: Adres + Müşteri Tipi (alt hizaya yaslı) */}
+      <div style={{display:"flex",flexDirection:"column"}}>
+        <div style={{...kart,width:"fit-content",padding:"12px"}}>
+          <div style={{...secBas,color:T.primary}}>📍 Adres</div>
+          <div style={fRow}><label style={fLbl}>İl</label><div style={{width:"325px"}}><Sel value={form.il} options={IL_LISTESI} onChange={v=>{u("il",v);u("ilce","");}} placeholder="İl seçiniz"/></div></div>
+          <div style={fRow}><label style={fLbl}>İlçe</label><div style={{width:"325px"}}><Sel value={form.ilce} options={ilceler} onChange={v=>u("ilce",v)} placeholder={form.il?"İlçe seçiniz":"Önce il seçiniz"}/></div></div>
+          <div style={fRow}><label style={fLbl}>Mahalle</label><input style={inpAdres} value={form.mahalle} onChange={e=>u("mahalle",e.target.value)} placeholder="Mahalle" onFocus={foc} onBlur={blr}/></div>
+          <div style={{...fRow,marginBottom:0,alignItems:"flex-start"}}><label style={{...fLbl,paddingTop:"8px"}}>Açık Adres</label><textarea style={{...inpAdres,height:"60px",lineHeight:"1.4",padding:"7px 11px",resize:"vertical"}} value={form.adres} onChange={e=>u("adres",e.target.value)} placeholder="Cadde, sokak, no" onFocus={foc} onBlur={blr}/></div>
+        </div>
+        {/* Müşteri Tipi — Adres'in altında, alt hizaya yaslı (stretch + marginTop:auto) */}
+        <div style={{...kart,width:"fit-content",padding:"8px 12px",marginTop:"auto"}}>
+          <div style={{...fRow,marginBottom:0}}><label style={fLbl}>Müşteri Tipi</label><select style={{...inpAdres,cursor:"pointer"}} value={form.musteriTipi||""} onChange={e=>u("musteriTipi",e.target.value)} onFocus={foc} onBlur={blr}><option value="">—</option>{MUSTERI_TIPLERI.map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+        </div>
+      </div>
+    </div>
+
+    {/* Açıklama — geçici konum, sıradaki turda yerleştirilecek */}
     <div style={kart}>
-      <div style={{...secBas,color:T.primary}}>👤 Müşteri Bilgileri</div>
       <div style={grid}>
-        <div><label style={fl}>Müşteri Adı <span style={{color:T.err}}>*</span></label><input style={{...inp,fontWeight:500}} value={form.ad} onChange={e=>u("ad",toTitleCase(e.target.value))} placeholder="Ad / Ünvan" onFocus={foc} onBlur={blr}/></div>
-        <div><label style={fl}>Kısa Ad</label><input style={inp} value={form.kisaAd||""} onChange={e=>u("kisaAd",e.target.value)} placeholder="Kısa ad" onFocus={foc} onBlur={blr}/></div>
-        <div><label style={fl}>Müşteri Tipi</label><select style={{...inp,cursor:"pointer"}} value={form.musteriTipi||""} onChange={e=>u("musteriTipi",e.target.value)} onFocus={foc} onBlur={blr}><option value="">—</option>{MUSTERI_TIPLERI.map(m=><option key={m} value={m}>{m}</option>)}</select></div>
         <div style={{gridColumn:"1/-1"}}><label style={fl}>Açıklama</label><input style={inp} value={form.aciklama||""} onChange={e=>u("aciklama",e.target.value)} placeholder="Kısa açıklama..." onFocus={foc} onBlur={blr}/></div>
-      </div>
-    </div>
-
-    {/* İLETİŞİM */}
-    <div style={kart}>
-      <div style={{...secBas,color:T.primary}}>📞 İletişim</div>
-      <div style={grid}>
-        <div><label style={fl}>Cep Telefonu</label><input style={{...inp,borderColor:phoneOk(form.telefon)?T.bDark:T.err}} value={form.telefon} onChange={e=>u("telefon",fmtPhone(e.target.value))} placeholder="0532 000 00 00" inputMode="numeric" onFocus={foc} onBlur={blr}/></div>
-        <div><label style={fl}>Sabit Telefon</label><input style={{...inp,borderColor:phoneOk(form.sabitTelefon)?T.bDark:T.err}} value={form.sabitTelefon} onChange={e=>u("sabitTelefon",fmtPhone(e.target.value))} placeholder="0362 000 00 00" inputMode="numeric" onFocus={foc} onBlur={blr}/></div>
-        <div><label style={fl}>Telefon 2</label><input style={inp} value={form.telefon2||""} onChange={e=>u("telefon2",fmtPhone(e.target.value))} placeholder="0532 000 00 00" inputMode="numeric" onFocus={foc} onBlur={blr}/></div>
-        <div><label style={fl}>E-posta</label><input style={inp} value={form.eposta} onChange={e=>u("eposta",e.target.value)} placeholder="ornek@mail.com" inputMode="email" onFocus={foc} onBlur={blr}/></div>
-      </div>
-    </div>
-
-    {/* ADRES */}
-    <div style={kart}>
-      <div style={{...secBas,color:T.primary}}>📍 Adres</div>
-      <div style={grid}>
-        <div><label style={fl}>İl</label><select style={{...inp,cursor:"pointer"}} value={form.il} onChange={e=>{u("il",e.target.value);u("ilce","");}} onFocus={foc} onBlur={blr}><option value="">İl seçiniz</option>{IL_LISTESI.map(il=><option key={il} value={il}>{il}</option>)}</select></div>
-        <div><label style={fl}>İlçe</label><select style={{...inp,cursor:"pointer",background:!form.il?"#f5f5f5":"#fff"}} value={form.ilce} onChange={e=>u("ilce",e.target.value)} disabled={!form.il} onFocus={foc} onBlur={blr}><option value="">{form.il?"İlçe seçiniz":"Önce il seçiniz"}</option>{ilceler.map(i=><option key={i} value={i}>{i}</option>)}</select></div>
-        <div><label style={fl}>Mahalle</label><input style={inp} value={form.mahalle} onChange={e=>u("mahalle",e.target.value)} placeholder="Mahalle" onFocus={foc} onBlur={blr}/></div>
-        <div style={{gridColumn:"1/-1"}}><label style={fl}>Açık Adres</label><input style={inp} value={form.adres} onChange={e=>u("adres",e.target.value)} placeholder="Cadde, sokak, no" onFocus={foc} onBlur={blr}/></div>
       </div>
     </div>
 
