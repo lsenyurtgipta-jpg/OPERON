@@ -2142,6 +2142,7 @@ const SaticiFirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,p
   });
   const[saved,setSaved]=useState(false);
   const savingRef=useRef(false);
+  const[tab,setTab]=useState("genel");
   const[resmiOpen,setResmiOpen]=useState(false);
   const[nn,setNn]=useState("");
   const ilceler=useMemo(()=>ILLER_ILCELER[form.il]||[],[form.il]);
@@ -2225,14 +2226,19 @@ const SaticiFirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,p
       <button onClick={save} title={saved?"Kaydedildi":"Kaydet"} style={{padding:0,border:"none",background:"transparent",color:saved?"#52c41a":"#8799a3",cursor:"pointer",display:"flex",alignItems:"center",flexShrink:0,transition:"color .3s"}}><Save size={30}/></button>
     </div>
 
-    {/* DURUM BANDI */}
-    <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"10px",padding:"0 4px"}}>
+    {/* SEKMELER + DURUM (potansiyel/tarih/dönüştür sağda) */}
+    <div style={{display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap",marginBottom:"4px"}}>
+      {[{id:"genel",label:"Genel"},{id:"yakinlari",label:`Yakınları (${(form.kisiler||[]).length})`},{id:"sunum",label:`Sunum (${firmaSunumlari.length})`},{id:"satis",label:`Satış (${(form.ilgilendigiProjeler||[]).length+opsiyonluDaireler.length+satinAlinanDaireler.length})`},{id:"notlar",label:`Notlar (${(form.notlar||[]).length})`}].map(t=>(
+        <button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",borderRadius:T.r,border:`1px solid ${tab===t.id?T.primary:T.bDark}`,background:tab===t.id?T.primary:"#fff",color:tab===t.id?"#fff":T.t2,fontSize:"14px",fontWeight:tab===t.id?700:500,cursor:"pointer",minHeight:"44px"}}>{t.label}</button>
+      ))}
+      <span style={{flex:1}}/>
       {(form.turler||[]).map(t=><Badge key={t} type={t}/>)}
       {form.createdAt&&<span style={{fontSize:"12px",color:T.t3}}>📅 {fmtDate(form.createdAt)}</span>}
-      <span style={{flex:1}}/>
       {sadecePotansiyel&&<button onClick={aliciyaDonustur} title="Potansiyel müşteriyi Alıcı statüsüne yükselt" style={{padding:"10px 18px",borderRadius:T.r,border:"1px solid #52c41a",background:"#f6ffed",color:"#389e0d",fontSize:"14px",fontWeight:700,cursor:"pointer"}}>✓ Alıcıya Dönüştür</button>}
     </div>
 
+    {/* GENEL SEKMESİ */}
+    {tab==="genel"&&<>
     {/* MÜŞTERİ BİLGİLERİ + ADRES — yan yana (sol: müşteri bilgileri, sağ: adres) */}
     <div style={{display:"flex",gap:"16px",alignItems:"stretch",flexWrap:"wrap"}}>
       {/* SOL — Müşteri Bilgileri */}
@@ -2261,13 +2267,10 @@ const SaticiFirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,p
       </div>
     </div>
 
-    {/* Açıklama — geçici konum, sıradaki turda yerleştirilecek */}
-    <div style={kart}>
-      <div style={grid}>
-        <div style={{gridColumn:"1/-1"}}><label style={fl}>Açıklama</label><input style={inp} value={form.aciklama||""} onChange={e=>u("aciklama",e.target.value)} placeholder="Kısa açıklama..." onFocus={foc} onBlur={blr}/></div>
-      </div>
-    </div>
+    </>}
 
+    {/* YAKINLARI SEKMESİ */}
+    {tab==="yakinlari"&&<>
     {/* YAKINLARI */}
     <div style={kart}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px",gap:"10px",flexWrap:"wrap"}}>
@@ -2287,7 +2290,10 @@ const SaticiFirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,p
           <div style={{display:"flex",justifyContent:"flex-end",marginTop:"8px"}}><button onClick={()=>rmYakin(i)} style={{padding:"6px 14px",borderRadius:T.r,border:`1px solid ${T.err}`,background:"#fff1f0",color:T.err,cursor:"pointer",fontSize:"13px",fontWeight:600,display:"flex",alignItems:"center",gap:"6px"}}><Trash2 size={14}/> Sil</button></div>
         </div>)}
     </div>
+    </>}
 
+    {/* RESMİ/VERGİ — GENEL (devam) */}
+    {tab==="genel"&&<>
     {/* RESMİ / VERGİ (KATLANIR) */}
     <div style={kart}>
       <button onClick={()=>setResmiOpen(!resmiOpen)} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",border:"none",background:"transparent",cursor:"pointer",padding:0}}>
@@ -2315,10 +2321,12 @@ const SaticiFirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,p
         </div>
       </div>}
     </div>
+    </>}
 
-    {/* SATIŞ & SUNUM */}
+    {/* SUNUM SEKMESİ */}
+    {tab==="sunum"&&<>
     <div style={kart}>
-      <div style={{...secBas,color:"#722ed1"}}>📋 Satış & Sunum</div>
+      <div style={{...secBas,color:"#722ed1"}}>📋 Sunum Geçmişi</div>
       <div style={{marginBottom:"16px"}}>
         <div style={{fontSize:"13px",fontWeight:600,color:T.t2,marginBottom:"8px"}}>Sunum Geçmişi <span style={{color:T.t3,fontWeight:400}}>({firmaSunumlari.length})</span></div>
         {firmaSunumlari.length===0
@@ -2332,6 +2340,13 @@ const SaticiFirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,p
             </div>
           </div>;})}</div>}
       </div>
+    </div>
+    </>}
+
+    {/* SATIŞ SEKMESİ */}
+    {tab==="satis"&&<>
+    <div style={kart}>
+      <div style={{...secBas,color:"#1677ff"}}>🔵 Satış İlişkileri</div>
       <div style={{marginBottom:(opsiyonluDaireler.length>0||satinAlinanDaireler.length>0)?"16px":0}}>
         <div style={{fontSize:"13px",fontWeight:600,color:T.t2,marginBottom:"8px"}}>🏢 İlgilendiği Projeler <span style={{color:T.t3,fontWeight:400}}>({(form.ilgilendigiProjeler||[]).length})</span></div>
         {(form.ilgilendigiProjeler||[]).length===0
@@ -2347,8 +2362,16 @@ const SaticiFirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,p
         <div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden"}}>{satinAlinanDaireler.map((d,idx)=><div key={`${d.projeId}_${d.id}`} onClick={()=>setPage&&setPage("satis_sunum")} style={{display:"flex",justifyContent:"space-between",gap:"10px",padding:"10px 14px",background:idx%2===0?"#e6f4ff":"#fff",cursor:"pointer",alignItems:"center"}}><div style={{fontSize:"13px",color:T.text}}>{d.projeAd} • {d.blok||"—"} Blok • Daire {d.no||"—"}</div><div style={{fontSize:"13px",fontWeight:700,color:"#1677ff",whiteSpace:"nowrap"}}>{bedelOf(d)}</div></div>)}</div>
       </div>}
     </div>
+    </>}
 
-    {/* NOTLAR */}
+    {/* NOTLAR SEKMESİ */}
+    {tab==="notlar"&&<>
+    {/* Açıklama (Genel'den taşındı) */}
+    <div style={kart}>
+      <div style={grid}>
+        <div style={{gridColumn:"1/-1"}}><label style={fl}>Açıklama</label><input style={inp} value={form.aciklama||""} onChange={e=>u("aciklama",e.target.value)} placeholder="Kısa açıklama..." onFocus={foc} onBlur={blr}/></div>
+      </div>
+    </div>
     <div style={kart}>
       <div style={{...secBas,color:T.primary}}>📝 Notlar</div>
       <div style={{display:"flex",gap:"8px",marginBottom:"12px"}}>
@@ -2359,6 +2382,7 @@ const SaticiFirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,p
         ?<div style={{textAlign:"center",padding:"14px",color:T.t3,fontSize:"13px"}}>Henüz not yok</div>
         :(form.notlar||[]).slice().reverse().map(n=><div key={n.id} style={{padding:"10px 14px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`,marginBottom:"6px",borderLeft:`3px solid ${T.primary}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:"4px"}}><span style={{color:T.primary,fontSize:"12px",fontWeight:600}}>{n.yazar}</span><span style={{color:T.t3,fontSize:"12px"}}>{fmtDate(n.tarih)}</span></div><div style={{color:T.text,fontSize:"14px",lineHeight:1.5}}>{n.metin}</div></div>)}
     </div>
+    </>}
 
   </div>;
 };
