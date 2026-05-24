@@ -9387,7 +9387,7 @@ const SatisRaporPage=({projeler})=>{
     </div>
 
     {/* FİLTRE: sol durum kartları, sağ dikey istif (Tüm Projeler üstte, arama altta — alt hizalı) */}
-    <div style={{display:"flex",alignItems:"flex-end",gap:"16px",flexWrap:"wrap",marginBottom:"12px"}}>
+    <div style={{display:"flex",alignItems:"flex-start",gap:"16px",flexWrap:"wrap",marginBottom:"12px"}}>
       <div style={{display:"flex",gap:"10px",flexWrap:"wrap"}}>
         <Kart id="tumu" label="Tümü" sayi={durumOzet.tumu} toplam={durumFiltre==="tumu"?topListe:0} renk="#fff" bg="#1f2a30"/>
         <Kart id="musait" label="Müsait" sayi={durumOzet.musait} toplam={durumFiltre==="musait"?topListe:0} renk="#52c41a" bg="#f6ffed"/>
