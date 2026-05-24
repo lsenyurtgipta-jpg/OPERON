@@ -10042,23 +10042,16 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
               const mevcutFirma=firmalar.find(f=>String(f.id)===String(selBolum.aliciFirmaId));
               const aliciMi=(mevcutFirma?.turler||[]).includes("alici");
               return <>
-                {aliciMi
-                  ?<button onClick={()=>{setPickerIslem("satildi");setPickerAcik(true);}} style={{padding:tamEkran?"16px":"12px",borderRadius:T.r,border:"none",background:"#1677ff",color:"#fff",fontSize:tamEkran?"16px":"14px",fontWeight:700,cursor:"pointer",minHeight:tamEkran?"52px":"auto"}}>🔵 Satışa Çevir</button>
-                  :<>
-                    <button disabled style={{padding:tamEkran?"16px":"12px",borderRadius:T.r,border:"none",background:"#d9d9d9",color:"#fff",fontSize:tamEkran?"16px":"14px",fontWeight:700,cursor:"not-allowed",minHeight:tamEkran?"52px":"auto"}}>🔵 Satışa Çevir</button>
-                    <div style={{padding:"10px 12px",background:"#fff7e6",border:"1px solid #ffd591",borderRadius:T.r,fontSize:"12px",color:"#d46b08",lineHeight:1.5}}>
-                      ⚠ <strong>Müşteri potansiyel statüsünde.</strong> Satışa çevirmek için müşteriyi önce <strong>Alıcı</strong>'ya dönüştürüp TC/VKN, adres ve telefon gibi zorunlu bilgileri tamamlamalısınız.
-                    </div>
-                    <button onClick={()=>goToFirma&&goToFirma(selBolum.aliciFirmaId)} style={{padding:tamEkran?"14px":"10px",borderRadius:T.r,border:"1px solid #52c41a",background:"#f6ffed",color:"#389e0d",fontSize:tamEkran?"15px":"13px",fontWeight:700,cursor:"pointer",minHeight:tamEkran?"48px":"auto"}}>Firma Kartına Git →</button>
-                  </>
-                }
+                <button onClick={()=>{
+                  if(aliciMi){setPickerIslem("satildi");setPickerAcik(true);}
+                  else if(confirm(`"${selBolum.aliciFirmaAd||"Müşteri"}" henüz POTANSİYEL statüsünde.\n\nSatışa çevirmek için önce müşteriyi ALICI'ya dönüştürüp TC/VKN, adres ve telefon gibi zorunlu bilgileri tamamlamanız gerekir.\n\nMüşterinin firma kartına gitmek ister misiniz?`)){goToFirma&&goToFirma(selBolum.aliciFirmaId);}
+                }} style={{padding:tamEkran?"16px":"12px",borderRadius:T.r,border:"none",background:"#1677ff",color:"#fff",fontSize:tamEkran?"16px":"14px",fontWeight:700,cursor:"pointer",minHeight:tamEkran?"52px":"auto"}}>🔵 Satışa Çevir</button>
                 <button onClick={musaitYap} style={{padding:tamEkran?"14px":"10px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:tamEkran?"15px":"13px",cursor:"pointer",minHeight:tamEkran?"48px":"auto"}}>Müsait Yap</button>
               </>;
             })()}
             {selBolum.durum==="satildi"&&<button onClick={musaitYap} style={{padding:tamEkran?"14px":"10px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:tamEkran?"15px":"13px",cursor:"pointer",minHeight:tamEkran?"48px":"auto"}}>Müsait Yap (Satışı iptal)</button>}
           </div>
 
-          {!tamEkran&&selBolum.aliciFirmaId&&<button onClick={()=>goToFirma&&goToFirma(selBolum.aliciFirmaId)} style={{marginTop:"10px",width:"100%",padding:"8px",borderRadius:T.r,border:"none",background:"transparent",color:T.primary,fontSize:"12px",cursor:"pointer",textDecoration:"underline"}}>Müşteri Kartına Git →</button>}
         </div>
       </div>}
     </div>}
