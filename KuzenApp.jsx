@@ -4723,6 +4723,7 @@ const projeToLocal = (p) => ({
   karMarjiYuzde: p.kar_marji_yuzde!=null?String(p.kar_marji_yuzde):"",
   guncelKarMarjiYuzde: p.guncel_kar_marji_yuzde!=null?String(p.guncel_kar_marji_yuzde):"",
   varsayilanKdvOrani: p.varsayilan_kdv_orani||"20",
+  krediyeUygun: p.krediye_uygun===true, krediFaizOrani: p.kredi_faiz_orani!=null?String(p.kredi_faiz_orani):"",
   bloklar: p.bloklar||[], bolumler: p.bolumler||[],
   firmaBaglantilari: p.firma_baglantilari||[],
   tumDosyalar: p.tum_dosyalar||[],
@@ -4753,6 +4754,7 @@ const projeToDb = (p) => ({
   kar_marji_yuzde: p.karMarjiYuzde!==""&&p.karMarjiYuzde!=null?Number(p.karMarjiYuzde):null,
   guncel_kar_marji_yuzde: p.guncelKarMarjiYuzde!==""&&p.guncelKarMarjiYuzde!=null?Number(p.guncelKarMarjiYuzde):null,
   varsayilan_kdv_orani: p.varsayilanKdvOrani||"20",
+  krediye_uygun: p.krediyeUygun===true, kredi_faiz_orani: p.krediFaizOrani!==""&&p.krediFaizOrani!=null?Number(p.krediFaizOrani):null,
   // bloklar ve bolumler ayrı tablolarda tutuluyor — JSONB sütunları paralel, bu sütunlara yazmıyoruz
   firma_baglantilari: p.firmaBaglantilari||[],
   tum_dosyalar: p.tumDosyalar||[],
@@ -6271,6 +6273,18 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
                 <option value="Hasılat Paylaşımı">Hasılat Paylaşımı</option>
               </select>
             </div>
+            {/* KREDİYE UYGUN + AYLIK FAİZ — satıcı taksit planında kullanır */}
+            <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
+              <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right"}}>Krediye Uygun</label>
+              <label style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",fontSize:"14px",color:T.text}}>
+                <input type="checkbox" checked={form.krediyeUygun===true} onChange={e=>u("krediyeUygun",e.target.checked)} style={{width:"18px",height:"18px",cursor:"pointer",accentColor:T.primary}}/>
+                <span>Bu proje vadeli/kredili satışa açık</span>
+              </label>
+            </div>
+            {form.krediyeUygun&&<div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
+              <label style={{fontSize:"13px",fontWeight:600,color:T.text,textAlign:"right",height:"36px",lineHeight:"36px"}}>Aylık Faiz (%)</label>
+              <input style={{...iS,maxWidth:"160px"}} value={form.krediFaizOrani||""} onChange={e=>u("krediFaizOrani",e.target.value.replace(/[^0-9.,]/g,"").replace(",","."))} placeholder="örn. 2,5" inputMode="decimal"/>
+            </div>}
             {/* PAY ORANLARI - sadece anlaşma yöntemi seçiliyse */}
             {form.anlasmaYontemi&&<>
               <div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:"12px",alignItems:"center"}}>
@@ -9561,6 +9575,146 @@ const SunumRaporPage=({sunumlar=[],projeler=[],currentUser,saveSunum,delSunum})=
   </div>;
 };
 
+/* ---- TAKSİT PLANI MODAL — daire fiyatı/peşinat/vade/aylık faiz → eşit taksit + ara ödeme ---- */
+const VARSAYILAN_AYLIK_FAIZ=2.5; // aylık faiz oranı — admin belirler (şimdilik sabit), modalda salt-okunur
+const TaksitPlanModal=({bolum,faizOrani,onClose})=>{
+  const ilkFiyat=(()=>{const lst=parseFloat(bolum?.listeFiyatiKdvDahil)||0;const sat=(parseFloat(bolum?.satisBedeli)||0)+(parseFloat(bolum?.plus)||0);return lst>0?lst:sat;})();
+  const[fiyat,setFiyat]=useState(ilkFiyat||"");
+  const[pesTip,setPesTip]=useState("yuzde"); // yuzde | tutar
+  const[pesDeger,setPesDeger]=useState(30);
+  const[vade,setVade]=useState(36);
+  const[faiz]=useState(faizOrani!=null&&faizOrani!==""?parseFloat(faizOrani):VARSAYILAN_AYLIK_FAIZ);
+  const[araOdemeler,setAraOdemeler]=useState([]); // {ay,tutar}
+  const[planAcik,setPlanAcik]=useState(false);
+  const[araSekli,setAraSekli]=useState("ek"); // ek (taksit + ara) | yerine (o ay sadece ara)
+
+  const fNum=(v)=>parseFloat(String(v).replace(/[^\d.,]/g,"").replace(",","."))||0;
+  const f0=(x)=>Math.round(x||0).toLocaleString("tr-TR");
+
+  const fiyatN=fNum(fiyat);
+  const pesinat=pesTip==="yuzde"?Math.round(fiyatN*(fNum(pesDeger)/100)):fNum(pesDeger);
+  const kalan=Math.max(0,fiyatN-pesinat);
+  const i=fNum(faiz)/100;
+  const n=parseInt(vade)||0;
+  const pesYuzde=fiyatN>0?(pesinat/fiyatN*100):0;
+
+  const hesap=useMemo(()=>{
+    if(kalan<=0||n<=0)return {taksit:0,toplamOdenen:0,toplamFaiz:0,rows:[],araPV:0};
+    const annuite=(ana,ii,nn)=>{if(nn<=0)return 0;if(ii<=0)return ana/nn;const f=Math.pow(1+ii,nn);return ana*ii*f/(f-1);};
+    const aralar=araOdemeler.map(a=>({ay:parseInt(a.ay)||0,tutar:fNum(a.tutar)})).filter(a=>a.ay>=1&&a.ay<=n&&a.tutar>0);
+    // Ara ödemeler ödeneceği aya göre bugünkü değerine indirgenir (iskonto) ve ana borçtan düşülür → kalan EŞİT taksit
+    const araAylar=new Set(aralar.map(a=>a.ay));
+    const araPV=aralar.reduce((s,a)=>s+a.tutar/Math.pow(1+i,a.ay),0);
+    const netBorc=Math.max(0,kalan-araPV);
+    let taksit;
+    if(araSekli==="yerine"){
+      // ara ödeme aylarında normal taksit alınmaz → taksit yalnız diğer aylara dağılır
+      let pvF=0; for(let ay=1;ay<=n;ay++){if(!araAylar.has(ay))pvF+=(i<=0?1:1/Math.pow(1+i,ay));}
+      taksit=pvF>0?netBorc/pvF:0;
+    }else{
+      taksit=annuite(netBorc,i,n); // sabit (eşit) taksit
+    }
+    let bakiye=kalan,tFaiz=0,tOdenen=0;
+    const rows=[];
+    for(let ay=1;ay<=n;ay++){
+      const faizAy=bakiye*i;
+      const araBuAy=aralar.filter(a=>a.ay===ay).reduce((s,a)=>s+a.tutar,0);
+      let anapara,araGoster,taksitGoster;
+      if(araSekli==="yerine"&&araAylar.has(ay)){
+        let araAna=araBuAy-faizAy; if(araAna<0)araAna=0; if(araAna>bakiye)araAna=bakiye;
+        anapara=araAna; araGoster=araBuAy; taksitGoster=0;
+        bakiye=Math.max(0,bakiye-araAna); tFaiz+=faizAy; tOdenen+=faizAy+araAna;
+      }else{
+        anapara=taksit-faizAy;
+        const ek=(araSekli==="ek")?araBuAy:0;
+        if(anapara+ek>bakiye)anapara=Math.max(0,bakiye-ek);
+        araGoster=ek; taksitGoster=Math.round(faizAy+anapara);
+        bakiye=Math.max(0,bakiye-anapara-ek); tFaiz+=faizAy; tOdenen+=faizAy+anapara+ek;
+      }
+      const tD=new Date();tD.setMonth(tD.getMonth()+ay);
+      rows.push({ay,tarih:tD.toLocaleDateString("tr-TR"),taksit:taksitGoster,anapara:Math.round(anapara),faiz:Math.round(faizAy),ara:Math.round(araGoster),kalan:Math.round(bakiye)});
+      if(bakiye<=0.5)break;
+    }
+    return {taksit:Math.round(taksit),toplamOdenen:Math.round(tOdenen),toplamFaiz:Math.round(tFaiz),rows,araPV:Math.round(araPV)};
+  },[kalan,i,n,araOdemeler,araSekli]);
+
+  const toplamGenel=pesinat+hesap.toplamOdenen;
+  const iS3={width:"100%",height:"38px",padding:"0 11px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"15px",outline:"none",boxSizing:"border-box"};
+  const lbl3={display:"block",fontSize:"12px",fontWeight:600,color:T.t2,marginBottom:"5px"};
+  const hizBtn=(aktif)=>({padding:"6px 12px",borderRadius:T.r,border:`1px solid ${aktif?T.primary:T.bDark}`,background:aktif?T.primary:"#fff",color:aktif?"#fff":T.t2,fontSize:"13px",fontWeight:600,cursor:"pointer"});
+
+  return <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1100,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+    <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:T.rl,maxWidth:"640px",width:"100%",maxHeight:"90vh",overflowY:"auto",boxShadow:T.shM}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 20px",borderBottom:`1px solid ${T.border}`,position:"sticky",top:0,background:"#fff",zIndex:1}}>
+        <div style={{fontSize:"17px",fontWeight:700,color:T.text}}>💳 Taksit Planı{bolum?.no?` — Daire ${bolum.no}`:""}</div>
+        <button onClick={onClose} style={{background:"none",border:"none",fontSize:"20px",color:T.t3,cursor:"pointer",lineHeight:1}}>✕</button>
+      </div>
+      <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:"14px"}}>
+        <div><label style={lbl3}>Daire Fiyatı (₺)</label><input style={iS3} value={fiyat===""?"":fNum(fiyat).toLocaleString("tr-TR")} onChange={e=>setFiyat(e.target.value.replace(/\D/g,""))} inputMode="numeric" onFocus={foc} onBlur={blr}/></div>
+        <div>
+          <label style={lbl3}>Peşinat</label>
+          <div style={{display:"flex",gap:"8px",alignItems:"center"}}>
+            <div style={{display:"flex",border:`1px solid ${T.bDark}`,borderRadius:T.r,overflow:"hidden",flexShrink:0}}>
+              <button onClick={()=>{if(pesTip!=="tutar")setPesDeger(pesinat);setPesTip("tutar");}} style={{padding:"8px 14px",border:"none",background:pesTip==="tutar"?T.primary:"#fff",color:pesTip==="tutar"?"#fff":T.t2,fontSize:"14px",fontWeight:700,cursor:"pointer"}}>₺</button>
+              <button onClick={()=>{if(pesTip!=="yuzde")setPesDeger(Math.round(pesYuzde));setPesTip("yuzde");}} style={{padding:"8px 14px",border:"none",background:pesTip==="yuzde"?T.primary:"#fff",color:pesTip==="yuzde"?"#fff":T.t2,fontSize:"14px",fontWeight:700,cursor:"pointer"}}>%</button>
+            </div>
+            <input style={{...iS3,flex:1}} value={pesTip==="tutar"?(pesDeger===""?"":fNum(pesDeger).toLocaleString("tr-TR")):pesDeger} onChange={e=>setPesDeger(pesTip==="tutar"?e.target.value.replace(/\D/g,""):e.target.value)} inputMode="numeric" onFocus={foc} onBlur={blr}/>
+          </div>
+          <div style={{display:"flex",gap:"6px",marginTop:"6px",flexWrap:"wrap",alignItems:"center"}}>
+            {[20,30,50].map(p=><button key={p} onClick={()=>{setPesTip("yuzde");setPesDeger(p);}} style={hizBtn(pesTip==="yuzde"&&fNum(pesDeger)===p)}>%{p}</button>)}
+            <span style={{fontSize:"12px",color:T.t3,marginLeft:"4px"}}>= {f0(pesinat)} ₺ • %{pesYuzde.toFixed(0)}</span>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
+          <div><label style={lbl3}>Vade</label><select style={{...iS3,cursor:"pointer"}} value={vade} onChange={e=>setVade(e.target.value)} onFocus={foc} onBlur={blr}>{Array.from({length:48},(_,k)=>k+1).map(v=><option key={v} value={v}>{v} ay</option>)}</select></div>
+          <div><label style={lbl3}>Aylık Faiz (%) <span style={{color:T.t3,fontWeight:400,fontSize:"11px"}}>(sabit)</span></label><input style={{...iS3,background:"#f5f5f5",color:T.t2,cursor:"not-allowed"}} value={faiz} readOnly tabIndex={-1}/></div>
+        </div>
+        <div style={{padding:"12px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:araOdemeler.length>0?"8px":0}}>
+            <span style={{fontSize:"13px",fontWeight:600,color:T.t2}}>Ara Ödemeler <span style={{color:T.t3,fontWeight:400,fontSize:"11px"}}>(belirli ayda ek toplu ödeme)</span></span>
+            <button onClick={()=>setAraOdemeler(p=>[...p,{ay:"",tutar:""}])} style={{padding:"5px 12px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"12px",fontWeight:600,cursor:"pointer"}}>+ Ekle</button>
+          </div>
+          {araOdemeler.length>0&&<div style={{display:"flex",gap:"6px",alignItems:"center",marginBottom:"8px",flexWrap:"wrap"}}>
+            <span style={{fontSize:"11px",color:T.t3}}>Ödeme şekli:</span>
+            <button onClick={()=>setAraSekli("ek")} style={hizBtn(araSekli==="ek")}>Ek ödeme</button>
+            <button onClick={()=>setAraSekli("yerine")} style={hizBtn(araSekli==="yerine")}>Taksit yerine</button>
+            <span style={{fontSize:"11px",color:T.t3,marginLeft:"2px"}}>{araSekli==="ek"?"(o ay taksit + ara ödeme birlikte)":"(o ay normal taksit alınmaz)"}</span>
+          </div>}
+          {araOdemeler.map((a,idx)=><div key={idx} style={{display:"flex",gap:"8px",alignItems:"center",marginBottom:"6px"}}>
+            <input style={{...iS3,width:"80px",height:"34px"}} value={a.ay} onChange={e=>setAraOdemeler(p=>p.map((x,j)=>j===idx?{...x,ay:e.target.value}:x))} placeholder="Ay" inputMode="numeric" onFocus={foc} onBlur={blr}/>
+            <input style={{...iS3,flex:1,height:"34px"}} value={a.tutar===""?"":fNum(a.tutar).toLocaleString("tr-TR")} onChange={e=>setAraOdemeler(p=>p.map((x,j)=>j===idx?{...x,tutar:e.target.value.replace(/\D/g,"")}:x))} placeholder="Tutar ₺" inputMode="numeric" onFocus={foc} onBlur={blr}/>
+            <button onClick={()=>setAraOdemeler(p=>p.filter((_,j)=>j!==idx))} title="Sil" style={{background:"none",border:"none",color:"#ff6b6b",cursor:"pointer",padding:"4px",display:"flex"}}><Trash2 size={18}/></button>
+          </div>)}
+        </div>
+        <div style={{padding:"14px 16px",background:T.pBg,borderRadius:T.rl,border:`1px solid ${T.primary}33`}}>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:"13px",color:T.t2}}><span>Kalan Anapara</span><span style={{fontWeight:600,color:T.text}}>{f0(kalan)} ₺</span></div>
+          <div style={{borderTop:`1px solid ${T.primary}33`,margin:"8px 0",paddingTop:"8px",display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+            <span style={{fontSize:"14px",fontWeight:600,color:T.primary}}>Aylık Taksit <span style={{fontSize:"11px",fontWeight:400,color:T.t3}}>(eşit)</span></span>
+            <span style={{fontSize:"26px",fontWeight:700,color:T.primary}}>{f0(hesap.taksit)} ₺</span>
+          </div>
+          {hesap.araPV>0&&<div style={{fontSize:"11px",color:T.t3,marginBottom:"6px",textAlign:"right"}}>Ara ödemeler bugünkü değeriyle ({f0(hesap.araPV)} ₺) borçtan düşüldü</div>}
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:"13px",color:T.t2}}><span>Toplam Ödeme (peşinat dahil)</span><span style={{fontWeight:600,color:T.text}}>{f0(toplamGenel)} ₺</span></div>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:"13px",color:T.t2,marginTop:"3px"}}><span>Toplam Faiz</span><span style={{fontWeight:600,color:"#fa8c16"}}>{f0(hesap.toplamFaiz)} ₺</span></div>
+        </div>
+        <button onClick={()=>setPlanAcik(v=>!v)} style={{padding:"10px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.primary,fontSize:"14px",fontWeight:600,cursor:"pointer"}}>{planAcik?"▾ Ödeme planını gizle":"▸ Ödeme planını göster"}</button>
+        {planAcik&&hesap.rows.length>0&&<div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden",maxHeight:"300px",overflowY:"auto"}}>
+          <div style={{display:"grid",gridTemplateColumns:"76px 1fr 1fr 1fr 56px 1fr",gap:"6px",padding:"8px 12px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,fontSize:"11px",fontWeight:600,color:T.t2,textTransform:"uppercase",position:"sticky",top:0}}>
+            <div>Tarih</div><div style={{textAlign:"right"}}>Taksit</div><div style={{textAlign:"right"}}>Anapara</div><div style={{textAlign:"right"}}>Faiz</div><div style={{textAlign:"right"}}>Ara</div><div style={{textAlign:"right"}}>Kalan</div>
+          </div>
+          {hesap.rows.map(r=><div key={r.ay} style={{display:"grid",gridTemplateColumns:"76px 1fr 1fr 1fr 56px 1fr",gap:"6px",padding:"7px 12px",borderBottom:`1px solid ${T.border}`,fontSize:"12px",background:r.ara>0?"#fff7e6":"#fff"}}>
+            <div style={{color:T.t3,fontSize:"11px"}}>{r.tarih}</div>
+            <div style={{textAlign:"right",color:T.text,fontWeight:500}}>{f0(r.taksit)}</div>
+            <div style={{textAlign:"right",color:T.t2}}>{f0(r.anapara)}</div>
+            <div style={{textAlign:"right",color:T.t3}}>{f0(r.faiz)}</div>
+            <div style={{textAlign:"right",color:r.ara>0?"#d46b08":T.t3,fontWeight:r.ara>0?700:400}}>{r.ara>0?f0(r.ara):"—"}</div>
+            <div style={{textAlign:"right",color:T.t2}}>{f0(r.kalan)}</div>
+          </div>)}
+        </div>}
+      </div>
+    </div>
+  </div>;
+};
+
 /* ---- SATIŞ SUNUM PAGE ---- */
 const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage,goToFirma,goToYeniFirma,gomulu=false,currentUser,sunumlar=[],saveSunum,delSunum,saveHatirlatma})=>{
   const[selProjeId,setSelProjeId]=useState(null);
@@ -9569,6 +9723,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
   const[selBolumId,setSelBolumId]=useState(null);
   const[daireDurumF,setDaireDurumF]=useState("tumu"); // daire grid durum filtresi: tumu|musait|opsiyonlu|satildi
   const[detayBolum,setDetayBolum]=useState(null); // daire detay popup (opsiyon/alıcı + sunum geçmişi)
+  const[taksitBolum,setTaksitBolum]=useState(null); // taksit planı modalı
   const[tamEkran,setTamEkran]=useState(!gomulu); // gomulu (satıcı): overlay yok, ana ekranda akar; admin: otomatik Sunum Modu
   const[pickerAcik,setPickerAcik]=useState(false);
   const[pickerIslem,setPickerIslem]=useState(null); // "opsiyonla" | "satildi"
@@ -9876,6 +10031,9 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
       return <MusteriPickerModal firmalar={firmalar} onYeniMusteri={goToYeniFirma} onSelect={pickerIslem==="sunum"?sunumKaydet:musteriSec} onClose={()=>setPickerAcik(false)} baslik={pickerIslem==="sunum"?"SUNUM — MÜŞTERİ / İLETİŞİM":(pickerIslem==="opsiyonla"?"OPSİYONLA — MÜŞTERİ SEÇ":(opsiyonluSatisaCevir?"SATIŞA ÇEVİR — FİYAT ONAYI":"SATIŞ — MÜŞTERİ SEÇ"))} pickerIslem={pickerIslem} listeFiyatiOneri={selBolum?.listeFiyatiKdvDahil||""} initialFirma={mevcutFirma} initialSatisBedeli={mevcutSatisBed} initialPlus={mevcutPlus} bolum={selBolum} projeAd={selProje?.ad||""} bolumler={selProje?.bolumler||[]}/>;
     })()}
 
+    {/* TAKSİT PLANI MODAL */}
+    {taksitBolum&&<TaksitPlanModal bolum={taksitBolum} faizOrani={selProje?.krediFaizOrani} onClose={()=>setTaksitBolum(null)}/>}
+
     {/* DAİRE DETAY POPUP — opsiyon/alıcı bilgisi + sunum geçmişi (ortada, taşmaz) */}
     {detayBolum&&(()=>{
       const b=detayBolum;
@@ -10132,6 +10290,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
 
           {/* BUTONLAR — iPad touch hedefi min 50px */}
           <div style={{display:"flex",flexDirection:"column",gap:tamEkran?"10px":"8px"}}>
+            {selProje?.krediyeUygun&&<button onClick={()=>setTaksitBolum(selBolum)} style={{padding:tamEkran?"14px":"10px",borderRadius:T.r,border:`1px solid ${T.primary}`,background:T.pBg,color:T.primary,fontSize:tamEkran?"15px":"14px",fontWeight:700,cursor:"pointer",minHeight:tamEkran?"48px":"auto"}}>💳 Taksit Planı Hesapla</button>}
             {!tamEkran&&(selBolum.durum==="satildi"||selBolum.durum==="opsiyonlu")&&<button onClick={fiyatDuzelt} title="Satış Bedeli + PLUS düzenle" style={{alignSelf:"flex-end",padding:"4px 10px",borderRadius:"4px",border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"12px",fontWeight:600,cursor:"pointer"}}>✎ Fiyat Düzelt</button>}
             {selBolum.durum==="musait"&&<>
               <button onClick={()=>{setPickerIslem("sunum");setPickerAcik(true);}} style={{padding:tamEkran?"16px":"12px",borderRadius:T.r,border:"1px solid #52c41a",background:"#f6ffed",color:"#389e0d",fontSize:tamEkran?"16px":"14px",fontWeight:700,cursor:"pointer",minHeight:tamEkran?"52px":"auto"}}>📋 Sunum Yap</button>
