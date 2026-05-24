@@ -9380,8 +9380,8 @@ const SatisRaporPage=({projeler})=>{
   const cols="230px 60px 50px 50px 45px 75px 55px 75px 90px 115px";
 
   return <div>
-    {/* BAŞLIK + DURUM KARTLARI (sol) | PROJE + ARAMA (sağ) — tek satır; başlığın sağ boşluğu kullanılır */}
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:"16px",flexWrap:"wrap",marginBottom:"12px"}}>
+    {/* BAŞLIK + DURUM KARTLARI (sol) | PROJE + ARAMA (sağ bitişik) — başlığın sağ boşluğu kullanılır, sola yaslı (taşmaz) */}
+    <div style={{display:"flex",alignItems:"flex-start",gap:"16px",flexWrap:"wrap",marginBottom:"12px"}}>
       <div>
         <h2 style={{fontSize:"20px",fontWeight:600,color:T.text,margin:0}}>Satış Raporu</h2>
         <p style={{color:T.t2,fontSize:"14px",margin:"4px 0 12px"}}>Müteahhit'e ait tüm bölümler — durum filtresi ve liste fiyatı toplamı</p>
