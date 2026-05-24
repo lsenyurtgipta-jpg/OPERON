@@ -906,6 +906,7 @@ const PAGE_ROLES = {
   maliyet:      ['admin','data_entry'],
   satis_sunum:  ['admin','data_entry','satici'],
   satis_rapor:  ['admin','data_entry','satici'],
+  sunum_rapor:  ['admin','data_entry','satici'],
   hatirlatmalar:['admin','data_entry','satici'],
   kullanicilar: ['admin'],
 };
@@ -1228,6 +1229,7 @@ const Sidebar=({page,setPage,open,editMode=false,currentUser=null})=>{
     {type:"group",groupId:"satis",label:"SATIŞ",children:[
       {id:"satis_sunum",label:"Satış Sunumu"},
       {id:"satis_rapor",label:"Satış Raporu"},
+      {id:"sunum_rapor",label:"Sunum Raporu"},
     ]},
     {id:"kullanicilar",label:"KULLANICILAR"},
   ];
@@ -9461,6 +9463,104 @@ const SatisRaporPage=({projeler,currentUser})=>{
 };
 
 
+/* ---- SUNUM RAPORU PAGE ---- */
+const SUNUM_SONUC=[{id:"ilgileniyor",l:"İlgileniyor",c:"#52c41a",bg:"#f6ffed"},{id:"dusunuyor",l:"Düşünüyor",c:"#fa8c16",bg:"#fff7e6"},{id:"pas_gecti",l:"Pas geçti",c:"#8c8c8c",bg:"#f5f5f5"}];
+const SUNUM_ILGI=[{id:"yuksek",l:"Yüksek",c:"#ff4d4f",bg:"#fff1f0"},{id:"orta",l:"Orta",c:"#fa8c16",bg:"#fff7e6"},{id:"dusuk",l:"Düşük",c:"#8c8c8c",bg:"#f5f5f5"}];
+const SunumRaporPage=({sunumlar=[],projeler=[],currentUser,saveSunum,delSunum})=>{
+  const[projeFiltre,setProjeFiltre]=useState("tumu");
+  const[sonucFiltre,setSonucFiltre]=useState("tumu");
+  const[ilgiFiltre,setIlgiFiltre]=useState("tumu");
+  const[arama,setArama]=useState("");
+  const[edit,setEdit]=useState(null);
+
+  const projeAd=(pid)=>projeler.find(p=>String(p.id)===String(pid))?.ad||"—";
+  const daireAd=(pid,bid)=>{const p=projeler.find(p=>String(p.id)===String(pid));const b=(p?.bolumler||[]).find(x=>String(x.id)===String(bid));return b?`${b.blok?b.blok+" Blok • ":""}Daire ${b.no||"?"}`:"—";};
+  const sonucObj=(id)=>SUNUM_SONUC.find(x=>x.id===id);
+  const ilgiObj=(id)=>SUNUM_ILGI.find(x=>x.id===id);
+
+  const projeSecenekleri=useMemo(()=>{const m={};(sunumlar||[]).forEach(s=>{if(s.projeId!=null&&!m[s.projeId])m[s.projeId]={id:s.projeId,ad:projeAd(s.projeId)};});return Object.values(m).sort((a,b)=>(a.ad||"").localeCompare(b.ad||"","tr"));},[sunumlar,projeler]);
+
+  const gorunur=useMemo(()=>{
+    const q=nTR(arama);
+    return (sunumlar||[]).filter(s=>{
+      if(projeFiltre!=="tumu"&&String(s.projeId)!==String(projeFiltre))return false;
+      if(sonucFiltre!=="tumu"&&s.sonuc!==sonucFiltre)return false;
+      if(ilgiFiltre!=="tumu"&&s.ilgiSeviyesi!==ilgiFiltre)return false;
+      if(q&&!nTR(`${s.firmaAd||""} ${s.telefon||""} ${projeAd(s.projeId)} ${s.saticiAd||""}`).includes(q))return false;
+      return true;
+    }).sort((a,b)=>String(b.tarih||"").localeCompare(String(a.tarih||"")));
+  },[sunumlar,projeFiltre,sonucFiltre,ilgiFiltre,arama,projeler]);
+
+  const iS2={width:"100%",height:"38px",padding:"0 11px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"14px",outline:"none",boxSizing:"border-box"};
+  const lbl2={display:"block",fontSize:"12px",fontWeight:600,color:T.t2,marginBottom:"5px"};
+  const cols="92px 1.6fr 1.8fr 140px 110px 90px 90px 100px 84px";
+
+  const kaydet=async()=>{ if(!edit)return; await saveSunum({...edit}); setEdit(null); };
+
+  return <div>
+    <div style={{marginBottom:"14px"}}>
+      <h2 style={{fontSize:"20px",fontWeight:600,color:T.text,margin:0}}>Sunum Raporu</h2>
+      <p style={{color:T.t2,fontSize:"14px",margin:"4px 0 0"}}>Yapılan tüm sunum/görüşme kayıtları — filtrele, düzenle</p>
+    </div>
+    <div style={{display:"flex",gap:"10px",flexWrap:"wrap",alignItems:"center",marginBottom:"12px"}}>
+      <select style={{...iS2,width:"200px",cursor:"pointer"}} value={projeFiltre} onChange={e=>setProjeFiltre(e.target.value)} onFocus={foc} onBlur={blr}><option value="tumu">🏢 Tüm Projeler</option>{projeSecenekleri.map(p=><option key={p.id} value={p.id}>{p.ad}</option>)}</select>
+      <select style={{...iS2,width:"150px",cursor:"pointer"}} value={sonucFiltre} onChange={e=>setSonucFiltre(e.target.value)} onFocus={foc} onBlur={blr}><option value="tumu">Tüm Sonuçlar</option>{SUNUM_SONUC.map(s=><option key={s.id} value={s.id}>{s.l}</option>)}</select>
+      <select style={{...iS2,width:"140px",cursor:"pointer"}} value={ilgiFiltre} onChange={e=>setIlgiFiltre(e.target.value)} onFocus={foc} onBlur={blr}><option value="tumu">Tüm İlgi</option>{SUNUM_ILGI.map(s=><option key={s.id} value={s.id}>{s.l} ilgi</option>)}</select>
+      <input style={{...iS2,width:"240px"}} value={arama} onChange={e=>setArama(e.target.value)} placeholder="🔎 Müşteri, telefon, proje, satıcı..." onFocus={foc} onBlur={blr}/>
+      <span style={{fontSize:"13px",color:T.t3}}>{gorunur.length} kayıt</span>
+    </div>
+    <div style={{background:"#fff",border:`1px solid ${T.border}`,borderRadius:T.rl,overflow:"hidden"}}>
+      <div style={{display:"grid",gridTemplateColumns:cols,background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"10px 14px",gap:"10px"}}>
+        {["Tarih","Müşteri","Proje","Daire","Sonuç","İlgi","Sonraki","Satıcı",""].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
+      </div>
+      {gorunur.length===0
+        ?<div style={{padding:"40px",textAlign:"center",color:T.t3,fontSize:"14px"}}>Kayıt yok.</div>
+        :gorunur.map((s,idx)=>{const so=sonucObj(s.sonuc);const il=ilgiObj(s.ilgiSeviyesi);return <div key={s.id} style={{display:"grid",gridTemplateColumns:cols,padding:"10px 14px",gap:"10px",alignItems:"center",borderBottom:idx<gorunur.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa",fontSize:"13px"}}>
+          <div style={{color:T.t2}}>{s.tarih?s.tarih.split("-").reverse().join("."):"—"}</div>
+          <div style={{fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={s.firmaAd}>{s.firmaAd||"—"}</div>
+          <div style={{color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={projeAd(s.projeId)}>{projeAd(s.projeId)}</div>
+          <div style={{color:T.t2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{daireAd(s.projeId,s.bolumId)}</div>
+          <div>{so?<span style={{fontSize:"11px",fontWeight:600,color:so.c,background:so.bg,padding:"2px 8px",borderRadius:"10px",whiteSpace:"nowrap"}}>{so.l}</span>:"—"}</div>
+          <div>{il?<span style={{fontSize:"11px",fontWeight:600,color:il.c,background:il.bg,padding:"2px 8px",borderRadius:"10px",whiteSpace:"nowrap"}}>{il.l}</span>:"—"}</div>
+          <div style={{color:T.t2}}>{s.sonrakiTemas?s.sonrakiTemas.split("-").reverse().join("."):"—"}</div>
+          <div style={{color:T.t2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.saticiAd||"—"}</div>
+          <div style={{display:"flex",gap:"12px",justifyContent:"flex-end",alignItems:"center"}}>
+            <button onClick={()=>setEdit({...s})} title="Düzenle" style={{background:"none",border:"none",color:T.primary,cursor:"pointer",fontSize:"24px",padding:"6px",lineHeight:1}}>✎</button>
+            <button onClick={()=>delSunum&&delSunum(s.id)} title="Sil" style={{background:"none",border:"none",color:"#ff6b6b",cursor:"pointer",padding:"6px",display:"flex",alignItems:"center"}}><Trash2 size={22}/></button>
+          </div>
+        </div>;})}
+    </div>
+    {edit&&<div onClick={()=>setEdit(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:T.rl,maxWidth:"480px",width:"100%",maxHeight:"85vh",overflowY:"auto",boxShadow:T.shM}}>
+        <div style={{padding:"16px 20px",borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div>
+            <div style={{fontSize:"12px",color:T.t3}}>{projeAd(edit.projeId)} • {daireAd(edit.projeId,edit.bolumId)}</div>
+            <div style={{fontSize:"17px",fontWeight:700,color:T.text}}>Sunum Düzenle</div>
+          </div>
+          <button onClick={()=>setEdit(null)} style={{background:"none",border:"none",fontSize:"20px",color:T.t3,cursor:"pointer",lineHeight:1}}>✕</button>
+        </div>
+        <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:"12px"}}>
+          <div><label style={lbl2}>Müşteri</label><div style={{fontSize:"14px",fontWeight:600,color:T.text}}>{edit.firmaAd||"—"}</div></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
+            <div><label style={lbl2}>Tarih</label><input type="date" style={iS2} value={edit.tarih||""} onChange={e=>setEdit({...edit,tarih:e.target.value})} onFocus={foc} onBlur={blr}/></div>
+            <div><label style={lbl2}>Telefon</label><input style={iS2} value={edit.telefon||""} onChange={e=>setEdit({...edit,telefon:e.target.value.replace(/\D/g,"").slice(0,11)})} inputMode="numeric" onFocus={foc} onBlur={blr}/></div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
+            <div><label style={lbl2}>Sonuç</label><select style={{...iS2,cursor:"pointer"}} value={edit.sonuc||""} onChange={e=>setEdit({...edit,sonuc:e.target.value})} onFocus={foc} onBlur={blr}><option value="">—</option>{SUNUM_SONUC.map(s=><option key={s.id} value={s.id}>{s.l}</option>)}</select></div>
+            <div><label style={lbl2}>İlgi Seviyesi</label><select style={{...iS2,cursor:"pointer"}} value={edit.ilgiSeviyesi||""} onChange={e=>setEdit({...edit,ilgiSeviyesi:e.target.value})} onFocus={foc} onBlur={blr}><option value="">—</option>{SUNUM_ILGI.map(s=><option key={s.id} value={s.id}>{s.l}</option>)}</select></div>
+          </div>
+          <div><label style={lbl2}>Sonraki Temas</label><input type="date" style={{...iS2,maxWidth:"200px"}} value={edit.sonrakiTemas||""} onChange={e=>setEdit({...edit,sonrakiTemas:e.target.value})} onFocus={foc} onBlur={blr}/></div>
+          <div><label style={lbl2}>Not</label><textarea style={{...iS2,height:"80px",padding:"8px 11px",lineHeight:1.4,resize:"vertical"}} value={edit.notlar||""} onChange={e=>setEdit({...edit,notlar:e.target.value})} placeholder="Görüşme notu..." onFocus={foc} onBlur={blr}/></div>
+        </div>
+        <div style={{padding:"12px 20px",borderTop:`1px solid ${T.border}`,display:"flex",gap:"10px",justifyContent:"flex-end"}}>
+          <button onClick={()=>setEdit(null)} style={{padding:"9px 18px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.t2,fontSize:"14px",cursor:"pointer"}}>Vazgeç</button>
+          <button onClick={kaydet} style={{padding:"9px 22px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"14px",fontWeight:600,cursor:"pointer"}}>Kaydet</button>
+        </div>
+      </div>
+    </div>}
+  </div>;
+};
+
 /* ---- SATIŞ SUNUM PAGE ---- */
 const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage,goToFirma,goToYeniFirma,gomulu=false,currentUser,sunumlar=[],saveSunum,delSunum,saveHatirlatma})=>{
   const[selProjeId,setSelProjeId]=useState(null);
@@ -11243,6 +11343,13 @@ export default function App(){
   // Sunum (opsiyon öncesi görüşme / lead) kaydet/sil — daireye DOKUNMAZ
   const saveSunum = async (form) => {
     try {
+      if(form.id){
+        // Düzenleme — mevcut sunum kaydını güncelle
+        await sbPatch('sunumlar', form.id, sunumToDb(form));
+        setSunumlar(prev => prev.map(s=>s.id===form.id?{...s,...form}:s));
+        showToast(`📋 Sunum güncellendi`);
+        return {...form};
+      }
       const [saved] = await sbPost('sunumlar', sunumToDb(form));
       const local = sunumToLocal(saved);
       setSunumlar(prev => [...prev, local]);
@@ -11532,7 +11639,8 @@ export default function App(){
                     <button onClick={()=>{setEditMode(false);setPage("firmalar");setSaticiMenu(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"10px 14px",border:"none",background:page==="firmalar"?T.pBg:"#fff",color:page==="firmalar"?T.primary:T.text,fontSize:"14px",fontWeight:page==="firmalar"?700:500,cursor:"pointer",borderRadius:"6px"}}>Firmalar</button>
                     <div style={{fontSize:"11px",fontWeight:700,color:T.t3,textTransform:"uppercase",letterSpacing:"0.4px",padding:"8px 14px 4px"}}>Satış</div>
                     <button onClick={()=>{setEditMode(false);setPage("satis_sunum");setSaticiMenu(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"10px 14px 10px 24px",border:"none",background:page==="satis_sunum"?T.pBg:"#fff",color:page==="satis_sunum"?T.primary:T.text,fontSize:"14px",fontWeight:page==="satis_sunum"?700:500,cursor:"pointer",borderRadius:"6px"}}>Sunum</button>
-                    <button onClick={()=>{setEditMode(false);setPage("satis_rapor");setSaticiMenu(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"10px 14px 10px 24px",border:"none",background:page==="satis_rapor"?T.pBg:"#fff",color:page==="satis_rapor"?T.primary:T.text,fontSize:"14px",fontWeight:page==="satis_rapor"?700:500,cursor:"pointer",borderRadius:"6px"}}>Raporlar</button>
+                    <button onClick={()=>{setEditMode(false);setPage("satis_rapor");setSaticiMenu(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"10px 14px 10px 24px",border:"none",background:page==="satis_rapor"?T.pBg:"#fff",color:page==="satis_rapor"?T.primary:T.text,fontSize:"14px",fontWeight:page==="satis_rapor"?700:500,cursor:"pointer",borderRadius:"6px"}}>Satış Raporu</button>
+                    <button onClick={()=>{setEditMode(false);setPage("sunum_rapor");setSaticiMenu(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"10px 14px 10px 24px",border:"none",background:page==="sunum_rapor"?T.pBg:"#fff",color:page==="sunum_rapor"?T.primary:T.text,fontSize:"14px",fontWeight:page==="sunum_rapor"?700:500,cursor:"pointer",borderRadius:"6px"}}>Sunum Raporu</button>
                     <button onClick={()=>{setEditMode(false);setPage("hatirlatmalar");setSaticiMenu(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"10px 14px 10px 24px",border:"none",background:page==="hatirlatmalar"?T.pBg:"#fff",color:page==="hatirlatmalar"?T.primary:T.text,fontSize:"14px",fontWeight:page==="hatirlatmalar"?700:500,cursor:"pointer",borderRadius:"6px"}}>Hatırlatmalar</button>
                   </div>
                 </>}
@@ -11564,6 +11672,7 @@ export default function App(){
         {page==="maliyet"&&<MaliyetPage projeler={projeler} setProjeler={setProjeler} malzemeler={malzemeler} faturalar={faturalar} siparisler={siparisler} firmalar={firmalar} butceKalemleri={butceKalemleri} saveButceKalemi={saveButceKalemi} delButceKalemi={delButceKalemi} bulkSaveButceKalemleri={bulkSaveButceKalemleri}/>}
         {page==="satis_sunum"&&<SatisSunumPage projeler={projeler} setProjeler={setProjeler} firmalar={firmalar} saveProje={saveProje} saveFirma={saveFirma} setPage={setPage} goToFirma={goToFirma} goToYeniFirma={goToYeniFirma} gomulu={satici} currentUser={currentUser} sunumlar={sunumlar} saveSunum={saveSunum} delSunum={delSunum} saveHatirlatma={saveHatirlatma}/>}
         {page==="satis_rapor"&&<SatisRaporPage projeler={projeler} currentUser={currentUser}/>}
+        {page==="sunum_rapor"&&<SunumRaporPage sunumlar={sunumlar} projeler={projeler} currentUser={currentUser} saveSunum={saveSunum} delSunum={delSunum}/>}
         {page==="hatirlatmalar"&&<HatirlatmalarPage hatirlatmalar={hatirlatmalar} firmalar={firmalar} projeler={projeler} updateHatirlatma={updateHatirlatma} delHatirlatma={delHatirlatma} currentUser={currentUser} satici={satici} goToFirma={goToFirma} setPage={setPage}/>}
         {page==="kullanicilar"&&adminOnly&&<KullanicilarPage currentUser={currentUser}/>}
       </div>
