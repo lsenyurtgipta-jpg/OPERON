@@ -9380,21 +9380,19 @@ const SatisRaporPage=({projeler})=>{
   const cols="230px 60px 50px 50px 45px 75px 55px 75px 90px 115px";
 
   return <div>
-    {/* BAŞLIK */}
-    <div style={{marginBottom:"16px"}}>
-      <h2 style={{fontSize:"20px",fontWeight:600,color:T.text,margin:0}}>Satış Raporu</h2>
-      <p style={{color:T.t2,fontSize:"14px",margin:"4px 0 0"}}>Müteahhit'e ait tüm bölümler — durum filtresi ve liste fiyatı toplamı</p>
-    </div>
-
-    {/* FİLTRE: sol durum kartları, sağ dikey istif (Tüm Projeler üstte, arama altta — alt hizalı) */}
-    <div style={{display:"flex",alignItems:"flex-start",gap:"16px",flexWrap:"wrap",marginBottom:"12px"}}>
-      <div style={{display:"flex",gap:"10px",flexWrap:"wrap"}}>
-        <Kart id="tumu" label="Tümü" sayi={durumOzet.tumu} toplam={durumFiltre==="tumu"?topListe:0} renk="#fff" bg="#1f2a30"/>
-        <Kart id="musait" label="Müsait" sayi={durumOzet.musait} toplam={durumFiltre==="musait"?topListe:0} renk="#52c41a" bg="#f6ffed"/>
-        <Kart id="opsiyonlu" label="Opsiyonlu" sayi={durumOzet.opsiyonlu} toplam={durumFiltre==="opsiyonlu"?topListe:0} renk="#fa8c16" bg="#fff7e6"/>
-        <Kart id="satildi" label="Satıldı" sayi={durumOzet.satildi} toplam={durumFiltre==="satildi"?topListe:0} renk="#1677ff" bg="#e6f4ff"/>
+    {/* BAŞLIK + DURUM KARTLARI (sol) | PROJE + ARAMA (sağ) — tek satır; başlığın sağ boşluğu kullanılır */}
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:"16px",flexWrap:"wrap",marginBottom:"12px"}}>
+      <div>
+        <h2 style={{fontSize:"20px",fontWeight:600,color:T.text,margin:0}}>Satış Raporu</h2>
+        <p style={{color:T.t2,fontSize:"14px",margin:"4px 0 12px"}}>Müteahhit'e ait tüm bölümler — durum filtresi ve liste fiyatı toplamı</p>
+        <div style={{display:"flex",gap:"10px",flexWrap:"wrap"}}>
+          <Kart id="tumu" label="Tümü" sayi={durumOzet.tumu} toplam={durumFiltre==="tumu"?topListe:0} renk="#fff" bg="#1f2a30"/>
+          <Kart id="musait" label="Müsait" sayi={durumOzet.musait} toplam={durumFiltre==="musait"?topListe:0} renk="#52c41a" bg="#f6ffed"/>
+          <Kart id="opsiyonlu" label="Opsiyonlu" sayi={durumOzet.opsiyonlu} toplam={durumFiltre==="opsiyonlu"?topListe:0} renk="#fa8c16" bg="#fff7e6"/>
+          <Kart id="satildi" label="Satıldı" sayi={durumOzet.satildi} toplam={durumFiltre==="satildi"?topListe:0} renk="#1677ff" bg="#e6f4ff"/>
+        </div>
       </div>
-      <div style={{display:"flex",flexDirection:"column",gap:"8px",alignItems:"flex-end",flexShrink:0}}>
+      <div style={{display:"flex",flexDirection:"column",justifyContent:"space-between",alignItems:"flex-end",flexShrink:0,alignSelf:"stretch",gap:"8px"}}>
         <select style={{...iS,width:"240px",cursor:"pointer"}} value={projeFiltre} onChange={e=>setProjeFiltre(e.target.value)} onFocus={foc} onBlur={blr}>
           <option value="tumu">🏢 Tüm Projeler</option>
           {projeSecenekleri.map(p=><option key={p.id} value={p.id}>{p.ad}</option>)}
