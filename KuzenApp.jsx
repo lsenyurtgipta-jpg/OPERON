@@ -9493,11 +9493,11 @@ const SunumRaporPage=({sunumlar=[],projeler=[],currentUser,saveSunum,delSunum})=
 
   const iS2={width:"100%",height:"38px",padding:"0 11px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"14px",outline:"none",boxSizing:"border-box"};
   const lbl2={display:"block",fontSize:"12px",fontWeight:600,color:T.t2,marginBottom:"5px"};
-  const cols="92px 1.6fr 1.8fr 140px 110px 90px 90px 100px 84px";
+  const cols="92px minmax(0,1.5fr) minmax(0,1.6fr) 140px 110px 90px 90px 100px 84px";
 
   const kaydet=async()=>{ if(!edit)return; await saveSunum({...edit}); setEdit(null); };
 
-  return <div>
+  return <div style={{maxWidth:"1200px"}}>
     <div style={{marginBottom:"14px"}}>
       <h2 style={{fontSize:"20px",fontWeight:600,color:T.text,margin:0}}>Sunum Raporu</h2>
       <p style={{color:T.t2,fontSize:"14px",margin:"4px 0 0"}}>Yapılan tüm sunum/görüşme kayıtları — filtrele, düzenle</p>
