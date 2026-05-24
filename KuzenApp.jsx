@@ -9445,6 +9445,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
   const[tanitimGecildi,setTanitimGecildi]=useState(false);
   const[selBlokAd,setSelBlokAd]=useState(null);
   const[selBolumId,setSelBolumId]=useState(null);
+  const[daireDurumF,setDaireDurumF]=useState("tumu"); // daire grid durum filtresi: tumu|musait|opsiyonlu|satildi
   const[tamEkran,setTamEkran]=useState(!gomulu); // gomulu (satıcı): overlay yok, ana ekranda akar; admin: otomatik Sunum Modu
   const[pickerAcik,setPickerAcik]=useState(false);
   const[pickerIslem,setPickerIslem]=useState(null); // "opsiyonla" | "satildi"
@@ -9492,6 +9493,8 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
       .filter(b=>b.blok===selBlokAd&&b.sahiplik==="Müteahhit")
       .sort((a,b)=>numKey(a.no)-numKey(b.no)||(a.no||"").localeCompare(b.no||"","tr"));
   },[selProje,selBlokAd]);
+  // Durum filtresine göre görünür daireler (filtre rozetleri için)
+  const gorunurDaireler=useMemo(()=>blokBolumler.filter(b=>daireDurumF==="tumu"||b.durum===daireDurumF),[blokBolumler,daireDurumF]);
 
   // Durum rengi
   const durumRenk=(d)=>BOLUM_DURUMLARI.find(x=>x.id===d)||{color:"#8c8c8c",bg:"#fafafa",label:"—"};
@@ -9862,19 +9865,21 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
     {/* ADIM 4 — DAİRE SEÇİMİ + DETAY (iPad: sağ panel 460px, sol grid scroll edilebilir) */}
     {adim===4&&selProje&&selBlok&&<div style={{display:"grid",gridTemplateColumns:selBolum?(tamEkran?"1fr 460px":"1fr 400px"):"1fr",gap:tamEkran?"18px":"16px",flex:"1 1 auto",minHeight:0,overflow:"hidden",alignItems:"stretch",maxWidth:gomulu?`${SATICI_UI.daireEkranW}px`:undefined,marginLeft:gomulu?"auto":undefined,marginRight:gomulu?"auto":undefined,width:gomulu?"100%":undefined}}>
       <div style={{display:"flex",flexDirection:"column",minHeight:0,overflow:"hidden"}}>
-        {/* Durum filtre rozetleri */}
-        <div style={{marginBottom:"12px",padding:tamEkran?"14px 18px":"12px 16px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:"20px",flexWrap:"wrap",flexShrink:0}}>
-          <div style={{fontSize:tamEkran?"15px":"14px",fontWeight:700,color:T.text}}>{selBlokAd} Blok — {blokBolumler.length} daire</div>
-          <div style={{flex:1}}></div>
-          {BOLUM_DURUMLARI.map(d=><div key={d.id} style={{display:"flex",alignItems:"center",gap:"6px",fontSize:"13px"}}>
-            <div style={{width:"14px",height:"14px",borderRadius:"3px",background:d.color}}></div>
-            <span style={{color:T.t2}}>{d.label}</span>
-          </div>)}
-        </div>
-        {blokBolumler.length===0
-          ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",border:`1px dashed ${T.border}`,borderRadius:T.rl}}>Bu blokta daire tanımı yok.</div>
+        {/* Durum filtresi — tıklanabilir (Tümü/Müsait/Opsiyonlu/Satıldı) */}
+        {(()=>{const oz=blokOzet(selBlokAd);return <div style={{marginBottom:"12px",padding:tamEkran?"14px 18px":"12px 16px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap",flexShrink:0}}>
+          <div style={{fontSize:tamEkran?"15px":"14px",fontWeight:700,color:T.text,marginRight:"4px"}}>{selBlokAd} Blok</div>
+          {[{id:"tumu",label:"Tümü",sayi:blokBolumler.length,renk:T.primary},{id:"musait",label:"Müsait",sayi:oz.musait,renk:"#52c41a"},{id:"opsiyonlu",label:"Opsiyonlu",sayi:oz.opsiyonlu,renk:"#fa8c16"},{id:"satildi",label:"Satıldı",sayi:oz.satildi,renk:"#1677ff"}].map(f=>{
+            const aktif=daireDurumF===f.id;
+            return <button key={f.id} onClick={()=>setDaireDurumF(f.id)} style={{display:"flex",alignItems:"center",gap:"7px",padding:tamEkran?"8px 16px":"6px 12px",borderRadius:T.r,border:`1px solid ${aktif?f.renk:T.bDark}`,background:aktif?f.renk:"#fff",color:aktif?"#fff":T.t2,fontSize:tamEkran?"14px":"13px",fontWeight:aktif?700:500,cursor:"pointer",minHeight:tamEkran?"40px":"auto",transition:"all .15s"}}>
+              {f.id!=="tumu"&&<span style={{width:"12px",height:"12px",borderRadius:"3px",background:aktif?"#fff":f.renk,flexShrink:0}}></span>}
+              <span>{f.label} ({f.sayi})</span>
+            </button>;
+          })}
+        </div>;})()}
+        {gorunurDaireler.length===0
+          ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",border:`1px dashed ${T.border}`,borderRadius:T.rl}}>{blokBolumler.length===0?"Bu blokta daire tanımı yok.":"Bu filtrede daire yok."}</div>
           :<div style={{display:"grid",gridTemplateColumns:tamEkran?(selBolum?"repeat(5,1fr)":"repeat(6,1fr)"):"repeat(5,1fr)",gap:tamEkran?"14px":"12px",overflowY:"auto",overflowX:"hidden",alignContent:"flex-start",paddingRight:"4px"}}>
-            {blokBolumler.map(b=>{
+            {gorunurDaireler.map(b=>{
               const d=durumRenk(b.durum);
               const sec=selBolumId===b.id;
               const satildi=b.durum==="satildi";
