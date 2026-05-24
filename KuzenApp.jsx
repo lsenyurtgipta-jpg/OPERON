@@ -9305,7 +9305,7 @@ const GorselSlider=({gorseller=[],yukseklik="380px",otomatik=true,placeholderIco
 };
 
 /* ---- SATIŞ RAPORU PAGE ---- */
-const SatisRaporPage=({projeler})=>{
+const SatisRaporPage=({projeler,currentUser})=>{
   const[durumFiltre,setDurumFiltre]=useState("tumu"); // tumu | musait | opsiyonlu | satildi
   const[arama,setArama]=useState("");
   const[projeFiltre,setProjeFiltre]=useState("tumu"); // proje adına göre filtre: tumu | projeId
@@ -9372,7 +9372,7 @@ const SatisRaporPage=({projeler})=>{
     }}>
       <span style={{color:aktif?renk:"#8799a3",fontSize:"13px",fontWeight:600}}>{label}:</span>
       <span style={{color:aktif?renk:"#fff",fontWeight:700,fontSize:"15px"}}>{sayi}</span>
-      {toplam>0&&<span style={{color:aktif?renk:"#8799a3",fontSize:"13px"}}>— {toplam.toLocaleString("tr-TR")} ₺</span>}
+      {toplam>0&&isAdmin(currentUser)&&<span style={{color:aktif?renk:"#8799a3",fontSize:"13px"}}>— {toplam.toLocaleString("tr-TR")} ₺</span>}
     </button>;
   };
 
@@ -9383,7 +9383,16 @@ const SatisRaporPage=({projeler})=>{
     {/* BAŞLIK + DURUM KARTLARI (sol) | PROJE + ARAMA (sağ bitişik) — başlığın sağ boşluğu kullanılır, sola yaslı (taşmaz) */}
     <div style={{display:"flex",alignItems:"flex-start",gap:"16px",flexWrap:"wrap",marginBottom:"12px"}}>
       <div>
-        <h2 style={{fontSize:"20px",fontWeight:600,color:T.text,margin:0}}>Satış Raporu</h2>
+        <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+          <h2 style={{fontSize:"20px",fontWeight:600,color:T.text,margin:0}}>Satış Raporu</h2>
+          {isAdmin(currentUser)&&<button onClick={()=>{
+            const rows=[["Proje Adı","Tip","Blok","No","Kat","Brüt m²","Oda","Cephe","Durum","Liste Fiyatı (KDV Dahil)"]];
+            gorunur.forEach(b=>{const ds=BOLUM_DURUMLARI.find(d=>d.id===b.durum);rows.push([b.projeAd||"",b.tipi||"",b.blok||"",b.no||"",b.kat||"",b.brutM2||"",b.odaSayisi||"",b.cephe||"",ds?ds.label:(b.durum||""),parseFloat(b.listeFiyatiKdvDahil)||""]);});
+            const csv=rows.map(r=>r.map(c=>`"${c}"`).join(";")).join("\n");
+            const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"});
+            const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="satis_raporu.csv";a.click();
+          }} title="Excel'e Aktar" style={{padding:0,border:"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center"}}><img src={excelIcon} alt="Excel" style={{width:"30px",height:"30px"}}/></button>}
+        </div>
         <p style={{color:T.t2,fontSize:"14px",margin:"4px 0 12px"}}>Müteahhit'e ait tüm bölümler — durum filtresi ve liste fiyatı toplamı</p>
         <div style={{display:"flex",gap:"10px",flexWrap:"wrap"}}>
           <Kart id="tumu" label="Tümü" sayi={durumOzet.tumu} toplam={durumFiltre==="tumu"?topListe:0} renk="#fff" bg="#1f2a30"/>
@@ -9445,7 +9454,7 @@ const SatisRaporPage=({projeler})=>{
         <div></div>
         <div></div>
         <div></div>
-        <div style={{fontSize:"15px",fontWeight:700,color:"#52c41a",textAlign:"right"}}>{topListe>0?topListe.toLocaleString("tr-TR")+" ₺":"—"}</div>
+        <div style={{fontSize:"15px",fontWeight:700,color:"#52c41a",textAlign:"right"}}>{isAdmin(currentUser)?(topListe>0?topListe.toLocaleString("tr-TR")+" ₺":"—"):""}</div>
       </div>}
     </div>
   </div>;
@@ -11539,7 +11548,7 @@ export default function App(){
         {page==="alis_fatura"&&<AlisFaturalariPage faturalar={faturalar} setFaturalar={setFaturalar} onSave={saveFatura} onDel={delFatura} siparisler={siparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler} butceKalemleri={butceKalemleri}/>}
         {page==="maliyet"&&<MaliyetPage projeler={projeler} setProjeler={setProjeler} malzemeler={malzemeler} faturalar={faturalar} siparisler={siparisler} firmalar={firmalar} butceKalemleri={butceKalemleri} saveButceKalemi={saveButceKalemi} delButceKalemi={delButceKalemi} bulkSaveButceKalemleri={bulkSaveButceKalemleri}/>}
         {page==="satis_sunum"&&<SatisSunumPage projeler={projeler} setProjeler={setProjeler} firmalar={firmalar} saveProje={saveProje} saveFirma={saveFirma} setPage={setPage} goToFirma={goToFirma} goToYeniFirma={goToYeniFirma} gomulu={satici} currentUser={currentUser} sunumlar={sunumlar} saveSunum={saveSunum} delSunum={delSunum} saveHatirlatma={saveHatirlatma}/>}
-        {page==="satis_rapor"&&<SatisRaporPage projeler={projeler}/>}
+        {page==="satis_rapor"&&<SatisRaporPage projeler={projeler} currentUser={currentUser}/>}
         {page==="hatirlatmalar"&&<HatirlatmalarPage hatirlatmalar={hatirlatmalar} firmalar={firmalar} projeler={projeler} updateHatirlatma={updateHatirlatma} delHatirlatma={delHatirlatma} currentUser={currentUser} satici={satici} goToFirma={goToFirma} setPage={setPage}/>}
         {page==="kullanicilar"&&adminOnly&&<KullanicilarPage currentUser={currentUser}/>}
       </div>
