@@ -9468,6 +9468,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
   const[selBlokAd,setSelBlokAd]=useState(null);
   const[selBolumId,setSelBolumId]=useState(null);
   const[daireDurumF,setDaireDurumF]=useState("tumu"); // daire grid durum filtresi: tumu|musait|opsiyonlu|satildi
+  const[detayBolum,setDetayBolum]=useState(null); // daire detay popup (opsiyon/alıcı + sunum geçmişi)
   const[tamEkran,setTamEkran]=useState(!gomulu); // gomulu (satıcı): overlay yok, ana ekranda akar; admin: otomatik Sunum Modu
   const[pickerAcik,setPickerAcik]=useState(false);
   const[pickerIslem,setPickerIslem]=useState(null); // "opsiyonla" | "satildi"
@@ -9775,6 +9776,52 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
       return <MusteriPickerModal firmalar={firmalar} onYeniMusteri={goToYeniFirma} onSelect={pickerIslem==="sunum"?sunumKaydet:musteriSec} onClose={()=>setPickerAcik(false)} baslik={pickerIslem==="sunum"?"SUNUM — MÜŞTERİ / İLETİŞİM":(pickerIslem==="opsiyonla"?"OPSİYONLA — MÜŞTERİ SEÇ":(opsiyonluSatisaCevir?"SATIŞA ÇEVİR — FİYAT ONAYI":"SATIŞ — MÜŞTERİ SEÇ"))} pickerIslem={pickerIslem} listeFiyatiOneri={selBolum?.listeFiyatiKdvDahil||""} initialFirma={mevcutFirma} initialSatisBedeli={mevcutSatisBed} initialPlus={mevcutPlus} bolum={selBolum} projeAd={selProje?.ad||""} bolumler={selProje?.bolumler||[]}/>;
     })()}
 
+    {/* DAİRE DETAY POPUP — opsiyon/alıcı bilgisi + sunum geçmişi (ortada, taşmaz) */}
+    {detayBolum&&(()=>{
+      const b=detayBolum;
+      const sunumList=(sunumlar||[]).filter(s=>String(s.bolumId)===String(b.id)).sort((x,y)=>String(y.tarih).localeCompare(String(x.tarih)));
+      const ds=durumRenk(b.durum);
+      const opsiyonVar=(b.durum==="opsiyonlu"||b.durum==="satildi");
+      return <div onClick={()=>setDetayBolum(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+        <div onClick={(e)=>e.stopPropagation()} style={{background:"#fff",borderRadius:T.rl,maxWidth:"520px",width:"100%",maxHeight:"80vh",overflowY:"auto",boxShadow:T.shM}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 20px",borderBottom:`1px solid ${T.border}`}}>
+            <div>
+              <div style={{fontSize:"12px",color:T.t3}}>{b.blok?`${b.blok} Blok • `:""}Daire {b.no||"—"}</div>
+              <div style={{fontSize:"18px",fontWeight:700,color:T.text}}>Daire Detayı</div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+              <span style={{padding:"3px 10px",borderRadius:"4px",background:ds.color,color:"#fff",fontSize:"12px",fontWeight:700,textTransform:"uppercase"}}>{ds.label}</span>
+              <button onClick={()=>setDetayBolum(null)} style={{background:"none",border:"none",fontSize:"20px",color:T.t3,cursor:"pointer",lineHeight:1}}>✕</button>
+            </div>
+          </div>
+          <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:"16px"}}>
+            {opsiyonVar&&b.aliciFirmaAd&&<div style={{padding:"12px 14px",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffd591"}}>
+              <div style={{color:"#d48806",fontWeight:600,fontSize:"13px",marginBottom:"4px"}}>👤 {b.durum==="satildi"?"Alıcı":"Opsiyon Sahibi"}</div>
+              <div style={{color:T.text,fontSize:"15px",fontWeight:600}}>{b.aliciFirmaAd}</div>
+              {b.sozlesmeTarihi&&<div style={{color:T.t3,fontSize:"12px",marginTop:"2px"}}>Tarih: {b.sozlesmeTarihi}</div>}
+              {(()=>{const bed=(parseFloat(b.satisBedeli)||0)+(parseFloat(b.plus)||0);return bed>0?<div style={{color:T.t2,fontSize:"13px",marginTop:"4px",fontWeight:700}}>{bed.toLocaleString("tr-TR")} ₺</div>:null;})()}
+            </div>}
+            <div>
+              <div style={{fontSize:"13px",fontWeight:700,color:T.text,marginBottom:"8px",display:"flex",alignItems:"center",gap:"6px"}}>📋 Sunum Geçmişi <span style={{fontSize:"12px",color:T.t3,fontWeight:500}}>({sunumList.length})</span></div>
+              {sunumList.length===0
+                ?<div style={{padding:"16px",textAlign:"center",color:T.t3,fontSize:"13px",background:"#fafafa",borderRadius:T.r,border:`1px solid ${T.border}`}}>Bu daireye sunum yapılmamış.</div>
+                :<div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
+                  {sunumList.map(s=><div key={s.id} style={{padding:"10px 12px",background:"#fafafa",border:`1px solid ${T.border}`,borderRadius:T.r,fontSize:"13px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:"8px"}}>
+                      <span style={{fontWeight:600,color:T.text}}>{s.firmaAd||"—"}</span>
+                      <span style={{color:T.t3,fontSize:"12px"}}>{s.tarih||""}</span>
+                    </div>
+                    <div style={{color:T.t2,marginTop:"2px"}}>📞 {s.telefon||"—"}{s.saticiAd?` • ${s.saticiAd}`:""}</div>
+                    {s.notlar&&<div style={{color:T.t3,marginTop:"3px",fontStyle:"italic",whiteSpace:"pre-wrap"}}>{s.notlar}</div>}
+                    <button onClick={()=>delSunum&&delSunum(s.id)} style={{marginTop:"6px",padding:"3px 10px",borderRadius:"4px",border:`1px solid ${T.border}`,background:"#fff",color:T.t3,fontSize:"12px",cursor:"pointer"}}>Sil</button>
+                  </div>)}
+                </div>}
+            </div>
+          </div>
+        </div>
+      </div>;
+    })()}
+
     {/* ÜST BAR — proje adı + adımlar + tam ekran toggle (touch-optimized) */}
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"14px",paddingBottom:"12px",borderBottom:`1px solid ${T.border}`,gap:"20px",flexWrap:"nowrap",flexShrink:0}}>
       <div style={{display:"flex",alignItems:"center",gap:"32px",flexWrap:"nowrap",flex:"1 1 auto",minWidth:0}}>
@@ -9908,7 +9955,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
               const sunumSay=(sunumlar||[]).filter(s=>String(s.bolumId)===String(b.id)).length;
               return <div key={b.id} onClick={()=>setSelBolumId(b.id)} style={{background:satildi?"#f5f5f5":d.bg,border:`2px solid ${sec?d.color:(satildi?"#d9d9d9":d.color+"55")}`,borderRadius:T.rl,padding:tamEkran?"18px 16px":"14px",cursor:"pointer",transition:"all .15s",position:"relative",transform:sec?"scale(1.02)":"scale(1)",boxShadow:sec?T.shM:"none",opacity:satildi?0.55:1,filter:satildi?"grayscale(0.6)":"none",minHeight:tamEkran?"150px":"auto"}}
                 onMouseEnter={e=>{if(!sec&&!satildi)e.currentTarget.style.transform="scale(1.02)";}} onMouseLeave={e=>{if(!sec)e.currentTarget.style.transform="scale(1)";}}>
-                {sunumSay>0&&<div title={`${sunumSay} sunum kaydı`} style={{position:"absolute",top:"8px",right:"8px",display:"flex",alignItems:"center",gap:"3px",padding:"2px 7px",borderRadius:"10px",background:"#e6f4ff",color:"#0958d9",fontSize:"11px",fontWeight:700,border:"1px solid #91caff",zIndex:2}}>📋 {sunumSay}</div>}
+                {sunumSay>0&&<div onClick={(e)=>{e.stopPropagation();setDetayBolum(b);}} title="Sunum/opsiyon detayını gör" style={{position:"absolute",top:"8px",right:"8px",display:"flex",alignItems:"center",gap:"4px",padding:"5px 11px",borderRadius:"12px",background:"#e6f4ff",color:"#0958d9",fontSize:"13px",fontWeight:700,border:"1px solid #91caff",zIndex:3,cursor:"pointer"}}>📋 {sunumSay}</div>}
                 <div style={{fontSize:"12px",color:T.t3,marginBottom:"4px",fontWeight:500}}>Daire No</div>
                 <div style={{fontSize:tamEkran?"28px":"22px",fontWeight:700,color:d.color,marginBottom:"10px"}}>{b.no||"—"}</div>
                 <div style={{fontSize:"13px",color:T.t2,marginBottom:"3px"}}>{b.odaSayisi||"—"}{b.kat?` • K:${b.kat}`:""}</div>
@@ -9920,7 +9967,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
                   if(tutar<=0||tamEkran)return null;
                   return <div style={{fontSize:"13px",fontWeight:700,color:T.text,marginBottom:"6px"}}>{lst>0?tutar.toLocaleString("tr-TR")+" ₺":fmtPara(sat,b.paraBirimi)}</div>;
                 })()}
-                <div style={{fontSize:"11px",padding:"4px 10px",borderRadius:"4px",background:d.color,color:"#fff",fontWeight:700,textTransform:"uppercase",display:"inline-block",letterSpacing:"0.3px"}}>{d.label}</div>
+                <div onClick={(b.durum==="opsiyonlu"||b.durum==="satildi")?(e)=>{e.stopPropagation();setDetayBolum(b);}:undefined} title={(b.durum==="opsiyonlu"||b.durum==="satildi")?"Opsiyon/satış detayını gör":undefined} style={{fontSize:"11px",padding:"4px 10px",borderRadius:"4px",background:d.color,color:"#fff",fontWeight:700,textTransform:"uppercase",display:"inline-block",letterSpacing:"0.3px",cursor:(b.durum==="opsiyonlu"||b.durum==="satildi")?"pointer":"default"}}>{d.label}</div>
               </div>;
             })}
           </div>}
@@ -9983,13 +10030,6 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
             return <button onClick={()=>acDosya(tapu)} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",width:"100%",padding:tamEkran?"14px":"10px",borderRadius:T.r,border:`1px solid ${T.primary}`,background:"#fff",color:T.primary,fontSize:tamEkran?"15px":"13px",fontWeight:700,cursor:"pointer",marginBottom:"14px"}}>📄 Tapu Görüntüle</button>;
           })()}
 
-          {/* Müşteri bilgisi (tam ekran sunum modunda gizli) */}
-          {!tamEkran&&selBolum.aliciFirmaAd&&<div style={{padding:"10px 12px",background:"#fff7e6",borderRadius:T.r,border:"1px solid #ffd591",marginBottom:"14px",fontSize:"12px"}}>
-            <div style={{color:"#d48806",fontWeight:600,marginBottom:"2px"}}>👤 {selBolum.durum==="satildi"?"Alıcı":"Opsiyon Sahibi"}</div>
-            <div style={{color:T.text}}>{selBolum.aliciFirmaAd}</div>
-            {selBolum.sozlesmeTarihi&&<div style={{color:T.t3,fontSize:"11px"}}>Tarih: {selBolum.sozlesmeTarihi}</div>}
-          </div>}
-
           {/* BUTONLAR — iPad touch hedefi min 50px */}
           <div style={{display:"flex",flexDirection:"column",gap:tamEkran?"10px":"8px"}}>
             {!tamEkran&&(selBolum.durum==="satildi"||selBolum.durum==="opsiyonlu")&&<button onClick={fiyatDuzelt} title="Satış Bedeli + PLUS düzenle" style={{alignSelf:"flex-end",padding:"4px 10px",borderRadius:"4px",border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"12px",fontWeight:600,cursor:"pointer"}}>✎ Fiyat Düzelt</button>}
@@ -10018,24 +10058,6 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
             {selBolum.durum==="satildi"&&<button onClick={musaitYap} style={{padding:tamEkran?"14px":"10px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:tamEkran?"15px":"13px",cursor:"pointer",minHeight:tamEkran?"48px":"auto"}}>Müsait Yap (Satışı iptal)</button>}
           </div>
 
-          {!tamEkran&&(()=>{
-            const list=(sunumlar||[]).filter(s=>String(s.bolumId)===String(selBolum.id)).sort((a,b)=>String(b.tarih).localeCompare(String(a.tarih)));
-            if(list.length===0)return null;
-            return <div style={{marginTop:"14px",borderTop:`1px solid ${T.border}`,paddingTop:"12px"}}>
-              <div style={{fontSize:"12px",fontWeight:700,color:T.text,marginBottom:"8px",display:"flex",alignItems:"center",gap:"6px"}}>📋 Sunum Geçmişi <span style={{fontSize:"11px",color:T.t3,fontWeight:500}}>({list.length})</span></div>
-              <div style={{display:"flex",flexDirection:"column",gap:"6px",maxHeight:"200px",overflowY:"auto"}}>
-                {list.map(s=><div key={s.id} style={{padding:"8px 10px",background:"#fafafa",border:`1px solid ${T.border}`,borderRadius:T.r,fontSize:"12px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:"8px"}}>
-                    <span style={{fontWeight:600,color:T.text}}>{s.firmaAd||"—"}</span>
-                    <span style={{color:T.t3,fontSize:"11px"}}>{s.tarih||""}</span>
-                  </div>
-                  <div style={{color:T.t2,marginTop:"2px"}}>📞 {s.telefon||"—"}{s.saticiAd?` • ${s.saticiAd}`:""}</div>
-                  {s.notlar&&<div style={{color:T.t3,marginTop:"3px",fontStyle:"italic",whiteSpace:"pre-wrap"}}>{s.notlar}</div>}
-                  <button onClick={()=>delSunum&&delSunum(s.id)} style={{marginTop:"4px",padding:"2px 8px",borderRadius:"4px",border:`1px solid ${T.border}`,background:"#fff",color:T.t3,fontSize:"11px",cursor:"pointer"}}>Sil</button>
-                </div>)}
-              </div>
-            </div>;
-          })()}
           {!tamEkran&&selBolum.aliciFirmaId&&<button onClick={()=>goToFirma&&goToFirma(selBolum.aliciFirmaId)} style={{marginTop:"10px",width:"100%",padding:"8px",borderRadius:T.r,border:"none",background:"transparent",color:T.primary,fontSize:"12px",cursor:"pointer",textDecoration:"underline"}}>Müşteri Kartına Git →</button>}
         </div>
       </div>}
