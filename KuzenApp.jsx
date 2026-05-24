@@ -9377,7 +9377,7 @@ const SatisRaporPage=({projeler})=>{
   };
 
   // Tablo grid: Proje | Tip | Blok | No | Kat | Brüt m² | Oda | Cephe | Durum | Liste Fiyatı
-  const cols="180px 60px 50px 50px 45px 75px 55px 75px 90px 115px";
+  const cols="230px 60px 50px 50px 45px 75px 55px 75px 90px 115px";
 
   return <div>
     {/* BAŞLIK */}
@@ -9394,7 +9394,7 @@ const SatisRaporPage=({projeler})=>{
         <Kart id="opsiyonlu" label="Opsiyonlu" sayi={durumOzet.opsiyonlu} toplam={durumFiltre==="opsiyonlu"?topListe:0} renk="#fa8c16" bg="#fff7e6"/>
         <Kart id="satildi" label="Satıldı" sayi={durumOzet.satildi} toplam={durumFiltre==="satildi"?topListe:0} renk="#1677ff" bg="#e6f4ff"/>
       </div>
-      <div style={{display:"flex",gap:"10px",alignItems:"center",flexWrap:"wrap"}}>
+      <div style={{display:"flex",gap:"10px",alignItems:"center",flexWrap:"wrap",marginRight:"50px"}}>
         <select style={{...iS,width:"200px",cursor:"pointer"}} value={projeFiltre} onChange={e=>setProjeFiltre(e.target.value)} onFocus={foc} onBlur={blr}>
           <option value="tumu">🏢 Tüm Projeler</option>
           {projeSecenekleri.map(p=><option key={p.id} value={p.id}>{p.ad}</option>)}
