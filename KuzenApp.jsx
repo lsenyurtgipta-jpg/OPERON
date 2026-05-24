@@ -9308,6 +9308,7 @@ const GorselSlider=({gorseller=[],yukseklik="380px",otomatik=true,placeholderIco
 const SatisRaporPage=({projeler})=>{
   const[durumFiltre,setDurumFiltre]=useState("tumu"); // tumu | musait | opsiyonlu | satildi
   const[arama,setArama]=useState("");
+  const[projeFiltre,setProjeFiltre]=useState("tumu"); // proje adına göre filtre: tumu | projeId
 
   // Tüm projelerden Müteahhit'e ait bölümler — proje adı + bölüm bilgileri
   const tumBolumler=useMemo(()=>{
@@ -9329,6 +9330,13 @@ const SatisRaporPage=({projeler})=>{
     });
   },[projeler]);
 
+  // Müteahhit bölümü olan benzersiz projeler (proje filtresi dropdown'ı için)
+  const projeSecenekleri=useMemo(()=>{
+    const m={};
+    tumBolumler.forEach(b=>{if(b.projeId!=null&&!m[b.projeId])m[b.projeId]={id:b.projeId,ad:b.projeAd||"—"};});
+    return Object.values(m).sort((a,b)=>(a.ad||"").localeCompare(b.ad||"","tr"));
+  },[tumBolumler]);
+
   // Durum sayıları (filtre kartları için — tüm Müteahhit bölümlerinden)
   const durumOzet=useMemo(()=>{
     const o={tumu:tumBolumler.length,musait:0,opsiyonlu:0,satildi:0};
@@ -9341,11 +9349,12 @@ const SatisRaporPage=({projeler})=>{
     const q=nTR(arama);
     return tumBolumler.filter(b=>{
       if(durumFiltre!=="tumu"&&b.durum!==durumFiltre)return false;
+      if(projeFiltre!=="tumu"&&String(b.projeId)!==String(projeFiltre))return false;
       if(!q)return true;
       const hay=nTR(`${b.projeAd||""} ${b.blok||""} ${b.no||""} ${b.tipi||""} ${b.odaSayisi||""} ${b.cephe||""}`);
       return hay.includes(q);
     });
-  },[tumBolumler,durumFiltre,arama]);
+  },[tumBolumler,durumFiltre,projeFiltre,arama]);
 
   // Görünür toplamlar
   const topBrut=gorunur.reduce((s,b)=>s+(parseFloat(b.brutM2)||0),0);
@@ -9368,7 +9377,7 @@ const SatisRaporPage=({projeler})=>{
   };
 
   // Tablo grid: Proje | Tip | Blok | No | Kat | Brüt m² | Oda | Cephe | Durum | Liste Fiyatı
-  const cols="2fr 90px 70px 70px 60px 90px 90px 100px 110px 150px";
+  const cols="180px 60px 50px 50px 45px 75px 55px 75px 90px 115px";
 
   return <div>
     {/* BAŞLIK */}
@@ -9385,7 +9394,13 @@ const SatisRaporPage=({projeler})=>{
         <Kart id="opsiyonlu" label="Opsiyonlu" sayi={durumOzet.opsiyonlu} toplam={durumFiltre==="opsiyonlu"?topListe:0} renk="#fa8c16" bg="#fff7e6"/>
         <Kart id="satildi" label="Satıldı" sayi={durumOzet.satildi} toplam={durumFiltre==="satildi"?topListe:0} renk="#1677ff" bg="#e6f4ff"/>
       </div>
-      <input style={{...iS,width:"260px"}} value={arama} onChange={e=>setArama(e.target.value)} placeholder="🔎 Proje, blok, no, tip, oda, cephe..." onFocus={foc} onBlur={blr}/>
+      <div style={{display:"flex",gap:"10px",alignItems:"center",flexWrap:"wrap"}}>
+        <select style={{...iS,width:"200px",cursor:"pointer"}} value={projeFiltre} onChange={e=>setProjeFiltre(e.target.value)} onFocus={foc} onBlur={blr}>
+          <option value="tumu">🏢 Tüm Projeler</option>
+          {projeSecenekleri.map(p=><option key={p.id} value={p.id}>{p.ad}</option>)}
+        </select>
+        <input style={{...iS,width:"240px"}} value={arama} onChange={e=>setArama(e.target.value)} placeholder="🔎 Proje, blok, no, tip, oda, cephe..." onFocus={foc} onBlur={blr}/>
+      </div>
     </div>
 
     {/* UYARI — fiyatı girilmemiş daire varsa */}
