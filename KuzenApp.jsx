@@ -4334,6 +4334,362 @@ const AlisFaturalariPage=({faturalar,setFaturalar,onSave,onDel,siparisler,teklif
   </div>;
 };
 
+/* ========== SATIŞ FATURALARI SAYFASI (Faz 1) ==========
+   Satılmış daireden ÜRETİLEN fatura. 1 daire = 1 fatura, rakamlar daireden snapshot'lanır.
+   R  = resmi (satis_bedeli + KDV) → paylaşılabilir.
+   plus (RR) = gayri resmi → YALNIZ admin görür, hiçbir çıktısı yoktur. */
+const SatisFaturalariPage=({satisFaturalari=[],onSave,onDel,projeler=[],firmalar=[],malzemeler=[],currentUser})=>{
+  const[search,setSearch]=useState("");
+  const[projeFiltre,setProjeFiltre]=useState("all");
+  const[durumFiltre,setDurumFiltre]=useState("all"); // all | faturasiz | faturali
+  const[kesModal,setKesModal]=useState(null);
+  const[detayModal,setDetayModal]=useState(null);
+  const isAdmin=currentUser?.rol==="admin";
+  const lS={display:"block",color:T.text,fontSize:"11px",fontWeight:500,marginBottom:"4px"};
+  const fmt=(v)=>{const n=parseFloat(v||0);return n.toLocaleString("tr-TR",{maximumFractionDigits:0});};
+  const bugun=new Date().toISOString().split("T")[0];
+
+  // Tüm projelerden satılmış daireler
+  const satilanDaireler=useMemo(()=>{
+    const out=[];
+    (projeler||[]).forEach(p=>{(p.bolumler||[]).forEach(b=>{if(b.durum==="satildi")out.push({...b,projeId:p.id,projeAd:p.ad});});});
+    return out;
+  },[projeler]);
+
+  // bolumId -> aktif (iptal olmayan) fatura
+  const faturaHaritasi=useMemo(()=>{
+    const m={};
+    (satisFaturalari||[]).forEach(f=>{if(f.durum!=="iptal"&&f.bolumId!=null)m[f.bolumId]=f;});
+    return m;
+  },[satisFaturalari]);
+
+  // bolumId -> malzeme kartı (BB kartı) — fatura satırı kod+adı buradan
+  const malzemeHaritasi=useMemo(()=>{
+    const m={};
+    (malzemeler||[]).forEach(mz=>{if(mz.bolumId!=null)m[mz.bolumId]=mz;});
+    return m;
+  },[malzemeler]);
+
+  const nextSfNo=()=>{
+    const yil=new Date().getFullYear();
+    const mevcut=(satisFaturalari||[]).filter(f=>(f.sfNo||"").includes(`-${yil}-`)).map(f=>parseInt((f.sfNo||"").split("-")[2])||0);
+    const n=mevcut.length>0?Math.max(...mevcut)+1:1;
+    return `SF-${yil}-${String(n).padStart(3,"0")}`;
+  };
+
+  // Daire güncel rakamları ile fatura snapshot'ı farklı mı? (yeniden kes uyarısı)
+  const snapshotFarkli=(daire,fatura)=>{
+    if(!fatura)return false;
+    return parseFloat(daire.satisBedeli||0)!==parseFloat(fatura.satisBedeli||0)
+        || parseFloat(daire.plus||0)!==parseFloat(fatura.plus||0);
+  };
+
+  const satirlar=useMemo(()=>{
+    const q=(search||"").toLocaleLowerCase("tr");
+    return satilanDaireler
+      .filter(d=>projeFiltre==="all"||String(d.projeId)===String(projeFiltre))
+      .map(d=>{const fatura=faturaHaritasi[d.id]||null;return{daire:d,fatura,farkli:snapshotFarkli(d,fatura)};})
+      .filter(r=>durumFiltre==="all"||(durumFiltre==="faturasiz"?!r.fatura:!!r.fatura))
+      .filter(r=>{
+        if(!q)return true;
+        return (r.daire.projeAd||"").toLocaleLowerCase("tr").includes(q)
+          ||(r.daire.blok||"").toLocaleLowerCase("tr").includes(q)
+          ||(r.daire.no||"").toLocaleLowerCase("tr").includes(q)
+          ||(r.daire.aliciFirmaAd||"").toLocaleLowerCase("tr").includes(q)
+          ||(r.fatura?.sfNo||"").toLocaleLowerCase("tr").includes(q);
+      });
+  },[satilanDaireler,faturaHaritasi,projeFiltre,durumFiltre,search]);
+
+  const faturasizSayi=satilanDaireler.filter(d=>!faturaHaritasi[d.id]).length;
+  const faturaliSayi=satilanDaireler.filter(d=>!!faturaHaritasi[d.id]).length;
+
+  const faturaKes=(daire,mevcut)=>setKesModal({daire,mevcut:mevcut||null,faturaTarihi:mevcut?.faturaTarihi||bugun,aciklama:mevcut?.aciklama||"",sfNo:mevcut?.sfNo||nextSfNo()});
+
+  const kesOnayla=async()=>{
+    if(!kesModal)return;
+    const{daire,mevcut,faturaTarihi,aciklama,sfNo}=kesModal;
+    const plusNum=parseFloat(daire.plus||0);
+    const kart=malzemeHaritasi[daire.id]||null;
+    const kayit={
+      ...(mevcut||{}),
+      id:mevcut?.id||null,
+      sfNo,bolumId:daire.id,projeId:daire.projeId,projeAd:daire.projeAd,
+      blok:daire.blok||"",daireNo:daire.no||"",
+      malzemeKodu:kart?.malzemeKodu||"",malzemeAd:kart?.ad||"",
+      aliciFirmaId:daire.aliciFirmaId||null,aliciFirmaAd:daire.aliciFirmaAd||"",
+      faturaTarihi,sozlesmeTarihi:daire.sozlesmeTarihi||"",
+      satisBedeli:daire.satisBedeli||"",kdvOrani:daire.kdvOrani||"",
+      plus:daire.plus||"",ozelKod:plusNum>0?"RR":"R",
+      paraBirimi:daire.paraBirimi||"TL",aciklama,durum:"kesildi"
+    };
+    if(onSave)await onSave(kayit);
+    setKesModal(null);
+  };
+
+  const kdvTutar=(f)=>(parseFloat(f.satisBedeli||0))*(parseFloat(f.kdvOrani||0)/100);
+  const rToplam=(f)=>parseFloat(f.satisBedeli||0)+kdvTutar(f); // R fatura toplamı (bedel+KDV)
+  const gercekSatis=(f)=>parseFloat(f.satisBedeli||0)+kdvTutar(f)+parseFloat(f.plus||0); // Satış Tutarı = R Toplam (KDV dahil) + PLUS — admin
+  const netGelir=(f)=>parseFloat(f.satisBedeli||0)+parseFloat(f.plus||0); // Net (KDV hariç) = matrah + PLUS — maliyet/rapor tabanı, admin
+
+  // Daire maliyeti — MaliyetPage ile AYNI formül: brüt m² × blok öngörülen m² (KDV hariç, planlanan).
+  // Dönüş: {maliyet,brutM2,ong} | {yok:'daire'|'arsa'|'ong'}
+  const daireMaliyetHesap=(f)=>{
+    const proje=(projeler||[]).find(p=>String(p.id)===String(f.projeId));
+    const daire=proje?(proje.bolumler||[]).find(b=>String(b.id)===String(f.bolumId)):null;
+    if(!daire)return{yok:"daire"};
+    if((daire.sahiplik||"")!=="Müteahhit")return{yok:"arsa"};
+    const blok=(proje.bloklar||[]).find(bl=>bl.ad===daire.blok);
+    const ong=blok&&blok.ongorulenM2KdvHaric!==""&&blok.ongorulenM2KdvHaric!=null?parseFloat(blok.ongorulenM2KdvHaric):NaN;
+    const brutM2=parseFloat(daire.brutM2)||0;
+    if(isNaN(ong)||brutM2<=0)return{yok:"ong"};
+    return{maliyet:brutM2*ong,brutM2,ong};
+  };
+
+  // R (resmi) belgesini baskıya hazır olarak yeni pencerede açar — PLUS/RR ASLA yer almaz.
+  const yazdir=(f)=>{
+    const firma=(firmalar||[]).find(x=>String(x.id)===String(f.aliciFirmaId))||null;
+    const fmtTL=(v)=>(parseFloat(v||0)).toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2});
+    const esc=(s)=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    const matrah=parseFloat(f.satisBedeli||0), kdv=kdvTutar(f), toplam=matrah+kdv;
+    const kalemAd=f.malzemeAd||`${f.projeAd} ${f.blok?("· "+f.blok):""} No ${f.daireNo||"—"} bağımsız bölümü`;
+    const aliciSatirlari=[
+      firma?.adres?esc(firma.adres):"",
+      [firma?.ilce,firma?.il].filter(Boolean).map(esc).join(" / "),
+      firma?.telefon?("Tel: "+esc(firma.telefon)):"",
+      firma?.eposta?("E-posta: "+esc(firma.eposta)):""
+    ].filter(Boolean).join("<br>");
+    const logo=window.location.origin+"/gipta-logo.png";
+    const html=`<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><title>${esc(f.sfNo)} — Satış Faturası</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;font-size:12px;padding:28px 32px}
+  .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0a3d91;padding-bottom:14px}
+  .head img{height:70px;object-fit:contain}
+  .meta{text-align:right;font-size:11px;line-height:1.7}
+  .meta .baslik{font-size:20px;font-weight:700;color:#0a3d91;letter-spacing:1px;margin-bottom:6px}
+  .meta b{display:inline-block;min-width:96px;text-align:left;color:#555}
+  .alici{margin-top:22px;padding:12px 14px;background:#f5f7fb;border:1px solid #d9e2f0;border-radius:6px}
+  .alici .lbl{font-size:10px;color:#0a3d91;font-weight:700;letter-spacing:1px;margin-bottom:4px}
+  .alici .ad{font-size:14px;font-weight:700;margin-bottom:4px}
+  table{width:100%;border-collapse:collapse;margin-top:20px;font-size:11px}
+  th{background:#0a3d91;color:#fff;padding:8px 6px;text-align:left;font-weight:600}
+  td{padding:9px 6px;border-bottom:1px solid #e3e8f0;vertical-align:top}
+  .r{text-align:right;white-space:nowrap}
+  .c{text-align:center}
+  .tot{margin-top:18px;display:flex;justify-content:flex-end}
+  .tot table{width:320px;margin:0}
+  .tot td{border:none;padding:5px 6px}
+  .tot .grand td{border-top:2px solid #0a3d91;font-size:14px;font-weight:700;color:#0a3d91;padding-top:8px}
+  .foot{margin-top:40px;font-size:10px;color:#9aa3b2;text-align:center;border-top:1px solid #e3e8f0;padding-top:10px}
+  @media print{body{padding:0}@page{margin:14mm}}
+</style></head><body>
+  <div class="head">
+    <img src="${logo}" alt="GIPTA">
+    <div class="meta">
+      <div class="baslik">SATIŞ FATURASI</div>
+      <div><b>Fatura No</b> ${esc(f.sfNo)}</div>
+      <div><b>Fatura Tarihi</b> ${esc(f.faturaTarihi||"—")}</div>
+      ${f.sozlesmeTarihi?`<div><b>Sözleşme Tarihi</b> ${esc(f.sozlesmeTarihi)}</div>`:""}
+    </div>
+  </div>
+  <div class="alici">
+    <div class="lbl">SAYIN</div>
+    <div class="ad">${esc(f.aliciFirmaAd||"—")}</div>
+    ${aliciSatirlari||""}
+  </div>
+  <table>
+    <thead><tr>
+      <th class="c" style="width:34px">#</th>
+      <th style="width:130px">Malzeme / Hizmet Kodu</th>
+      <th>Malzeme / Hizmet</th>
+      <th class="c" style="width:54px">Miktar</th>
+      <th class="r" style="width:110px">Birim Fiyat</th>
+      <th class="c" style="width:54px">KDV</th>
+      <th class="r" style="width:120px">Tutar</th>
+    </tr></thead>
+    <tbody><tr>
+      <td class="c">1</td>
+      <td>${esc(f.malzemeKodu||"—")}</td>
+      <td>${esc(kalemAd)}</td>
+      <td class="c">1</td>
+      <td class="r">${fmtTL(matrah)} ₺</td>
+      <td class="c">%${esc(f.kdvOrani||0)}</td>
+      <td class="r">${fmtTL(matrah)} ₺</td>
+    </tr></tbody>
+  </table>
+  <div class="tot"><table>
+    <tr><td>Matrah (KDV hariç)</td><td class="r">${fmtTL(matrah)} ₺</td></tr>
+    <tr><td>Hesaplanan KDV (%${esc(f.kdvOrani||0)})</td><td class="r">${fmtTL(kdv)} ₺</td></tr>
+    <tr class="grand"><td>Ödenecek Tutar</td><td class="r">${fmtTL(toplam)} ₺</td></tr>
+  </table></div>
+  <div class="foot">${esc(f.aciklama||"")}</div>
+</body></html>`;
+    const w=window.open("","_blank","width=860,height=1000");
+    if(!w){alert("Yazdırma penceresi açılamadı — tarayıcı açılır pencereyi engellemiş olabilir.");return;}
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(()=>{try{w.print();}catch(e){}},350);
+  };
+
+  const projeSecenekleri=useMemo(()=>{
+    const seen={};const out=[];
+    satilanDaireler.forEach(d=>{if(!seen[d.projeId]){seen[d.projeId]=true;out.push({id:d.projeId,ad:d.projeAd});}});
+    return out;
+  },[satilanDaireler]);
+
+  const chip=(label,val,renk)=><div style={{display:"flex",flexDirection:"column",gap:"2px",padding:"8px 14px",borderRadius:T.r,background:"#fff",border:`1px solid ${T.border}`,minWidth:"110px"}}><span style={{fontSize:"11px",color:T.t3,fontWeight:600,textTransform:"uppercase"}}>{label}</span><span style={{fontSize:"18px",fontWeight:700,color:renk}}>{val}</span></div>;
+
+  return <div style={{padding:"4px"}}>
+    {/* BAŞLIK + ÖZET */}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"14px",flexWrap:"wrap",gap:"10px"}}>
+      <div>
+        <div style={{fontSize:"20px",fontWeight:700,color:T.text}}>Satış Faturaları</div>
+        <div style={{fontSize:"12px",color:T.t3,marginTop:"2px"}}>Satılmış daireden fatura kes — R (resmi) paylaşılabilir, RR (plus) yalnız yöneticide.</div>
+      </div>
+      <div style={{display:"flex",gap:"10px"}}>
+        {chip("Faturasız Satış",faturasizSayi,faturasizSayi>0?"#fa8c16":T.t2)}
+        {chip("Kesilmiş Fatura",faturaliSayi,"#1677ff")}
+      </div>
+    </div>
+
+    {/* FİLTRE BARI */}
+    <div style={{display:"flex",gap:"10px",marginBottom:"14px",flexWrap:"wrap",alignItems:"center"}}>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Ara: SF no, proje, blok, daire, alıcı..." onFocus={foc} onBlur={blr} style={{...iS,maxWidth:"320px",fontSize:"13px"}}/>
+      <select value={projeFiltre} onChange={e=>setProjeFiltre(e.target.value)} style={{...iS,maxWidth:"220px",fontSize:"13px"}}>
+        <option value="all">Tüm Projeler</option>
+        {projeSecenekleri.map(p=><option key={p.id} value={p.id}>{p.ad}</option>)}
+      </select>
+      <div style={{display:"flex",gap:"4px"}}>
+        {[{id:"all",label:"Tümü"},{id:"faturasiz",label:"Faturasız"},{id:"faturali",label:"Faturalı"}].map(d=>(
+          <button key={d.id} onClick={()=>setDurumFiltre(d.id)} style={{padding:"7px 14px",borderRadius:T.r,border:`1px solid ${durumFiltre===d.id?T.primary:T.bDark}`,background:durumFiltre===d.id?T.pBg:"#fff",color:durumFiltre===d.id?T.primary:T.t2,fontSize:"13px",fontWeight:600,cursor:"pointer"}}>{d.label}</button>
+        ))}
+      </div>
+    </div>
+
+    {/* LİSTE */}
+    {satirlar.length===0
+      ?<div style={{padding:"48px",textAlign:"center",color:T.t3,border:`1px dashed ${T.border}`,borderRadius:T.r,background:"#fafafa",fontSize:"13px"}}>Satılmış daire bulunamadı. Bir daireyi "Satış Sunumu"ndan satışa çevirince burada görünür.</div>
+      :<div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden",background:"#fff"}}>
+        <div style={{display:"grid",gridTemplateColumns:"130px 1.4fr 1.4fr 110px 1fr 70px 90px 220px",gap:"8px",padding:"10px 14px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
+          {["SF No","Proje / Daire","Alıcı","Tarih","R Toplam (Bedel+KDV)","Kod","Durum",""].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t3,textTransform:"uppercase",textAlign:i>=4&&i<=4?"right":"left"}}>{h}</div>)}
+        </div>
+        {satirlar.map(({daire,fatura,farkli})=>(
+          <div key={daire.id} style={{display:"grid",gridTemplateColumns:"130px 1.4fr 1.4fr 110px 1fr 70px 90px 220px",gap:"8px",padding:"10px 14px",borderBottom:`1px solid ${T.border}`,alignItems:"center",background:fatura?"#fff":"#fffdf7"}}>
+            <div style={{fontSize:"13px",fontWeight:700,color:fatura?T.primary:T.t3}}>{fatura?.sfNo||"—"}</div>
+            <div style={{fontSize:"13px",color:T.text}}>
+              <div style={{fontWeight:600}}>{daire.projeAd||"—"}</div>
+              <div style={{fontSize:"12px",color:T.t2}}>{daire.blok?`${daire.blok} • `:""}No {daire.no||"—"} {daire.netM2?`• ${daire.netM2} m²`:""}</div>
+            </div>
+            <div style={{fontSize:"13px",color:daire.aliciFirmaAd?T.text:T.t3}}>{daire.aliciFirmaAd||"— (alıcı yok)"}</div>
+            <div style={{fontSize:"12px",color:T.t2}}>{fatura?.faturaTarihi||"—"}</div>
+            <div style={{fontSize:"14px",fontWeight:600,color:T.text,textAlign:"right"}}>{fatura?`${fmt(rToplam(fatura))} ₺`:<span style={{color:T.t3,fontWeight:400}}>~{fmt(parseFloat(daire.satisBedeli||0)*(1+parseFloat(daire.kdvOrani||0)/100))} ₺</span>}</div>
+            <div>{fatura&&<span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:700,color:fatura.ozelKod==="RR"?"#d48806":"#52c41a",background:fatura.ozelKod==="RR"?"#fffbe6":"#f6ffed",border:`1px solid ${fatura.ozelKod==="RR"?"#ffe58f":"#b7eb8f"}`}}>{fatura.ozelKod}</span>}</div>
+            <div>{fatura?<span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:600,color:"#1677ff",background:"#e6f4ff",border:"1px solid #1677ff33"}}>Kesildi</span>:<span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:600,color:"#fa8c16",background:"#fff7e6",border:"1px solid #ffd591"}}>Faturasız</span>}</div>
+            <div style={{display:"flex",gap:"6px",justifyContent:"flex-end",flexWrap:"wrap"}}>
+              {!fatura&&<button onClick={()=>faturaKes(daire)} disabled={!daire.satisBedeli} title={daire.satisBedeli?"":"Daire satış bedeli boş"} style={{padding:"6px 12px",borderRadius:T.r,border:"none",background:daire.satisBedeli?"#1677ff":"#d9d9d9",color:"#fff",fontSize:"12px",fontWeight:600,cursor:daire.satisBedeli?"pointer":"not-allowed"}}>Fatura Kes</button>}
+              {fatura&&<button onClick={()=>setDetayModal(fatura)} style={{padding:"6px 12px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Görüntüle</button>}
+              {fatura&&farkli&&<button onClick={()=>faturaKes(daire,fatura)} title="Daire rakamları değişti — faturayı güncelle" style={{padding:"6px 10px",borderRadius:T.r,border:"1px solid #fa8c16",background:"#fff7e6",color:"#d46b08",fontSize:"12px",fontWeight:600,cursor:"pointer"}}>⚠ Güncelle</button>}
+              {fatura&&onDel&&<button onClick={()=>onDel(fatura.id)} title="Faturayı sil" style={{padding:"6px 10px",borderRadius:T.r,border:`1px solid ${T.err}`,background:"#fff",color:T.err,fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Sil</button>}
+            </div>
+          </div>
+        ))}
+      </div>}
+
+    {/* FATURA KES / GÜNCELLE MODALI */}
+    {kesModal&&(()=>{
+      const d=kesModal.daire;
+      const bedel=parseFloat(d.satisBedeli||0), plusN=parseFloat(d.plus||0), kdvO=parseFloat(d.kdvOrani||0);
+      const kdv=bedel*kdvO/100;
+      return <div onClick={()=>setKesModal(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:"20px"}}>
+        <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"460px",boxShadow:T.shM,overflow:"hidden"}}>
+          <div style={{padding:"14px 18px",borderBottom:`1px solid ${T.border}`,fontSize:"15px",fontWeight:700,color:T.text}}>{kesModal.mevcut?"Faturayı Güncelle":"Fatura Kes"} <span style={{color:T.primary}}>{kesModal.sfNo}</span></div>
+          <div style={{padding:"18px",display:"flex",flexDirection:"column",gap:"12px"}}>
+            <div style={{fontSize:"13px",color:T.t2}}>{d.projeAd} — {d.blok?`${d.blok} • `:""}No {d.no||"—"}{d.aliciFirmaAd?` → ${d.aliciFirmaAd}`:""}</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"}}>
+              <div><label style={lS}>Fatura Tarihi</label><input type="date" value={kesModal.faturaTarihi} onChange={e=>setKesModal(p=>({...p,faturaTarihi:e.target.value}))} style={{...iS,fontSize:"13px"}}/></div>
+              <div><label style={lS}>KDV Oranı (daire kuralı)</label><div style={{...iS,background:"#fafafa",color:T.t2,fontWeight:700,lineHeight:"36px",textAlign:"center"}}>%{kdvO||0}</div></div>
+            </div>
+            {/* R görünümü — paylaşılabilir */}
+            <div style={{padding:"12px 14px",borderRadius:T.r,background:"#f6ffed",border:"1px solid #b7eb8f"}}>
+              <div style={{fontSize:"11px",fontWeight:700,color:"#52c41a",textTransform:"uppercase",marginBottom:"6px"}}>R — Resmi Fatura (paylaşılabilir)</div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:"13px",color:T.text}}><span>Matrah (KDV hariç)</span><span style={{fontWeight:600}}>{fmt(bedel)} ₺</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:"13px",color:T.t2,marginTop:"2px"}}><span>KDV (%{kdvO||0})</span><span>{fmt(kdv)} ₺</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:"14px",color:"#237804",fontWeight:700,borderTop:"1px dashed #b7eb8f",marginTop:"6px",paddingTop:"6px"}}><span>Fatura Toplamı</span><span>{fmt(bedel+kdv)} ₺</span></div>
+            </div>
+            {/* RR — yalnız admin */}
+            {plusN>0&&(isAdmin
+              ?<div style={{padding:"12px 14px",borderRadius:T.r,background:"#fff1f0",border:"1px solid #ffa39e"}}>
+                <div style={{fontSize:"11px",fontWeight:700,color:T.err,textTransform:"uppercase",marginBottom:"6px"}}>⛔ RR — GİZLİ · PAYLAŞILMAZ</div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:"13px",color:"#d48806"}}><span>PLUS (gayri resmi)</span><span style={{fontWeight:700}}>{fmt(plusN)} ₺</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:"14px",color:T.err,fontWeight:700,borderTop:"1px dashed #ffa39e",marginTop:"6px",paddingTop:"6px"}}><span>Satış Tutarı</span><span>{fmt(bedel+kdv+plusN)} ₺</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:"12px",color:T.t2,marginTop:"4px"}}><span>Net Satış (KDV hariç) · maliyet/rapor</span><span style={{fontWeight:600}}>{fmt(bedel+plusN)} ₺</span></div>
+              </div>
+              :<div style={{padding:"8px 12px",borderRadius:T.r,background:"#fafafa",border:`1px solid ${T.border}`,fontSize:"12px",color:T.t3}}>Bu satışta gayri resmi (RR) bileşen var — yalnızca yönetici görebilir.</div>
+            )}
+            <div><label style={lS}>Açıklama (opsiyonel)</label><input value={kesModal.aciklama} onChange={e=>setKesModal(p=>({...p,aciklama:e.target.value}))} onFocus={foc} onBlur={blr} style={{...iS,fontSize:"13px"}}/></div>
+          </div>
+          <div style={{padding:"12px 18px",borderTop:`1px solid ${T.border}`,background:"#fafafa",display:"flex",gap:"8px",justifyContent:"flex-end"}}>
+            <button onClick={()=>setKesModal(null)} style={{padding:"8px 16px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>Vazgeç</button>
+            <button onClick={kesOnayla} style={{padding:"8px 20px",borderRadius:T.r,border:"none",background:"#1677ff",color:"#fff",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>{kesModal.mevcut?"Güncelle":"Faturayı Kes"}</button>
+          </div>
+        </div>
+      </div>;
+    })()}
+
+    {/* GÖRÜNTÜLE MODALI */}
+    {detayModal&&(()=>{
+      const f=detayModal;
+      return <div onClick={()=>setDetayModal(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:"20px"}}>
+        <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"460px",boxShadow:T.shM,overflow:"hidden"}}>
+          <div style={{padding:"14px 18px",borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:"15px",fontWeight:700,color:T.primary}}>{f.sfNo}</span>
+            <span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:700,color:f.ozelKod==="RR"?"#d48806":"#52c41a",background:f.ozelKod==="RR"?"#fffbe6":"#f6ffed",border:`1px solid ${f.ozelKod==="RR"?"#ffe58f":"#b7eb8f"}`}}>{f.ozelKod}</span>
+          </div>
+          <div style={{padding:"18px",display:"flex",flexDirection:"column",gap:"12px"}}>
+            <div style={{fontSize:"13px",color:T.t2}}>{f.projeAd} — {f.blok?`${f.blok} • `:""}No {f.daireNo||"—"}</div>
+            <div style={{fontSize:"13px",color:T.text}}><strong>Alıcı:</strong> {f.aliciFirmaAd||"—"}</div>
+            <div style={{fontSize:"13px",color:T.text}}><strong>Fatura Tarihi:</strong> {f.faturaTarihi||"—"}{f.sozlesmeTarihi?`  ·  Sözleşme: ${f.sozlesmeTarihi}`:""}</div>
+            <div style={{padding:"12px 14px",borderRadius:T.r,background:"#f6ffed",border:"1px solid #b7eb8f"}}>
+              <div style={{fontSize:"11px",fontWeight:700,color:"#52c41a",textTransform:"uppercase",marginBottom:"6px"}}>R — Resmi Fatura (paylaşılabilir)</div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:"13px",color:T.text}}><span>Matrah (KDV hariç)</span><span style={{fontWeight:600}}>{fmt(f.satisBedeli)} ₺</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:"13px",color:T.t2,marginTop:"2px"}}><span>KDV (%{f.kdvOrani||0})</span><span>{fmt(kdvTutar(f))} ₺</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:"14px",color:"#237804",fontWeight:700,borderTop:"1px dashed #b7eb8f",marginTop:"6px",paddingTop:"6px"}}><span>Fatura Toplamı</span><span>{fmt(rToplam(f))} ₺</span></div>
+            </div>
+            {parseFloat(f.plus||0)>0&&(isAdmin
+              ?<div style={{padding:"12px 14px",borderRadius:T.r,background:"#fff1f0",border:"1px solid #ffa39e"}}>
+                <div style={{fontSize:"11px",fontWeight:700,color:T.err,textTransform:"uppercase",marginBottom:"6px"}}>⛔ RR — GİZLİ · PAYLAŞILMAZ</div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:"13px",color:"#d48806"}}><span>PLUS (gayri resmi)</span><span style={{fontWeight:700}}>{fmt(f.plus)} ₺</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:"14px",color:T.err,fontWeight:700,borderTop:"1px dashed #ffa39e",marginTop:"6px",paddingTop:"6px"}}><span>Satış Tutarı</span><span>{fmt(gercekSatis(f))} ₺</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:"12px",color:T.t2,marginTop:"4px"}}><span>Net Satış (KDV hariç) · maliyet/rapor</span><span style={{fontWeight:600}}>{fmt(netGelir(f))} ₺</span></div>
+              </div>
+              :<div style={{padding:"8px 12px",borderRadius:T.r,background:"#fafafa",border:`1px solid ${T.border}`,fontSize:"12px",color:T.t3}}>Bu satışta gayri resmi (RR) bileşen var — yalnızca yönetici görebilir.</div>
+            )}
+            {isAdmin&&(()=>{
+              const m=daireMaliyetHesap(f);
+              if(m.yok==="arsa")return<div style={{padding:"8px 12px",borderRadius:T.r,background:"#fafafa",border:`1px solid ${T.border}`,fontSize:"12px",color:T.t3}}>Arsa sahibi dairesi — kârlılık hesaplanmaz.</div>;
+              if(m.yok)return<div style={{padding:"8px 12px",borderRadius:T.r,background:"#fffbe6",border:"1px solid #ffe58f",fontSize:"12px",color:"#ad6800"}}>Kârlılık için blok öngörülen m² maliyeti gerekli — Maliyet sayfasından girin.</div>;
+              const gelir=netGelir(f), kar=gelir-m.maliyet, marj=m.maliyet>0?(kar/m.maliyet*100):0;
+              const renk=kar>=0?"#237804":"#cf1322";
+              return<div style={{padding:"12px 14px",borderRadius:T.r,background:"#f9f0ff",border:"1px solid #d3adf7"}}>
+                <div style={{fontSize:"11px",fontWeight:700,color:"#722ed1",textTransform:"uppercase",marginBottom:"6px"}}>KÂRLILIK (yalnız yönetici)</div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:"13px",color:T.text}}><span>Öngörülen Maliyet (KDV hariç)</span><span style={{fontWeight:600}}>{fmt(m.maliyet)} ₺</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:"13px",color:T.t2,marginTop:"2px"}}><span>Net Satış (matrah + PLUS)</span><span>{fmt(gelir)} ₺</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:"14px",color:renk,fontWeight:700,borderTop:"1px dashed #d3adf7",marginTop:"6px",paddingTop:"6px"}}><span>Kâr<span style={{fontSize:"12px",fontWeight:600,marginLeft:"6px"}}>%{marj.toLocaleString("tr-TR",{maximumFractionDigits:0})}</span></span><span>{fmt(kar)} ₺</span></div>
+              </div>;
+            })()}
+            {f.aciklama&&<div style={{fontSize:"12px",color:T.t2}}><strong>Açıklama:</strong> {f.aciklama}</div>}
+          </div>
+          <div style={{padding:"12px 18px",borderTop:`1px solid ${T.border}`,background:"#fafafa",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <button onClick={()=>yazdir(f)} style={{padding:"8px 18px",borderRadius:T.r,border:"1px solid #52c41a",background:"#f6ffed",color:"#237804",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>🖨 Yazdır / PDF (R)</button>
+            <button onClick={()=>setDetayModal(null)} style={{padding:"8px 20px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>Kapat</button>
+          </div>
+        </div>
+      </div>;
+    })()}
+  </div>;
+};
+
 /* ========== MALZEMELER SAYFASI (ÜST SEKMELER İLE) ========== */
 const MalzemelerPage=({malzemeler,setMalzemeler,onSaveMalzeme,onDelMalzeme,firmalar,altKategoriler,setAltKategoriler,altGruplar,setAltGruplar,teklifler,setTeklifler,onSaveKat,onDelKat,onSaveAltGrp,onDelAltGrp,onSaveTeklif,onDelTeklif,projeler=[],setEditMode})=>{
   const[mainTab,setMainTab]=useState("liste");
@@ -5131,6 +5487,38 @@ const hatirlatmaToDb = (h) => ({
   hatirlatma_tarihi:h.hatirlatmaTarihi||null, baslik:h.baslik||"", notlar:h.notlar||"",
   durum:h.durum||"bekliyor",
   olusturan_id:h.olusturanId||null, olusturan_ad:h.olusturanAd||""
+});
+
+// SATIŞ FATURALARI — satılmış daireden üretilen fatura (1 daire = 1 fatura, snapshot).
+// R = resmi (satis_bedeli + KDV) paylaşılabilir; plus = gayri resmi (RR) yalnız admin, çıktısı yok.
+const satisFaturasiToLocal = (s) => ({
+  id:s.id, sfNo:s.sf_no||"",
+  bolumId:s.bolum_id, projeId:s.proje_id, projeAd:s.proje_ad||"",
+  blok:s.blok||"", daireNo:s.daire_no||"",
+  malzemeKodu:s.malzeme_kodu||"", malzemeAd:s.malzeme_ad||"",
+  aliciFirmaId:s.alici_firma_id, aliciFirmaAd:s.alici_firma_ad||"",
+  faturaTarihi:s.fatura_tarihi||"", sozlesmeTarihi:s.sozlesme_tarihi||"",
+  satisBedeli:s.satis_bedeli!=null?String(s.satis_bedeli):"",
+  kdvOrani:s.kdv_orani||"",
+  plus:s.plus!=null?String(s.plus):"",
+  ozelKod:s.ozel_kod||"R",
+  paraBirimi:s.para_birimi||"TL",
+  aciklama:s.aciklama||"", durum:s.durum||"kesildi",
+  createdAt:s.created_at||""
+});
+const satisFaturasiToDb = (s) => ({
+  sf_no:s.sfNo||"",
+  bolum_id:s.bolumId||null, proje_id:s.projeId||null, proje_ad:s.projeAd||"",
+  blok:s.blok||"", daire_no:s.daireNo||"",
+  malzeme_kodu:s.malzemeKodu||"", malzeme_ad:s.malzemeAd||"",
+  alici_firma_id:s.aliciFirmaId||null, alici_firma_ad:s.aliciFirmaAd||"",
+  fatura_tarihi:s.faturaTarihi||null, sozlesme_tarihi:s.sozlesmeTarihi||null,
+  satis_bedeli:s.satisBedeli!==""&&s.satisBedeli!=null?Number(s.satisBedeli):null,
+  kdv_orani:s.kdvOrani||"",
+  plus:s.plus!==""&&s.plus!=null?Number(s.plus):null,
+  ozel_kod:s.ozelKod||"R",
+  para_birimi:s.paraBirimi||"TL",
+  aciklama:s.aciklama||"", durum:s.durum||"kesildi"
 });
 
 /* ========== PROJELER MODÜLÜ ========== */
@@ -10635,6 +11023,7 @@ export default function App(){
   const[dosyaKategorileri,setDosyaKategorileri]=useState(DOSYA_KATEGORILERI.map(k=>({...k,altKategoriler:[...k.altKategoriler]})));
   const[siparisler,setSiparisler]=useState([]);
   const[faturalar,setFaturalar]=useState([]);
+  const[satisFaturalari,setSatisFaturalari]=useState([]);
   const[sunumlar,setSunumlar]=useState([]);
   const[hatirlatmalar,setHatirlatmalar]=useState([]);
 
@@ -10642,7 +11031,7 @@ export default function App(){
   const loadAll = useCallback(async (ilkYukleme=false) => {
     if(ilkYukleme) setLoading(true);
     try {
-      const [fDb, kDb, nDb, mDb, katDb, agDb, tDb, tkDb, sbDb, bkDb, ilDb, adDb, pDb, spDb, spkDb, afDb, afkDb, bkalDb, blokDb, bolumDb, bksatDb, bksrDb, suDb, htDb] = await Promise.all([
+      const [fDb, kDb, nDb, mDb, katDb, agDb, tDb, tkDb, sbDb, bkDb, ilDb, adDb, pDb, spDb, spkDb, afDb, afkDb, bkalDb, blokDb, bolumDb, bksatDb, bksrDb, suDb, htDb, sfDb] = await Promise.all([
         sbGet('firmalar','order=id.asc'),
         sbGet('kisiler','order=id.asc'),
         sbGet('notlar','order=id.asc'),
@@ -10667,6 +11056,7 @@ export default function App(){
         sbGet('butce_kalemi_satir_revizyonlari','order=butce_kalemi_satir_id.asc,rev_no.asc'),
         sbGet('sunumlar','order=id.asc'),
         sbGet('hatirlatmalar','order=hatirlatma_tarihi.asc'),
+        sbGet('satis_faturalari','order=id.asc').catch(()=>[]), // migration çalışmadan önce de uygulama açılsın
       ]);
       const firmaList = fDb.map(f => {
         const loc = firmaToLocal(f);
@@ -10692,6 +11082,7 @@ export default function App(){
       setFaturalar(afDb.map(f=>{const kalemler=afkDb.filter(k=>k.fatura_id===f.id).map(faturaKalemToLocal);return faturaToLocal(f,kalemler);}));
       setSunumlar((suDb||[]).map(sunumToLocal));
       setHatirlatmalar((htDb||[]).map(hatirlatmaToLocal));
+      setSatisFaturalari((sfDb||[]).map(satisFaturasiToLocal));
       setProjeler(pDb.map(p=>{
         const loc=projeToLocal(p);
         loc.bloklar=(blokDb||[]).filter(b=>b.proje_id===p.id).map(blokToLocal);
@@ -10833,6 +11224,17 @@ export default function App(){
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sunumlar' }, (p) => {
         if(isDel(p)) { const id=oldId(p); if(!id) return; setSunumlar(prev => remove(prev, id)); }
         else { setSunumlar(prev => upsert(prev, sunumToLocal(p.new))); }
+      })
+      // satis_faturalari — top-level (satılmış daireden üretilen satış faturaları)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'satis_faturalari' }, (p) => {
+        if(isDel(p)) { const id=oldId(p); if(!id) return;
+          setSatisFaturalari(prev => remove(prev, id));
+          showToast(`📡 Satış faturası silindi`);
+        } else {
+          const local = satisFaturasiToLocal(p.new);
+          setSatisFaturalari(prev => upsert(prev, local));
+          showToast(`📡 Satış faturası ${local.sfNo||''} ${p.eventType==='INSERT'?'kesildi':'güncellendi'}`);
+        }
       })
       // hatirlatmalar — sonraki temas / takip / görev
       .on('postgres_changes', { event: '*', schema: 'public', table: 'hatirlatmalar' }, (p) => {
@@ -11527,6 +11929,33 @@ export default function App(){
     setSunumlar(prev=>prev.filter(s=>s.id!==id));
   };
 
+  // SATIŞ FATURALARI — satılmış daireden üretilen fatura (snapshot). 1 daire = 1 fatura.
+  const saveSatisFaturasi = async (form) => {
+    try {
+      if(form.id){
+        await sbPatch('satis_faturalari', form.id, satisFaturasiToDb(form));
+        setSatisFaturalari(prev => prev.map(f=>f.id===form.id?{...f,...form}:f));
+        showToast(`🧾 Satış faturası ${form.sfNo||''} güncellendi`);
+        return {...form};
+      }
+      const [saved] = await sbPost('satis_faturalari', satisFaturasiToDb(form));
+      const local = satisFaturasiToLocal(saved);
+      setSatisFaturalari(prev => [...prev, local]);
+      showToast(`🧾 Satış faturası ${local.sfNo||''} kesildi`);
+      return local;
+    } catch(e) {
+      console.warn("Satış faturası kayıt hatası:", e.message);
+      alert("Satış faturası kaydedilemedi: "+e.message);
+      return null;
+    }
+  };
+  const delSatisFaturasi = async (id) => {
+    if(!confirm("Bu satış faturası silinsin mi?")) return;
+    try { await sbDel('satis_faturalari', id); }
+    catch(e) { console.warn("Satış faturası silme hatası:", e.message); }
+    setSatisFaturalari(prev=>prev.filter(f=>f.id!==id));
+  };
+
   // Hatırlatmalar — sonraki temas / takip / görev. Sunumdan otomatik veya elle oluşturulabilir.
   const saveHatirlatma = async (form) => {
     try {
@@ -11828,6 +12257,7 @@ export default function App(){
         {page==="teklif_verme"&&<div style={{padding:"80px",textAlign:"center",color:T.t3,fontSize:"16px",border:`1px dashed ${T.border}`,borderRadius:T.rl}}><div style={{fontSize:"32px",marginBottom:"12px"}}>📋</div>Teklif Verme modülü hazırlanıyor...</div>}
         {page==="satinalma"&&<SatinalmaSiparisleriPage siparisler={siparisler} setSiparisler={setSiparisler} onSave={saveSiparis} onDel={delSiparis} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler} butceKalemleri={butceKalemleri} faturalar={faturalar}/>}
         {page==="alis_fatura"&&<AlisFaturalariPage faturalar={faturalar} setFaturalar={setFaturalar} onSave={saveFatura} onDel={delFatura} siparisler={siparisler} teklifler={teklifler} firmalar={firmalar} projeler={projeler} malzemeler={malzemeler} butceKalemleri={butceKalemleri}/>}
+        {page==="satis_fatura"&&<SatisFaturalariPage satisFaturalari={satisFaturalari} onSave={saveSatisFaturasi} onDel={delSatisFaturasi} projeler={projeler} firmalar={firmalar} malzemeler={malzemeler} currentUser={currentUser}/>}
         {page==="maliyet"&&<MaliyetPage projeler={projeler} setProjeler={setProjeler} malzemeler={malzemeler} faturalar={faturalar} siparisler={siparisler} firmalar={firmalar} butceKalemleri={butceKalemleri} saveButceKalemi={saveButceKalemi} delButceKalemi={delButceKalemi} bulkSaveButceKalemleri={bulkSaveButceKalemleri}/>}
         {page==="satis_sunum"&&<SatisSunumPage projeler={projeler} setProjeler={setProjeler} firmalar={firmalar} saveProje={saveProje} saveFirma={saveFirma} setPage={setPage} goToFirma={goToFirma} goToYeniFirma={goToYeniFirma} gomulu={satici} currentUser={currentUser} sunumlar={sunumlar} saveSunum={saveSunum} delSunum={delSunum} saveHatirlatma={saveHatirlatma}/>}
         {page==="satis_rapor"&&<SatisRaporPage projeler={projeler} currentUser={currentUser}/>}

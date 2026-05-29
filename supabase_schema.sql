@@ -485,6 +485,42 @@ CREATE POLICY "anon_all_sunumlar" ON sunumlar FOR ALL USING (true) WITH CHECK (t
 ALTER PUBLICATION supabase_realtime ADD TABLE sunumlar;
 
 -- ============================================
+-- SATIŞ FATURALARI (2026-05-29) — Faz 1
+-- Satılmış daireden üretilen satış faturası. 1 daire = 1 fatura (snapshot).
+-- R = resmi (satis_bedeli + KDV) paylaşılabilir; plus = gayri resmi (RR) yalnız admin, çıktısı yok.
+-- ozel_kod: plus>0 → 'RR', değilse 'R'. Muhasebe tutmaz; amaç satış karlılığı/rakamı. Resmi kayıt Logo Wings'te.
+-- ============================================
+CREATE TABLE satis_faturalari (
+  id              BIGSERIAL PRIMARY KEY,
+  sf_no           TEXT DEFAULT '',
+  bolum_id        BIGINT REFERENCES bolumler(id)  ON DELETE SET NULL,
+  proje_id        BIGINT REFERENCES projeler(id)  ON DELETE SET NULL,
+  proje_ad        TEXT DEFAULT '',
+  blok            TEXT DEFAULT '',
+  daire_no        TEXT DEFAULT '',
+  malzeme_kodu    TEXT DEFAULT '',
+  malzeme_ad      TEXT DEFAULT '',
+  alici_firma_id  BIGINT REFERENCES firmalar(id)  ON DELETE SET NULL,
+  alici_firma_ad  TEXT DEFAULT '',
+  fatura_tarihi   DATE,
+  sozlesme_tarihi DATE,
+  satis_bedeli    NUMERIC,        -- R matrah (KDV hariç) — snapshot
+  kdv_orani       TEXT DEFAULT '',
+  plus            NUMERIC,        -- RR / gayri resmi — ADMIN-ONLY — snapshot
+  ozel_kod        TEXT DEFAULT 'R',
+  para_birimi     TEXT DEFAULT 'TL',
+  aciklama        TEXT DEFAULT '',
+  durum           TEXT DEFAULT 'kesildi',
+  created_at      TIMESTAMPTZ DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE satis_faturalari ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "anon_all_satis_faturalari" ON satis_faturalari FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON satis_faturalari TO anon, authenticated;
+GRANT USAGE, SELECT ON SEQUENCE satis_faturalari_id_seq TO anon, authenticated;
+ALTER PUBLICATION supabase_realtime ADD TABLE satis_faturalari;
+
+-- ============================================
 -- TAMAMLANDI
 -- 17 ana tablo + sunumlar + RLS politikaları ayarlandı
 -- ============================================
