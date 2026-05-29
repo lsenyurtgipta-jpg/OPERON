@@ -4431,20 +4431,6 @@ const SatisFaturalariPage=({satisFaturalari=[],onSave,onDel,projeler=[],firmalar
   const gercekSatis=(f)=>parseFloat(f.satisBedeli||0)+kdvTutar(f)+parseFloat(f.plus||0); // Satış Tutarı = R Toplam (KDV dahil) + PLUS — admin
   const netGelir=(f)=>parseFloat(f.satisBedeli||0)+parseFloat(f.plus||0); // Net (KDV hariç) = matrah + PLUS — maliyet/rapor tabanı, admin
 
-  // Daire maliyeti — MaliyetPage ile AYNI formül: brüt m² × blok öngörülen m² (KDV hariç, planlanan).
-  // Dönüş: {maliyet,brutM2,ong} | {yok:'daire'|'arsa'|'ong'}
-  const daireMaliyetHesap=(f)=>{
-    const proje=(projeler||[]).find(p=>String(p.id)===String(f.projeId));
-    const daire=proje?(proje.bolumler||[]).find(b=>String(b.id)===String(f.bolumId)):null;
-    if(!daire)return{yok:"daire"};
-    if((daire.sahiplik||"")!=="Müteahhit")return{yok:"arsa"};
-    const blok=(proje.bloklar||[]).find(bl=>bl.ad===daire.blok);
-    const ong=blok&&blok.ongorulenM2KdvHaric!==""&&blok.ongorulenM2KdvHaric!=null?parseFloat(blok.ongorulenM2KdvHaric):NaN;
-    const brutM2=parseFloat(daire.brutM2)||0;
-    if(isNaN(ong)||brutM2<=0)return{yok:"ong"};
-    return{maliyet:brutM2*ong,brutM2,ong};
-  };
-
   // R (resmi) belgesini baskıya hazır olarak yeni pencerede açar — PLUS/RR ASLA yer almaz.
   const yazdir=(f)=>{
     const firma=(firmalar||[]).find(x=>String(x.id)===String(f.aliciFirmaId))||null;
@@ -4665,19 +4651,6 @@ const SatisFaturalariPage=({satisFaturalari=[],onSave,onDel,projeler=[],firmalar
               </div>
               :<div style={{padding:"8px 12px",borderRadius:T.r,background:"#fafafa",border:`1px solid ${T.border}`,fontSize:"12px",color:T.t3}}>Bu satışta gayri resmi (RR) bileşen var — yalnızca yönetici görebilir.</div>
             )}
-            {isAdmin&&(()=>{
-              const m=daireMaliyetHesap(f);
-              if(m.yok==="arsa")return<div style={{padding:"8px 12px",borderRadius:T.r,background:"#fafafa",border:`1px solid ${T.border}`,fontSize:"12px",color:T.t3}}>Arsa sahibi dairesi — kârlılık hesaplanmaz.</div>;
-              if(m.yok)return<div style={{padding:"8px 12px",borderRadius:T.r,background:"#fffbe6",border:"1px solid #ffe58f",fontSize:"12px",color:"#ad6800"}}>Kârlılık için blok öngörülen m² maliyeti gerekli — Maliyet sayfasından girin.</div>;
-              const gelir=netGelir(f), kar=gelir-m.maliyet, marj=m.maliyet>0?(kar/m.maliyet*100):0;
-              const renk=kar>=0?"#237804":"#cf1322";
-              return<div style={{padding:"12px 14px",borderRadius:T.r,background:"#f9f0ff",border:"1px solid #d3adf7"}}>
-                <div style={{fontSize:"11px",fontWeight:700,color:"#722ed1",textTransform:"uppercase",marginBottom:"6px"}}>KÂRLILIK (yalnız yönetici)</div>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:"13px",color:T.text}}><span>Öngörülen Maliyet (KDV hariç)</span><span style={{fontWeight:600}}>{fmt(m.maliyet)} ₺</span></div>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:"13px",color:T.t2,marginTop:"2px"}}><span>Net Satış (matrah + PLUS)</span><span>{fmt(gelir)} ₺</span></div>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:"14px",color:renk,fontWeight:700,borderTop:"1px dashed #d3adf7",marginTop:"6px",paddingTop:"6px"}}><span>Kâr<span style={{fontSize:"12px",fontWeight:600,marginLeft:"6px"}}>%{marj.toLocaleString("tr-TR",{maximumFractionDigits:0})}</span></span><span>{fmt(kar)} ₺</span></div>
-              </div>;
-            })()}
             {f.aciklama&&<div style={{fontSize:"12px",color:T.t2}}><strong>Açıklama:</strong> {f.aciklama}</div>}
           </div>
           <div style={{padding:"12px 18px",borderTop:`1px solid ${T.border}`,background:"#fafafa",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
