@@ -4690,33 +4690,161 @@ const durumInfo=(id)=>GOREV_DURUMLARI.find(x=>x.id===id)||GOREV_DURUMLARI[0];
 
 /* --- GEÇİCİ DEMO VERİSİ (bellekte; sayfa yenileyince sıfırlanır) --- */
 const GOREV_GRUPLARI_SEED=[
-  {id:1,ad:"Saha",ustGrupId:null,aciklama:"Şantiye saha işleri"},
-  {id:2,ad:"Kalıpçı",ustGrupId:1,aciklama:"Kalıp ekibi"},
-  {id:3,ad:"Demirci",ustGrupId:1,aciklama:"Demir bağlama ekibi"},
-  {id:4,ad:"Ofis",ustGrupId:null,aciklama:"Ofis / idari"},
-  {id:5,ad:"Satınalma",ustGrupId:4,aciklama:"Tedarik / satınalma"},
-  {id:6,ad:"Üretim",ustGrupId:null,aciklama:"Atölye / üretim"},
+  {id:1,kod:"001",ad:"SAHA"},
+  {id:2,kod:"002",ad:"OFİS"},
+  {id:3,kod:"003",ad:"SATINALMA"},
+  {id:4,kod:"004",ad:"ÜRETİM"},
+];
+const GOREV_ALT_GRUPLARI_SEED=[
+  {id:1,grupKod:"001",grupAd:"SAHA",kod:"01",ad:"KALIPÇI"},
+  {id:2,grupKod:"001",grupAd:"SAHA",kod:"02",ad:"DEMİRCİ"},
+  {id:3,grupKod:"001",grupAd:"SAHA",kod:"03",ad:"BETON / KABA İNŞAAT"},
+  {id:4,grupKod:"002",grupAd:"OFİS",kod:"01",ad:"MUHASEBE"},
+  {id:5,grupKod:"002",grupAd:"OFİS",kod:"02",ad:"İDARİ İŞLER"},
+  {id:6,grupKod:"003",grupAd:"SATINALMA",kod:"01",ad:"TEDARİK"},
 ];
 const PERSONELLER_SEED=[
-  {id:1,ad:"Mehmet",soyad:"Demir",tcKimlikNo:"12345678901",telefon:"0532 111 22 33",eposta:"",dogumTarihi:"1985-03-12",iseBaslamaTarihi:"2022-01-10",pozisyon:"Saha Şefi",gorevGrubuId:1,calismaTipi:"maasli",ucret:"65000",hesapVar:true,rol:"yonetici",aktif:true,aciklama:""},
-  {id:2,ad:"Ahmet",soyad:"Yıldız",tcKimlikNo:"22345678902",telefon:"0533 222 33 44",eposta:"",dogumTarihi:"1990-07-22",iseBaslamaTarihi:"2023-05-01",pozisyon:"Kalıp Ustası",gorevGrubuId:2,calismaTipi:"yevmiyeli",ucret:"1800",hesapVar:false,rol:"",aktif:true,aciklama:""},
-  {id:3,ad:"Hasan",soyad:"Kaya",tcKimlikNo:"32345678903",telefon:"0534 333 44 55",eposta:"",dogumTarihi:"1988-11-05",iseBaslamaTarihi:"2024-02-15",pozisyon:"Demir Ustası",gorevGrubuId:3,calismaTipi:"goturu",ucret:"",hesapVar:true,rol:"taseron",aktif:true,aciklama:"Götürü demir işleri — firmamız üzerinden sigortalı"},
-  {id:4,ad:"Ayşe",soyad:"Şahin",tcKimlikNo:"42345678904",telefon:"0535 444 55 66",eposta:"ayse@firma.com",dogumTarihi:"1992-04-18",iseBaslamaTarihi:"2021-09-01",pozisyon:"Satınalma Sorumlusu",gorevGrubuId:5,calismaTipi:"maasli",ucret:"55000",hesapVar:true,rol:"data_entry",aktif:true,aciklama:""},
+  {id:1,ad:"Mehmet",soyad:"Demir",tcKimlikNo:"12345678901",telefon:"0532 111 22 33",eposta:"",dogumTarihi:"1985-03-12",iseBaslamaTarihi:"2022-01-10",pozisyon:"Saha Şefi",gorevGrubuId:1,gorevAltGrupId:"",calismaTipi:"maasli",ucret:"65000",hesapVar:true,rol:"yonetici",aktif:true,aciklama:""},
+  {id:2,ad:"Ahmet",soyad:"Yıldız",tcKimlikNo:"22345678902",telefon:"0533 222 33 44",eposta:"",dogumTarihi:"1990-07-22",iseBaslamaTarihi:"2023-05-01",pozisyon:"Kalıp Ustası",gorevGrubuId:1,gorevAltGrupId:1,calismaTipi:"yevmiyeli",ucret:"1800",hesapVar:false,rol:"",aktif:true,aciklama:""},
+  {id:3,ad:"Hasan",soyad:"Kaya",tcKimlikNo:"32345678903",telefon:"0534 333 44 55",eposta:"",dogumTarihi:"1988-11-05",iseBaslamaTarihi:"2024-02-15",pozisyon:"Demir Ustası",gorevGrubuId:1,gorevAltGrupId:2,calismaTipi:"goturu",ucret:"",hesapVar:true,rol:"taseron",aktif:true,aciklama:"Götürü demir işleri — firmamız üzerinden sigortalı"},
+  {id:4,ad:"Ayşe",soyad:"Şahin",tcKimlikNo:"42345678904",telefon:"0535 444 55 66",eposta:"ayse@firma.com",dogumTarihi:"1992-04-18",iseBaslamaTarihi:"2021-09-01",pozisyon:"Satınalma Sorumlusu",gorevGrubuId:3,gorevAltGrupId:6,calismaTipi:"maasli",ucret:"55000",hesapVar:true,rol:"data_entry",aktif:true,aciklama:""},
 ];
 const GOREVLER_SEED=[
-  {id:1,baslik:"Duşakabin teslim takibi",aciklama:"Yıldız Duşakabin siparişinin sahaya teslimini takip et; eksik/hasar kontrolü yap.",gorevGrubuId:1,atayanId:4,atananId:1,tip:"teslim_takibi",oncelik:"yuksek",baslamaTarihi:"2026-05-28",planlananBitis:"2026-06-05",durum:"devam",malzemeListesi:[{ad:"Duşakabin 90x90",miktar:"12",birim:"adet"}],tutar:"",geriBildirimNotu:"",projeId:null,bolumId:null,siparisId:null,createdAt:"2026-05-28"},
-  {id:2,baslik:"3. kat döşeme kalıbı",aciklama:"B blok 3. kat döşeme kalıbı imalatı.",gorevGrubuId:2,atayanId:1,atananId:2,tip:"saha_isi",oncelik:"normal",baslamaTarihi:"2026-05-25",planlananBitis:"2026-06-10",durum:"atandi",malzemeListesi:[],tutar:"",geriBildirimNotu:"",projeId:null,bolumId:null,siparisId:null,createdAt:"2026-05-24"},
-  {id:3,baslik:"Bodrum perde demir bağlama (götürü)",aciklama:"Bodrum perde demirleri götürü usulü bağlanacak.",gorevGrubuId:3,atayanId:1,atananId:3,tip:"saha_isi",oncelik:"normal",baslamaTarihi:"2026-05-20",planlananBitis:"2026-05-30",durum:"tamamlandi",malzemeListesi:[],tutar:"85000",geriBildirimNotu:"İş bitti, mal kabul bekliyor.",projeId:null,bolumId:null,siparisId:null,createdAt:"2026-05-19"},
+  {id:1,baslik:"Duşakabin teslim takibi",aciklama:"Yıldız Duşakabin siparişinin sahaya teslimini takip et; eksik/hasar kontrolü yap.",gorevGrubuId:1,gorevAltGrupId:"",atayanId:4,atananId:1,tip:"teslim_takibi",oncelik:"yuksek",baslamaTarihi:"2026-05-28",planlananBitis:"2026-06-05",durum:"devam",malzemeListesi:[{ad:"Duşakabin 90x90",miktar:"12",birim:"adet"}],tutar:"",geriBildirimNotu:"",projeId:null,bolumId:null,siparisId:null,createdAt:"2026-05-28"},
+  {id:2,baslik:"3. kat döşeme kalıbı",aciklama:"B blok 3. kat döşeme kalıbı imalatı.",gorevGrubuId:1,gorevAltGrupId:1,atayanId:1,atananId:2,tip:"saha_isi",oncelik:"normal",baslamaTarihi:"2026-05-25",planlananBitis:"2026-06-10",durum:"atandi",malzemeListesi:[],tutar:"",geriBildirimNotu:"",projeId:null,bolumId:null,siparisId:null,createdAt:"2026-05-24"},
+  {id:3,baslik:"Bodrum perde demir bağlama (götürü)",aciklama:"Bodrum perde demirleri götürü usulü bağlanacak.",gorevGrubuId:1,gorevAltGrupId:2,atayanId:1,atananId:3,tip:"saha_isi",oncelik:"normal",baslamaTarihi:"2026-05-20",planlananBitis:"2026-05-30",durum:"tamamlandi",malzemeListesi:[],tutar:"85000",geriBildirimNotu:"İş bitti, mal kabul bekliyor.",projeId:null,bolumId:null,siparisId:null,createdAt:"2026-05-19"},
 ];
 
-const PersonelPage=({personeller=[],onSave,onDel,gorevGruplari=[],onSaveGrup,onDelGrup})=>{
+/* --- Görev Grup / Alt Grup yönetimi (MALZEMELER kurgusunun birebir aynısı: 3 haneli grup kodu + 2 haneli alt grup kodu, iki panelli) --- */
+const GorevGrupYonetim=({gruplar=[],altGruplar=[],onSaveGrup,onDelGrup,onSaveAltGrup,onDelAltGrup})=>{
+  const[yKod,setYKod]=useState("");const[yAd,setYAd]=useState("");
+  const[edId,setEdId]=useState(null);const[edKod,setEdKod]=useState("");const[edAd,setEdAd]=useState("");
+  const[sel,setSel]=useState(null);
+  const[ygKod,setYgKod]=useState("");const[ygAd,setYgAd]=useState("");
+  const[egId,setEgId]=useState(null);const[egKod,setEgKod]=useState("");const[egAd,setEgAd]=useState("");
+
+  const sorted=(gruplar||[]).slice().sort((a,b)=>(a.kod||"").localeCompare(b.kod||""));
+  const altFiltreli=sel?(altGruplar||[]).filter(g=>g.grupKod===sel.kod).slice().sort((a,b)=>(a.kod||"").localeCompare(b.kod||"")):[];
+
+  const grupEkle=()=>{
+    if(!yKod||yKod.length!==3){alert("Kod 3 hane olmalıdır!");return;}
+    if(!yAd.trim()){alert("Grup adı giriniz!");return;}
+    if((gruplar||[]).find(a=>a.kod===yKod)){alert(`Bu kod (${yKod}) zaten kullanılıyor!`);return;}
+    onSaveGrup&&onSaveGrup({kod:yKod,ad:yAd.trim()});
+    setYKod(String(parseInt(yKod)+1).padStart(3,"0"));setYAd("");
+  };
+  const grupDuzBaslat=(a)=>{setEdId(a.id);setEdKod(a.kod);setEdAd(a.ad);};
+  const grupDuzIptal=()=>{setEdId(null);setEdKod("");setEdAd("");};
+  const grupDuzKaydet=(a)=>{
+    if(!edKod||edKod.length!==3){alert("Kod 3 hane olmalıdır!");return;}
+    if(!edAd.trim()){alert("Grup adı giriniz!");return;}
+    onSaveGrup&&onSaveGrup({...a,kod:edKod,ad:edAd.trim()});
+    if(sel?.id===a.id)setSel(p=>({...p,kod:edKod,ad:edAd.trim()}));
+    grupDuzIptal();
+  };
+  const grupSil=(a)=>{if(confirm(`"${a.ad}" grubunu ve tüm alt gruplarını silmek istediğinize emin misiniz?`)){onDelGrup&&onDelGrup(a.id);if(sel?.id===a.id)setSel(null);}};
+
+  const grupSec=(a)=>{
+    setSel(a);grupDuzIptal();altDuzIptal();setYgAd("");
+    const mevcut=(altGruplar||[]).filter(g=>g.grupKod===a.kod).map(g=>parseInt(g.kod)||0);
+    setYgKod(String(mevcut.length>0?Math.max(...mevcut)+1:1).padStart(2,"0"));
+  };
+  const altEkle=()=>{
+    if(!sel){alert("Önce sol taraftan bir grup seçiniz!");return;}
+    if(!ygKod||ygKod.length!==2){alert("Kod 2 hane olmalıdır!");return;}
+    if(!ygAd.trim()){alert("Alt grup adı giriniz!");return;}
+    if((altGruplar||[]).find(g=>g.grupKod===sel.kod&&g.kod===ygKod)){alert(`Bu kod (${ygKod}) bu grupta zaten var!`);return;}
+    onSaveAltGrup&&onSaveAltGrup({grupKod:sel.kod,grupAd:sel.ad,kod:ygKod,ad:ygAd.trim()});
+    setYgKod(String(parseInt(ygKod)+1).padStart(2,"0"));setYgAd("");
+  };
+  const altDuzBaslat=(g)=>{setEgId(g.id);setEgKod(g.kod);setEgAd(g.ad);};
+  const altDuzIptal=()=>{setEgId(null);setEgKod("");setEgAd("");};
+  const altDuzKaydet=(g)=>{
+    if(!egKod||egKod.length!==2){alert("Kod 2 hane olmalıdır!");return;}
+    if(!egAd.trim()){alert("Alt grup adı giriniz!");return;}
+    onSaveAltGrup&&onSaveAltGrup({...g,kod:egKod,ad:egAd.trim()});
+    altDuzIptal();
+  };
+  const altSil=(g)=>{if(confirm("Bu alt grubu silmek istediğinize emin misiniz?"))onDelAltGrup&&onDelAltGrup(g.id);};
+
+  return <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px",minHeight:"calc(100vh - 320px)"}}>
+    {/* SOL: GRUPLAR */}
+    <div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#384248"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px"}}><span style={{fontSize:"15px",fontWeight:700,color:"#fff"}}>Gruplar</span><span style={{fontSize:"12px",color:"#8799a3"}}>{sorted.length}</span></div>
+        <button onClick={grupEkle} title="Grup Ekle" style={{padding:0,border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><SquarePlus size={28}/></button>
+      </div>
+      <div style={{padding:"8px 12px",borderBottom:`1px solid ${T.border}`,display:"grid",gridTemplateColumns:"80px 1fr",gap:"8px"}}>
+        <input style={{...iS,fontSize:"14px"}} value={yKod} onChange={e=>setYKod(e.target.value.replace(/\D/g,"").slice(0,3))} placeholder="Kod" maxLength={3} onFocus={foc} onBlur={blr}/>
+        <input style={{...iS,fontSize:"14px"}} value={yAd} onChange={e=>setYAd(e.target.value)} placeholder="Grup adı..." onKeyDown={e=>e.key==="Enter"&&grupEkle()} onFocus={foc} onBlur={blr}/>
+      </div>
+      <div style={{maxHeight:"calc(100vh - 360px)",overflow:"auto"}}>
+        {sorted.length===0?<div style={{padding:"32px",textAlign:"center",color:T.t3,fontSize:"13px"}}>Grup yok. Kod + ad girip + ile ekleyin.</div>:
+        sorted.map((a,idx)=><div key={a.id}>
+          {edId===a.id
+            ?<div style={{display:"grid",gridTemplateColumns:"80px 1fr auto",padding:"0 12px",gap:"8px",alignItems:"center",background:T.pBg,height:"38px"}}>
+              <input style={{...iS,fontFamily:"monospace",fontWeight:700,textAlign:"center",fontSize:"14px"}} value={edKod} onChange={e=>setEdKod(e.target.value.replace(/\D/g,"").slice(0,3))} maxLength={3}/>
+              <input style={{...iS,fontSize:"14px"}} value={edAd} onChange={e=>setEdAd(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")grupDuzKaydet(a);if(e.key==="Escape")grupDuzIptal();}} autoFocus onFocus={foc} onBlur={blr}/>
+              <div style={{display:"flex",gap:"10px"}}><button onClick={()=>grupDuzKaydet(a)} title="Kaydet" style={{padding:0,border:"none",background:"transparent",color:"#384248",cursor:"pointer",display:"flex"}}><Save size={22}/></button><button onClick={grupDuzIptal} title="İptal" style={{padding:0,border:"none",background:"transparent",color:T.t3,cursor:"pointer",display:"flex"}}><X size={22}/></button></div>
+            </div>
+            :<div onClick={()=>grupSec(a)} style={{display:"grid",gridTemplateColumns:"80px 1fr auto",padding:"0 12px",gap:"8px",alignItems:"center",height:"38px",borderBottom:idx<sorted.length-1?`1px solid ${T.border}`:"none",background:sel?.id===a.id?"#384248":idx%2===0?"#fff":"#fafafa",cursor:"pointer",borderLeft:sel?.id===a.id?"3px solid #8799a3":"3px solid transparent"}}
+              onMouseEnter={e=>{if(sel?.id!==a.id)e.currentTarget.style.background=T.pBg;}} onMouseLeave={e=>{if(sel?.id!==a.id)e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa";}}>
+              <div style={{fontSize:"14px",fontFamily:"monospace",fontWeight:700,color:sel?.id===a.id?"#8799a3":"#384248"}}>{a.kod}</div>
+              <div style={{fontSize:"14px",fontWeight:500,color:sel?.id===a.id?"#fff":T.text,textTransform:"uppercase",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.ad}</div>
+              <div style={{display:"flex",gap:"10px"}}>
+                <button onClick={e=>{e.stopPropagation();grupDuzBaslat(a);}} title="Düzenle" style={{padding:0,border:"none",background:"transparent",color:sel?.id===a.id?"#8799a3":"#384248",cursor:"pointer",display:"flex"}}><SquarePen size={22}/></button>
+                <button onClick={e=>{e.stopPropagation();grupSil(a);}} title="Sil" style={{padding:0,border:"none",background:"transparent",color:sel?.id===a.id?"#ff6b6b":T.err,cursor:"pointer",display:"flex"}}><Trash2 size={22}/></button>
+              </div>
+            </div>}
+        </div>)}
+      </div>
+    </div>
+    {/* SAĞ: ALT GRUPLAR */}
+    <div style={{border:`1px solid ${T.border}`,borderRadius:"8px",overflow:"hidden"}}>
+      {!sel?<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"60px",color:T.t3,fontSize:"14px",background:"#fff",height:"100%"}}>← Soldan bir grup seçin</div>:<>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#384248"}}>
+          <div style={{display:"flex",alignItems:"center",gap:"12px"}}><span style={{fontSize:"15px",fontWeight:700,color:"#fff"}}>{sel.kod} · {sel.ad}</span><span style={{fontSize:"12px",color:"#8799a3"}}>{altFiltreli.length}</span></div>
+          <button onClick={altEkle} title="Alt Grup Ekle" style={{padding:0,border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex"}}><SquarePlus size={28}/></button>
+        </div>
+        <div style={{padding:"8px 12px",borderBottom:`1px solid ${T.border}`,display:"grid",gridTemplateColumns:"80px 1fr",gap:"8px"}}>
+          <input style={{...iS,fontSize:"14px"}} value={ygKod} onChange={e=>setYgKod(e.target.value.replace(/\D/g,"").slice(0,2))} placeholder="Kod" maxLength={2} onFocus={foc} onBlur={blr}/>
+          <input style={{...iS,fontSize:"14px"}} value={ygAd} onChange={e=>setYgAd(e.target.value)} placeholder="Alt grup adı..." onKeyDown={e=>e.key==="Enter"&&altEkle()} onFocus={foc} onBlur={blr}/>
+        </div>
+        <div style={{maxHeight:"calc(100vh - 360px)",overflow:"auto"}}>
+        {altFiltreli.length===0?<div style={{padding:"32px",textAlign:"center",color:T.t3,fontSize:"13px"}}>Bu grupta henüz alt grup yok.</div>:
+        altFiltreli.map((g,idx)=><div key={g.id}>
+          {egId===g.id
+            ?<div style={{display:"grid",gridTemplateColumns:"80px 1fr auto",padding:"0 12px",gap:"8px",alignItems:"center",background:T.pBg,height:"38px"}}>
+              <input style={{...iS,fontFamily:"monospace",fontWeight:700,textAlign:"center",fontSize:"14px"}} value={egKod} onChange={e=>setEgKod(e.target.value.replace(/\D/g,"").slice(0,2))} maxLength={2}/>
+              <input style={{...iS,fontSize:"14px"}} value={egAd} onChange={e=>setEgAd(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")altDuzKaydet(g);if(e.key==="Escape")altDuzIptal();}} autoFocus onFocus={foc} onBlur={blr}/>
+              <div style={{display:"flex",gap:"10px"}}><button onClick={()=>altDuzKaydet(g)} title="Kaydet" style={{padding:0,border:"none",background:"transparent",color:"#384248",cursor:"pointer",display:"flex"}}><Save size={22}/></button><button onClick={altDuzIptal} title="İptal" style={{padding:0,border:"none",background:"transparent",color:T.t3,cursor:"pointer",display:"flex"}}><X size={22}/></button></div>
+            </div>
+            :<div style={{display:"grid",gridTemplateColumns:"80px 1fr auto",padding:"0 12px",gap:"8px",alignItems:"center",height:"38px",borderBottom:idx<altFiltreli.length-1?`1px solid ${T.border}`:"none",background:idx%2===0?"#fff":"#fafafa"}}
+              onMouseEnter={e=>e.currentTarget.style.background=T.pBg} onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#fafafa"}>
+              <div style={{fontSize:"14px",fontFamily:"monospace",fontWeight:700,color:"#384248"}}>{g.kod}</div>
+              <div style={{fontSize:"14px",fontWeight:500,color:T.text,textTransform:"uppercase",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.ad}</div>
+              <div style={{display:"flex",gap:"10px"}}>
+                <button onClick={()=>altDuzBaslat(g)} title="Düzenle" style={{padding:0,border:"none",background:"transparent",color:"#384248",cursor:"pointer",display:"flex"}}><SquarePen size={22}/></button>
+                <button onClick={()=>altSil(g)} title="Sil" style={{padding:0,border:"none",background:"transparent",color:T.err,cursor:"pointer",display:"flex"}}><Trash2 size={22}/></button>
+              </div>
+            </div>}
+        </div>)}
+        </div>
+      </>}
+    </div>
+  </div>;
+};
+
+const PersonelPage=({personeller=[],onSave,onDel,gorevGruplari=[],onSaveGrup,onDelGrup,gorevAltGruplari=[],onSaveAltGrup,onDelAltGrup})=>{
   const[mainTab,setMainTab]=useState("liste");
   const[search,setSearch]=useState("");
   const[tipFiltre,setTipFiltre]=useState("all");
   const[modal,setModal]=useState(null);
-  const[grupModal,setGrupModal]=useState(null);
   const lS2={display:"block",color:T.text,fontSize:"11px",fontWeight:500,marginBottom:"4px"};
   const grupAd=(id)=>{const g=(gorevGruplari||[]).find(x=>String(x.id)===String(id));return g?g.ad:"—";};
+  const grupById=(id)=>(gorevGruplari||[]).find(x=>String(x.id)===String(id))||null;
+  const altGrupAd=(id)=>{const a=(gorevAltGruplari||[]).find(x=>String(x.id)===String(id));return a?a.ad:"";};
+  const altGrupSecenek=(grubuId)=>{const g=grupById(grubuId);if(!g)return[];return (gorevAltGruplari||[]).filter(a=>a.grupKod===g.kod).slice().sort((a,b)=>(a.kod||"").localeCompare(b.kod||""));};
 
   const filtreli=useMemo(()=>{
     const q=(search||"").toLocaleLowerCase("tr");
@@ -4731,7 +4859,7 @@ const PersonelPage=({personeller=[],onSave,onDel,gorevGruplari=[],onSaveGrup,onD
       });
   },[personeller,search,tipFiltre,gorevGruplari]);
 
-  const bos={ad:"",soyad:"",tcKimlikNo:"",telefon:"",eposta:"",dogumTarihi:"",iseBaslamaTarihi:"",pozisyon:"",gorevGrubuId:"",calismaTipi:"maasli",ucret:"",hesapVar:false,rol:"",aktif:true,aciklama:""};
+  const bos={ad:"",soyad:"",tcKimlikNo:"",telefon:"",eposta:"",dogumTarihi:"",iseBaslamaTarihi:"",pozisyon:"",gorevGrubuId:"",gorevAltGrupId:"",calismaTipi:"maasli",ucret:"",hesapVar:false,rol:"",aktif:true,aciklama:""};
   const acEkle=()=>setModal({...bos});
   const acDuzenle=(p)=>setModal({...bos,...p});
   const kaydet=()=>{
@@ -4740,14 +4868,6 @@ const PersonelPage=({personeller=[],onSave,onDel,gorevGruplari=[],onSaveGrup,onD
     setModal(null);
   };
   const sil=(p)=>{if(confirm(`${p.ad} ${p.soyad} silinsin mi?`))onDel&&onDel(p.id);};
-
-  const grupBos={ad:"",ustGrupId:"",aciklama:""};
-  const grupKaydet=()=>{
-    if(!grupModal.ad.trim()){alert("Grup adı zorunludur.");return;}
-    onSaveGrup&&onSaveGrup({...grupModal});
-    setGrupModal(null);
-  };
-  const grupSil=(g)=>{if(confirm(`"${g.ad}" grubu silinsin mi?`))onDelGrup&&onDelGrup(g.id);};
 
   const chip=(label,val,renk)=><div style={{display:"flex",flexDirection:"column",gap:"2px",padding:"8px 14px",borderRadius:T.r,background:"#fff",border:`1px solid ${T.border}`,minWidth:"96px"}}><span style={{fontSize:"11px",color:T.t3,fontWeight:600,textTransform:"uppercase"}}>{label}</span><span style={{fontSize:"18px",fontWeight:700,color:renk}}>{val}</span></div>;
   const calismaBadge=(id)=>{const map={maasli:{c:"#1677ff",b:"#e6f4ff"},yevmiyeli:{c:"#fa8c16",b:"#fff7e6"},goturu:{c:"#722ed1",b:"#f9f0ff"}};const m=map[id]||{c:T.t2,b:"#fafafa"};return <span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:600,color:m.c,background:m.b,border:`1px solid ${m.c}33`,whiteSpace:"nowrap"}}>{calismaTipiLabel(id)}</span>;};
@@ -4801,7 +4921,7 @@ const PersonelPage=({personeller=[],onSave,onDel,gorevGruplari=[],onSaveGrup,onD
                 {p.tcKimlikNo?<div style={{fontSize:"11px",color:T.t3}}>TC {p.tcKimlikNo}</div>:null}
               </div>
               <div style={{fontSize:"13px",color:T.t2}}>{p.pozisyon||"—"}</div>
-              <div style={{fontSize:"12px",color:T.t2}}>{grupAd(p.gorevGrubuId)}</div>
+              <div style={{fontSize:"12px",color:T.t2}}>{grupAd(p.gorevGrubuId)}{p.gorevAltGrupId?<span style={{color:T.t3}}> / {altGrupAd(p.gorevAltGrupId)}</span>:""}</div>
               <div>{calismaBadge(p.calismaTipi)}</div>
               <div style={{fontSize:"12px",color:T.t2}}>{p.telefon||"—"}</div>
               <div>{p.hesapVar?<span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:600,color:"#722ed1",background:"#f9f0ff",border:"1px solid #d3adf7"}}>{personelRolLabel(p.rol)}</span>:<span style={{fontSize:"12px",color:T.t3}}>— (hesap yok)</span>}</div>
@@ -4816,28 +4936,8 @@ const PersonelPage=({personeller=[],onSave,onDel,gorevGruplari=[],onSaveGrup,onD
     </>}
 
     {mainTab==="gruplar"&&<>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px",gap:"10px",flexWrap:"wrap"}}>
-        <div style={{fontSize:"13px",color:T.t2}}>Görev grupları — organizasyon birimleri (Saha, Ofis, Satınalma…). Üst grup ile hiyerarşi kurulur.</div>
-        <button onClick={()=>setGrupModal({...grupBos})} style={{padding:"8px 16px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"13px",fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>+ Yeni Grup</button>
-      </div>
-      {(gorevGruplari||[]).length===0
-        ?<div style={{padding:"48px",textAlign:"center",color:T.t3,border:`1px dashed ${T.border}`,borderRadius:T.r,background:"#fafafa",fontSize:"13px"}}>Grup yok. "+ Yeni Grup" ile ekleyin.</div>
-        :<div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden",background:"#fff"}}>
-          <div style={{display:"grid",gridTemplateColumns:"1.2fr 1fr 2fr 90px",gap:"8px",padding:"10px 14px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
-            {["Grup","Üst Grup","Açıklama",""].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t3,textTransform:"uppercase"}}>{h}</div>)}
-          </div>
-          {(gorevGruplari||[]).map(g=>(
-            <div key={g.id} style={{display:"grid",gridTemplateColumns:"1.2fr 1fr 2fr 90px",gap:"8px",padding:"10px 14px",borderBottom:`1px solid ${T.border}`,alignItems:"center"}}>
-              <div style={{fontSize:"13px",fontWeight:600,color:T.text}}>{g.ad}</div>
-              <div style={{fontSize:"12px",color:T.t2}}>{grupAd(g.ustGrupId)}</div>
-              <div style={{fontSize:"12px",color:T.t2}}>{g.aciklama||"—"}</div>
-              <div style={{display:"flex",gap:"6px",justifyContent:"flex-end"}}>
-                <button onClick={()=>setGrupModal({...grupBos,...g})} style={{padding:"6px 10px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Düzenle</button>
-                <button onClick={()=>grupSil(g)} style={{padding:"6px 9px",borderRadius:T.r,border:`1px solid ${T.err}`,background:"#fff",color:T.err,fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Sil</button>
-              </div>
-            </div>
-          ))}
-        </div>}
+      <div style={{fontSize:"13px",color:T.t2,marginBottom:"12px"}}>Görev grupları — MALZEMELER'deki gibi <strong>Grup</strong> (3 haneli kod) + <strong>Alt Grup</strong> (2 haneli kod) kurgusu. Soldan grup seçip sağdan alt grup ekleyin; personel ve görevler bu gruplara bağlanır.</div>
+      <GorevGrupYonetim gruplar={gorevGruplari} altGruplar={gorevAltGruplari} onSaveGrup={onSaveGrup} onDelGrup={onDelGrup} onSaveAltGrup={onSaveAltGrup} onDelAltGrup={onDelAltGrup}/>
     </>}
 
     {/* PERSONEL EKLE/DÜZENLE MODALI */}
@@ -4854,7 +4954,8 @@ const PersonelPage=({personeller=[],onSave,onDel,gorevGruplari=[],onSaveGrup,onD
             <div><label style={lS2}>Pozisyon / Görev</label><input value={modal.pozisyon} onChange={e=>setModal(p=>({...p,pozisyon:e.target.value}))} onFocus={foc} onBlur={blr} placeholder="Saha Şefi, Kalıp Ustası…" style={{...iS,fontSize:"13px"}}/></div>
             <div><label style={lS2}>Doğum Tarihi</label><input type="date" value={modal.dogumTarihi} onChange={e=>setModal(p=>({...p,dogumTarihi:e.target.value}))} style={{...iS,fontSize:"13px"}}/></div>
             <div><label style={lS2}>İşe Başlama</label><input type="date" value={modal.iseBaslamaTarihi} onChange={e=>setModal(p=>({...p,iseBaslamaTarihi:e.target.value}))} style={{...iS,fontSize:"13px"}}/></div>
-            <div><label style={lS2}>Görev Grubu</label><select value={modal.gorevGrubuId} onChange={e=>setModal(p=>({...p,gorevGrubuId:e.target.value}))} style={{...iS,fontSize:"13px"}}><option value="">— Seçiniz —</option>{(gorevGruplari||[]).map(g=><option key={g.id} value={g.id}>{g.ad}</option>)}</select></div>
+            <div><label style={lS2}>Görev Grubu</label><select value={modal.gorevGrubuId} onChange={e=>setModal(p=>({...p,gorevGrubuId:e.target.value,gorevAltGrupId:""}))} style={{...iS,fontSize:"13px"}}><option value="">— Seçiniz —</option>{(gorevGruplari||[]).slice().sort((a,b)=>(a.kod||"").localeCompare(b.kod||"")).map(g=><option key={g.id} value={g.id}>{g.kod} · {g.ad}</option>)}</select></div>
+            <div><label style={lS2}>Alt Grup</label><select value={modal.gorevAltGrupId||""} onChange={e=>setModal(p=>({...p,gorevAltGrupId:e.target.value}))} disabled={!modal.gorevGrubuId} style={{...iS,fontSize:"13px",opacity:modal.gorevGrubuId?1:0.5}}><option value="">— Seçiniz —</option>{altGrupSecenek(modal.gorevGrubuId).map(g=><option key={g.id} value={g.id}>{g.kod} · {g.ad}</option>)}</select></div>
             <div><label style={lS2}>Çalışma Tipi</label><select value={modal.calismaTipi} onChange={e=>setModal(p=>({...p,calismaTipi:e.target.value}))} style={{...iS,fontSize:"13px"}}>{CALISMA_TIPLERI.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></div>
             <div><label style={lS2}>{ucretLbl}</label><NumInput value={modal.ucret} onChange={v=>setModal(p=>({...p,ucret:v}))} placeholder={modal.calismaTipi==="goturu"?"görev bazlı":"0"} style={{...iS,fontSize:"13px"}}/></div>
             <div style={{display:"flex",alignItems:"flex-end"}}><label style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",fontSize:"13px",fontWeight:600,color:modal.aktif?"#52c41a":"#ff4d4f",height:"36px"}}><input type="checkbox" checked={modal.aktif} onChange={e=>setModal(p=>({...p,aktif:e.target.checked}))} style={{width:"16px",height:"16px",cursor:"pointer"}}/>{modal.aktif?"Aktif":"Pasif"}</label></div>
@@ -4880,25 +4981,10 @@ const PersonelPage=({personeller=[],onSave,onDel,gorevGruplari=[],onSaveGrup,onD
       </div>
     </div>}
 
-    {/* GRUP EKLE/DÜZENLE MODALI */}
-    {grupModal&&<div onClick={()=>setGrupModal(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:"20px"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"420px",boxShadow:T.shM,overflow:"hidden"}}>
-        <div style={{padding:"14px 18px",borderBottom:`1px solid ${T.border}`,fontSize:"15px",fontWeight:700,color:T.text}}>{grupModal.id?"Grup Düzenle":"Yeni Görev Grubu"}</div>
-        <div style={{padding:"18px",display:"flex",flexDirection:"column",gap:"12px"}}>
-          <div><label style={lS2}>Grup Adı *</label><input value={grupModal.ad} onChange={e=>setGrupModal(p=>({...p,ad:e.target.value}))} onFocus={foc} onBlur={blr} style={{...iS,fontSize:"13px"}}/></div>
-          <div><label style={lS2}>Üst Grup</label><select value={grupModal.ustGrupId||""} onChange={e=>setGrupModal(p=>({...p,ustGrupId:e.target.value||null}))} style={{...iS,fontSize:"13px"}}><option value="">— (en üst) —</option>{(gorevGruplari||[]).filter(g=>String(g.id)!==String(grupModal.id)).map(g=><option key={g.id} value={g.id}>{g.ad}</option>)}</select></div>
-          <div><label style={lS2}>Açıklama</label><input value={grupModal.aciklama} onChange={e=>setGrupModal(p=>({...p,aciklama:e.target.value}))} onFocus={foc} onBlur={blr} style={{...iS,fontSize:"13px"}}/></div>
-        </div>
-        <div style={{padding:"12px 18px",borderTop:`1px solid ${T.border}`,background:"#fafafa",display:"flex",gap:"8px",justifyContent:"flex-end"}}>
-          <button onClick={()=>setGrupModal(null)} style={{padding:"8px 16px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>Vazgeç</button>
-          <button onClick={grupKaydet} style={{padding:"8px 20px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>Kaydet</button>
-        </div>
-      </div>
-    </div>}
   </div>;
 };
 
-const GorevlerPage=({gorevler=[],onSave,onDel,personeller=[],gorevGruplari=[],projeler=[],siparisler=[],firmalar=[],currentUser})=>{
+const GorevlerPage=({gorevler=[],onSave,onDel,personeller=[],gorevGruplari=[],gorevAltGruplari=[],projeler=[],siparisler=[],firmalar=[],currentUser})=>{
   const[search,setSearch]=useState("");
   const[fDurum,setFDurum]=useState("all");
   const[fAtanan,setFAtanan]=useState("all");
@@ -4919,6 +5005,9 @@ const GorevlerPage=({gorevler=[],onSave,onDel,personeller=[],gorevGruplari=[],pr
   const siparisLabel=(s)=>s?`${s.spNo||("Sipariş #"+s.id)}${s.firmaId?(" · "+firmaAd(s.firmaId)):""}`:"";
   const daireList=(projeId)=>{const pr=projeById(projeId);return pr?(pr.bolumler||[]):[];};
   const daireLabel=(projeId,bolumId)=>{const b=daireList(projeId).find(x=>String(x.id)===String(bolumId));return b?`${b.blok?b.blok+" • ":""}No ${b.no||"—"}`:"";};
+  const grupById=(id)=>(gorevGruplari||[]).find(x=>String(x.id)===String(id))||null;
+  const altGrupAd=(id)=>{const a=(gorevAltGruplari||[]).find(x=>String(x.id)===String(id));return a?a.ad:"";};
+  const altGrupSecenek=(grubuId)=>{const g=grupById(grubuId);if(!g)return[];return (gorevAltGruplari||[]).filter(a=>a.grupKod===g.kod).slice().sort((a,b)=>(a.kod||"").localeCompare(b.kod||""));};
 
   const filtreli=useMemo(()=>{
     const q=(search||"").toLocaleLowerCase("tr");
@@ -4933,7 +5022,7 @@ const GorevlerPage=({gorevler=[],onSave,onDel,personeller=[],gorevGruplari=[],pr
   const acik=(gorevler||[]).filter(g=>!["kapandi","iptal"].includes(g.durum)).length;
   const onayBekleyen=(gorevler||[]).filter(g=>g.durum==="tamamlandi").length;
 
-  const bos={baslik:"",aciklama:"",gorevGrubuId:"",atayanId:"",atananId:"",tip:"genel",oncelik:"normal",baslamaTarihi:bugun,planlananBitis:"",durum:"atandi",malzemeListesi:[],tutar:"",geriBildirimNotu:"",projeId:"",bolumId:"",siparisId:""};
+  const bos={baslik:"",aciklama:"",gorevGrubuId:"",gorevAltGrupId:"",atayanId:"",atananId:"",tip:"genel",oncelik:"normal",baslamaTarihi:bugun,planlananBitis:"",durum:"atandi",malzemeListesi:[],tutar:"",geriBildirimNotu:"",projeId:"",bolumId:"",siparisId:""};
   const acAta=()=>setFormModal({...bos,atayanId:""});
   const acDuzenle=(g)=>{setDetay(null);setFormModal({...bos,...g,malzemeListesi:(g.malzemeListesi||[]).map(m=>({...m}))});};
   const kaydet=()=>{
@@ -4982,9 +5071,9 @@ const GorevlerPage=({gorevler=[],onSave,onDel,personeller=[],gorevGruplari=[],pr
         <option value="all">Tüm Kişiler</option>
         {(personeller||[]).map(p=><option key={p.id} value={p.id}>{p.ad} {p.soyad}</option>)}
       </select>
-      <select value={fGrup} onChange={e=>setFGrup(e.target.value)} style={{...iS,maxWidth:"160px",fontSize:"13px"}}>
+      <select value={fGrup} onChange={e=>setFGrup(e.target.value)} style={{...iS,maxWidth:"180px",fontSize:"13px"}}>
         <option value="all">Tüm Gruplar</option>
-        {(gorevGruplari||[]).map(g=><option key={g.id} value={g.id}>{g.ad}</option>)}
+        {(gorevGruplari||[]).slice().sort((a,b)=>(a.kod||"").localeCompare(b.kod||"")).map(g=><option key={g.id} value={g.id}>{g.kod} · {g.ad}</option>)}
       </select>
     </div>
 
@@ -5002,7 +5091,7 @@ const GorevlerPage=({gorevler=[],onSave,onDel,personeller=[],gorevGruplari=[],pr
               {(g.siparisId||g.projeId)?<div style={{fontSize:"11px",color:T.t3}}>{g.siparisId?`🔗 ${siparisLabel(siparisById(g.siparisId))}`:`${projeAd(g.projeId)}${g.bolumId?(" • "+daireLabel(g.projeId,g.bolumId)):""}`}</div>:null}
             </div>
             <div style={{fontSize:"13px",color:T.t2}}>{kisiAd(g.atananId)}</div>
-            <div style={{fontSize:"12px",color:T.t2}}>{grupAd(g.gorevGrubuId)}</div>
+            <div style={{fontSize:"12px",color:T.t2}}>{grupAd(g.gorevGrubuId)}{g.gorevAltGrupId?<span style={{color:T.t3}}> / {altGrupAd(g.gorevAltGrupId)}</span>:""}</div>
             <div style={{fontSize:"12px",color:T.t2}}>{gorevTipLabel(g.tip)}</div>
             <div>{oBadge(g.oncelik)}</div>
             <div style={{fontSize:"12px",color:T.t2}}>{g.baslamaTarihi||"—"} <span style={{color:T.t3}}>→</span> {g.planlananBitis||"—"}</div>
@@ -5024,7 +5113,8 @@ const GorevlerPage=({gorevler=[],onSave,onDel,personeller=[],gorevGruplari=[],pr
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"}}>
             <div><label style={lS2}>Atanan Kişi *</label><select value={formModal.atananId} onChange={e=>setFormModal(p=>({...p,atananId:e.target.value}))} style={{...iS,fontSize:"13px"}}><option value="">— Kişi seçiniz —</option>{(personeller||[]).filter(p=>p.aktif!==false).map(p=><option key={p.id} value={p.id}>{p.ad} {p.soyad}{p.pozisyon?` (${p.pozisyon})`:""}</option>)}</select></div>
             <div><label style={lS2}>Atayan</label><select value={formModal.atayanId} onChange={e=>setFormModal(p=>({...p,atayanId:e.target.value}))} style={{...iS,fontSize:"13px"}}><option value="">— Seçiniz —</option>{(personeller||[]).map(p=><option key={p.id} value={p.id}>{p.ad} {p.soyad}</option>)}</select></div>
-            <div><label style={lS2}>Görev Grubu</label><select value={formModal.gorevGrubuId} onChange={e=>setFormModal(p=>({...p,gorevGrubuId:e.target.value}))} style={{...iS,fontSize:"13px"}}><option value="">— Seçiniz —</option>{(gorevGruplari||[]).map(g=><option key={g.id} value={g.id}>{g.ad}</option>)}</select></div>
+            <div><label style={lS2}>Görev Grubu</label><select value={formModal.gorevGrubuId} onChange={e=>setFormModal(p=>({...p,gorevGrubuId:e.target.value,gorevAltGrupId:""}))} style={{...iS,fontSize:"13px"}}><option value="">— Seçiniz —</option>{(gorevGruplari||[]).slice().sort((a,b)=>(a.kod||"").localeCompare(b.kod||"")).map(g=><option key={g.id} value={g.id}>{g.kod} · {g.ad}</option>)}</select></div>
+            <div><label style={lS2}>Alt Grup</label><select value={formModal.gorevAltGrupId||""} onChange={e=>setFormModal(p=>({...p,gorevAltGrupId:e.target.value}))} disabled={!formModal.gorevGrubuId} style={{...iS,fontSize:"13px",opacity:formModal.gorevGrubuId?1:0.5}}><option value="">— Seçiniz —</option>{altGrupSecenek(formModal.gorevGrubuId).map(g=><option key={g.id} value={g.id}>{g.kod} · {g.ad}</option>)}</select></div>
             <div><label style={lS2}>Görev Tipi</label><select value={formModal.tip} onChange={e=>setFormModal(p=>({...p,tip:e.target.value}))} style={{...iS,fontSize:"13px"}}>{GOREV_TIPLERI.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select></div>
             <div><label style={lS2}>Öncelik</label><select value={formModal.oncelik} onChange={e=>setFormModal(p=>({...p,oncelik:e.target.value}))} style={{...iS,fontSize:"13px"}}>{GOREV_ONCELIK.map(o=><option key={o.id} value={o.id}>{o.label}</option>)}</select></div>
             <div><label style={lS2}>Durum</label><select value={formModal.durum} onChange={e=>setFormModal(p=>({...p,durum:e.target.value}))} style={{...iS,fontSize:"13px"}}>{GOREV_DURUMLARI.map(d=><option key={d.id} value={d.id}>{d.label}</option>)}</select></div>
@@ -5080,7 +5170,7 @@ const GorevlerPage=({gorevler=[],onSave,onDel,personeller=[],gorevGruplari=[],pr
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",fontSize:"13px"}}>
             <div style={{color:T.t2}}><strong style={{color:T.text}}>Atanan:</strong> {kisiAd(detay.atananId)}</div>
             <div style={{color:T.t2}}><strong style={{color:T.text}}>Atayan:</strong> {kisiAd(detay.atayanId)}</div>
-            <div style={{color:T.t2}}><strong style={{color:T.text}}>Grup:</strong> {grupAd(detay.gorevGrubuId)}</div>
+            <div style={{color:T.t2}}><strong style={{color:T.text}}>Grup:</strong> {grupAd(detay.gorevGrubuId)}{detay.gorevAltGrupId?` / ${altGrupAd(detay.gorevAltGrupId)}`:""}</div>
             <div style={{color:T.t2}}><strong style={{color:T.text}}>Tip:</strong> {gorevTipLabel(detay.tip)}</div>
             <div style={{color:T.t2}}><strong style={{color:T.text}}>Başlama:</strong> {detay.baslamaTarihi||"—"}</div>
             <div style={{color:T.t2}}><strong style={{color:T.text}}>Bitiş:</strong> {detay.planlananBitis||"—"}</div>
@@ -11575,12 +11665,15 @@ export default function App(){
   // --- PERSONEL & GÖREV (GEÇİCİ: bellekte; Supabase bağı ekran onayından sonra SQL ile kurulacak) ---
   const[personeller,setPersoneller]=useState(PERSONELLER_SEED);
   const[gorevGruplari,setGorevGruplari]=useState(GOREV_GRUPLARI_SEED);
+  const[gorevAltGruplari,setGorevAltGruplari]=useState(GOREV_ALT_GRUPLARI_SEED);
   const[gorevler,setGorevler]=useState(GOREVLER_SEED);
   const nextPgId=(arr)=>Math.max(0,...arr.map(x=>Number(x.id)||0))+1;
   const savePersonel=(d)=>setPersoneller(prev=>d.id?prev.map(x=>x.id===d.id?{...x,...d}:x):[...prev,{...d,id:nextPgId(prev)}]);
   const delPersonel=(id)=>setPersoneller(prev=>prev.filter(x=>x.id!==id));
   const saveGorevGrubu=(d)=>setGorevGruplari(prev=>d.id?prev.map(x=>x.id===d.id?{...x,...d}:x):[...prev,{...d,id:nextPgId(prev)}]);
-  const delGorevGrubu=(id)=>setGorevGruplari(prev=>prev.filter(x=>x.id!==id));
+  const delGorevGrubu=(id)=>setGorevGruplari(prev=>{const g=prev.find(x=>x.id===id);if(g)setGorevAltGruplari(a=>a.filter(x=>x.grupKod!==g.kod));return prev.filter(x=>x.id!==id);});
+  const saveGorevAltGrubu=(d)=>setGorevAltGruplari(prev=>d.id?prev.map(x=>x.id===d.id?{...x,...d}:x):[...prev,{...d,id:nextPgId(prev)}]);
+  const delGorevAltGrubu=(id)=>setGorevAltGruplari(prev=>prev.filter(x=>x.id!==id));
   const saveGorev=(d)=>setGorevler(prev=>d.id?prev.map(x=>x.id===d.id?{...x,...d}:x):[...prev,{...d,id:nextPgId(prev),createdAt:new Date().toISOString().split("T")[0]}]);
   const delGorev=(id)=>setGorevler(prev=>prev.filter(x=>x.id!==id));
 
@@ -12821,8 +12914,8 @@ export default function App(){
         {page==="sunum_rapor"&&<SunumRaporPage sunumlar={sunumlar} projeler={projeler} currentUser={currentUser} saveSunum={saveSunum} delSunum={delSunum}/>}
         {page==="hatirlatmalar"&&<HatirlatmalarPage hatirlatmalar={hatirlatmalar} firmalar={firmalar} projeler={projeler} updateHatirlatma={updateHatirlatma} delHatirlatma={delHatirlatma} currentUser={currentUser} satici={satici} goToFirma={goToFirma} setPage={setPage}/>}
         {page==="kullanicilar"&&adminOnly&&<KullanicilarPage currentUser={currentUser}/>}
-        {page==="personel"&&<PersonelPage personeller={personeller} onSave={savePersonel} onDel={delPersonel} gorevGruplari={gorevGruplari} onSaveGrup={saveGorevGrubu} onDelGrup={delGorevGrubu}/>}
-        {page==="gorevler"&&<GorevlerPage gorevler={gorevler} onSave={saveGorev} onDel={delGorev} personeller={personeller} gorevGruplari={gorevGruplari} projeler={projeler} siparisler={siparisler} firmalar={firmalar} currentUser={currentUser}/>}
+        {page==="personel"&&<PersonelPage personeller={personeller} onSave={savePersonel} onDel={delPersonel} gorevGruplari={gorevGruplari} onSaveGrup={saveGorevGrubu} onDelGrup={delGorevGrubu} gorevAltGruplari={gorevAltGruplari} onSaveAltGrup={saveGorevAltGrubu} onDelAltGrup={delGorevAltGrubu}/>}
+        {page==="gorevler"&&<GorevlerPage gorevler={gorevler} onSave={saveGorev} onDel={delGorev} personeller={personeller} gorevGruplari={gorevGruplari} gorevAltGruplari={gorevAltGruplari} projeler={projeler} siparisler={siparisler} firmalar={firmalar} currentUser={currentUser}/>}
         {page==="gorevlerim"&&<GorevlerimPage gorevler={gorevler} onSave={saveGorev} personeller={personeller} gorevGruplari={gorevGruplari} projeler={projeler} siparisler={siparisler} firmalar={firmalar} currentUser={currentUser}/>}
       </div>
     </div>
