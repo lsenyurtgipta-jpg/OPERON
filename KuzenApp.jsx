@@ -909,6 +909,9 @@ const PAGE_ROLES = {
   sunum_rapor:  ['admin','data_entry','satici'],
   hatirlatmalar:['admin','data_entry','satici'],
   kullanicilar: ['admin'],
+  personel:     ['admin'],
+  gorevler:     ['admin'],
+  gorevlerim:   ['admin'],
 };
 
 /* Rol bazlı varsayılan home sayfası — login sonrası ve yetkisiz redirect'te kullanılır. */
@@ -1205,7 +1208,7 @@ const KullanicilarPage = ({currentUser}) => {
 };
 
 const Sidebar=({page,setPage,open,editMode=false,currentUser=null})=>{
-  const[openGroups,setOpenGroups]=useState({siparisler:true,faturalar:true,satis:true});
+  const[openGroups,setOpenGroups]=useState({siparisler:true,faturalar:true,satis:true,personel_gorev:true});
   const toggleGroup=(g)=>setOpenGroups(p=>({...p,[g]:!p[g]}));
   const[uyariHedef,setUyariHedef]=useState(null);
   const sayfaDegistir=(hedef)=>{if(editMode){setUyariHedef(hedef);return;}setPage(hedef);};
@@ -1230,6 +1233,11 @@ const Sidebar=({page,setPage,open,editMode=false,currentUser=null})=>{
       {id:"satis_sunum",label:"Satış Sunumu"},
       {id:"satis_rapor",label:"Satış Raporu"},
       {id:"sunum_rapor",label:"Sunum Raporu"},
+    ]},
+    {type:"group",groupId:"personel_gorev",label:"PERSONEL & GÖREV",children:[
+      {id:"personel",label:"Personel"},
+      {id:"gorevler",label:"Görevler"},
+      {id:"gorevlerim",label:"Görevlerim"},
     ]},
     {id:"kullanicilar",label:"KULLANICILAR"},
   ];
@@ -4660,6 +4668,571 @@ const SatisFaturalariPage=({satisFaturalari=[],onSave,onDel,projeler=[],firmalar
         </div>
       </div>;
     })()}
+  </div>;
+};
+
+/* ============================================================
+   PERSONEL & GÖREV TAKİBİ MODÜLÜ  (Katman 0: Personel + Katman 1: Görev)
+   --- GEÇİCİ TEST SÜRÜMÜ: tüm veri BELLEKTE tutulur, Supabase YOK ---
+   Ekran / alan / akış onaylanınca SQL yazılıp kalıcı depolamaya geçilecek.
+   Bu blok tek parça — ileride ayrı dosyaya taşınmaya hazır.
+   ============================================================ */
+const CALISMA_TIPLERI=[{id:"maasli",label:"Maaşlı"},{id:"yevmiyeli",label:"Yevmiyeli"},{id:"goturu",label:"Götürü İş"}];
+const PERSONEL_ROLLERI=[{id:"yonetici",label:"Yönetici"},{id:"data_entry",label:"Veri Girişi"},{id:"satici",label:"Satıcı"},{id:"taseron",label:"Taşeron"}];
+const GOREV_TIPLERI=[{id:"satinalma",label:"Satınalma"},{id:"teslim_takibi",label:"Teslim Takibi"},{id:"saha_isi",label:"Saha İşi"},{id:"genel",label:"Genel"}];
+const GOREV_ONCELIK=[{id:"dusuk",label:"Düşük",color:"#8c8c8c",bg:"#fafafa"},{id:"normal",label:"Normal",color:"#1677ff",bg:"#e6f4ff"},{id:"yuksek",label:"Yüksek",color:"#fa8c16",bg:"#fff7e6"},{id:"acil",label:"Acil",color:"#ff4d4f",bg:"#fff1f0"}];
+const GOREV_DURUMLARI=[{id:"atandi",label:"Atandı",color:"#8c8c8c",bg:"#fafafa"},{id:"devam",label:"Devam Ediyor",color:"#1677ff",bg:"#e6f4ff"},{id:"tamamlandi",label:"Tamamlandı",color:"#13a8a8",bg:"#e6fffb"},{id:"onay",label:"Onay / Mal Kabul",color:"#722ed1",bg:"#f9f0ff"},{id:"kapandi",label:"Kapandı",color:"#389e0d",bg:"#f6ffed"},{id:"iptal",label:"İptal",color:"#ff4d4f",bg:"#fff1f0"}];
+const calismaTipiLabel=(id)=>(CALISMA_TIPLERI.find(x=>x.id===id)||{}).label||id||"—";
+const personelRolLabel=(id)=>(PERSONEL_ROLLERI.find(x=>x.id===id)||{}).label||"—";
+const gorevTipLabel=(id)=>(GOREV_TIPLERI.find(x=>x.id===id)||{}).label||id||"—";
+const oncelikInfo=(id)=>GOREV_ONCELIK.find(x=>x.id===id)||GOREV_ONCELIK[1];
+const durumInfo=(id)=>GOREV_DURUMLARI.find(x=>x.id===id)||GOREV_DURUMLARI[0];
+
+/* --- GEÇİCİ DEMO VERİSİ (bellekte; sayfa yenileyince sıfırlanır) --- */
+const GOREV_GRUPLARI_SEED=[
+  {id:1,ad:"Saha",ustGrupId:null,aciklama:"Şantiye saha işleri"},
+  {id:2,ad:"Kalıpçı",ustGrupId:1,aciklama:"Kalıp ekibi"},
+  {id:3,ad:"Demirci",ustGrupId:1,aciklama:"Demir bağlama ekibi"},
+  {id:4,ad:"Ofis",ustGrupId:null,aciklama:"Ofis / idari"},
+  {id:5,ad:"Satınalma",ustGrupId:4,aciklama:"Tedarik / satınalma"},
+  {id:6,ad:"Üretim",ustGrupId:null,aciklama:"Atölye / üretim"},
+];
+const PERSONELLER_SEED=[
+  {id:1,ad:"Mehmet",soyad:"Demir",tcKimlikNo:"12345678901",telefon:"0532 111 22 33",eposta:"",dogumTarihi:"1985-03-12",iseBaslamaTarihi:"2022-01-10",pozisyon:"Saha Şefi",gorevGrubuId:1,calismaTipi:"maasli",ucret:"65000",hesapVar:true,rol:"yonetici",aktif:true,aciklama:""},
+  {id:2,ad:"Ahmet",soyad:"Yıldız",tcKimlikNo:"22345678902",telefon:"0533 222 33 44",eposta:"",dogumTarihi:"1990-07-22",iseBaslamaTarihi:"2023-05-01",pozisyon:"Kalıp Ustası",gorevGrubuId:2,calismaTipi:"yevmiyeli",ucret:"1800",hesapVar:false,rol:"",aktif:true,aciklama:""},
+  {id:3,ad:"Hasan",soyad:"Kaya",tcKimlikNo:"32345678903",telefon:"0534 333 44 55",eposta:"",dogumTarihi:"1988-11-05",iseBaslamaTarihi:"2024-02-15",pozisyon:"Demir Ustası",gorevGrubuId:3,calismaTipi:"goturu",ucret:"",hesapVar:true,rol:"taseron",aktif:true,aciklama:"Götürü demir işleri — firmamız üzerinden sigortalı"},
+  {id:4,ad:"Ayşe",soyad:"Şahin",tcKimlikNo:"42345678904",telefon:"0535 444 55 66",eposta:"ayse@firma.com",dogumTarihi:"1992-04-18",iseBaslamaTarihi:"2021-09-01",pozisyon:"Satınalma Sorumlusu",gorevGrubuId:5,calismaTipi:"maasli",ucret:"55000",hesapVar:true,rol:"data_entry",aktif:true,aciklama:""},
+];
+const GOREVLER_SEED=[
+  {id:1,baslik:"Duşakabin teslim takibi",aciklama:"Yıldız Duşakabin siparişinin sahaya teslimini takip et; eksik/hasar kontrolü yap.",gorevGrubuId:1,atayanId:4,atananId:1,tip:"teslim_takibi",oncelik:"yuksek",baslamaTarihi:"2026-05-28",planlananBitis:"2026-06-05",durum:"devam",malzemeListesi:[{ad:"Duşakabin 90x90",miktar:"12",birim:"adet"}],tutar:"",geriBildirimNotu:"",projeId:null,bolumId:null,siparisId:null,createdAt:"2026-05-28"},
+  {id:2,baslik:"3. kat döşeme kalıbı",aciklama:"B blok 3. kat döşeme kalıbı imalatı.",gorevGrubuId:2,atayanId:1,atananId:2,tip:"saha_isi",oncelik:"normal",baslamaTarihi:"2026-05-25",planlananBitis:"2026-06-10",durum:"atandi",malzemeListesi:[],tutar:"",geriBildirimNotu:"",projeId:null,bolumId:null,siparisId:null,createdAt:"2026-05-24"},
+  {id:3,baslik:"Bodrum perde demir bağlama (götürü)",aciklama:"Bodrum perde demirleri götürü usulü bağlanacak.",gorevGrubuId:3,atayanId:1,atananId:3,tip:"saha_isi",oncelik:"normal",baslamaTarihi:"2026-05-20",planlananBitis:"2026-05-30",durum:"tamamlandi",malzemeListesi:[],tutar:"85000",geriBildirimNotu:"İş bitti, mal kabul bekliyor.",projeId:null,bolumId:null,siparisId:null,createdAt:"2026-05-19"},
+];
+
+const PersonelPage=({personeller=[],onSave,onDel,gorevGruplari=[],onSaveGrup,onDelGrup})=>{
+  const[mainTab,setMainTab]=useState("liste");
+  const[search,setSearch]=useState("");
+  const[tipFiltre,setTipFiltre]=useState("all");
+  const[modal,setModal]=useState(null);
+  const[grupModal,setGrupModal]=useState(null);
+  const lS2={display:"block",color:T.text,fontSize:"11px",fontWeight:500,marginBottom:"4px"};
+  const grupAd=(id)=>{const g=(gorevGruplari||[]).find(x=>String(x.id)===String(id));return g?g.ad:"—";};
+
+  const filtreli=useMemo(()=>{
+    const q=(search||"").toLocaleLowerCase("tr");
+    return (personeller||[])
+      .filter(p=>tipFiltre==="all"||p.calismaTipi===tipFiltre)
+      .filter(p=>{
+        if(!q)return true;
+        return (`${p.ad} ${p.soyad}`).toLocaleLowerCase("tr").includes(q)
+          ||(p.pozisyon||"").toLocaleLowerCase("tr").includes(q)
+          ||(p.telefon||"").toLocaleLowerCase("tr").includes(q)
+          ||grupAd(p.gorevGrubuId).toLocaleLowerCase("tr").includes(q);
+      });
+  },[personeller,search,tipFiltre,gorevGruplari]);
+
+  const bos={ad:"",soyad:"",tcKimlikNo:"",telefon:"",eposta:"",dogumTarihi:"",iseBaslamaTarihi:"",pozisyon:"",gorevGrubuId:"",calismaTipi:"maasli",ucret:"",hesapVar:false,rol:"",aktif:true,aciklama:""};
+  const acEkle=()=>setModal({...bos});
+  const acDuzenle=(p)=>setModal({...bos,...p});
+  const kaydet=()=>{
+    if(!modal.ad.trim()||!modal.soyad.trim()){alert("Ad ve soyad zorunludur.");return;}
+    onSave&&onSave({...modal});
+    setModal(null);
+  };
+  const sil=(p)=>{if(confirm(`${p.ad} ${p.soyad} silinsin mi?`))onDel&&onDel(p.id);};
+
+  const grupBos={ad:"",ustGrupId:"",aciklama:""};
+  const grupKaydet=()=>{
+    if(!grupModal.ad.trim()){alert("Grup adı zorunludur.");return;}
+    onSaveGrup&&onSaveGrup({...grupModal});
+    setGrupModal(null);
+  };
+  const grupSil=(g)=>{if(confirm(`"${g.ad}" grubu silinsin mi?`))onDelGrup&&onDelGrup(g.id);};
+
+  const chip=(label,val,renk)=><div style={{display:"flex",flexDirection:"column",gap:"2px",padding:"8px 14px",borderRadius:T.r,background:"#fff",border:`1px solid ${T.border}`,minWidth:"96px"}}><span style={{fontSize:"11px",color:T.t3,fontWeight:600,textTransform:"uppercase"}}>{label}</span><span style={{fontSize:"18px",fontWeight:700,color:renk}}>{val}</span></div>;
+  const calismaBadge=(id)=>{const map={maasli:{c:"#1677ff",b:"#e6f4ff"},yevmiyeli:{c:"#fa8c16",b:"#fff7e6"},goturu:{c:"#722ed1",b:"#f9f0ff"}};const m=map[id]||{c:T.t2,b:"#fafafa"};return <span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:600,color:m.c,background:m.b,border:`1px solid ${m.c}33`,whiteSpace:"nowrap"}}>{calismaTipiLabel(id)}</span>;};
+
+  const tabs=[{id:"liste",label:"Personel",count:(personeller||[]).length},{id:"gruplar",label:"Görev Grupları",count:(gorevGruplari||[]).length}];
+  const cols="1.3fr 1.2fr 0.9fr 95px 130px 120px 84px 110px";
+  const ucretLbl=modal?.calismaTipi==="yevmiyeli"?"Günlük Yevmiye (₺)":modal?.calismaTipi==="goturu"?"Ücret (götürü — görevde)":"Aylık Ücret (₺)";
+
+  return <div style={{padding:"4px"}}>
+    {/* BAŞLIK + ÖZET */}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"14px",flexWrap:"wrap",gap:"10px"}}>
+      <div>
+        <div style={{fontSize:"20px",fontWeight:700,color:T.text}}>Personel</div>
+        <div style={{fontSize:"12px",color:T.t3,marginTop:"2px"}}>Tüm çalışanlar — maaşlı, yevmiyeli ve götürü dahil. Görevler bu kişilere atanır. <span style={{color:"#fa8c16",fontWeight:600}}>(Test: veriler geçici, kalıcı kayıt yok.)</span></div>
+      </div>
+      <div style={{display:"flex",gap:"10px"}}>
+        {chip("Toplam",(personeller||[]).length,T.primary)}
+        {chip("Aktif",(personeller||[]).filter(p=>p.aktif).length,T.ok)}
+        {chip("Hesaplı",(personeller||[]).filter(p=>p.hesapVar).length,"#722ed1")}
+      </div>
+    </div>
+
+    {/* SEKMELER */}
+    <div style={{display:"flex",gap:"8px",marginBottom:"14px",flexWrap:"wrap"}}>
+      {tabs.map(t=><button key={t.id} onClick={()=>setMainTab(t.id)} style={{display:"inline-flex",alignItems:"center",gap:"7px",padding:"8px 16px",borderRadius:T.r,border:`1px solid ${mainTab===t.id?T.primary:T.bDark}`,background:mainTab===t.id?T.pBg:"#fff",color:mainTab===t.id?T.primary:T.t2,fontSize:"13px",fontWeight:600,cursor:"pointer"}}>{t.label}<span style={{fontSize:"11px",padding:"1px 7px",borderRadius:"10px",background:mainTab===t.id?T.primary:T.bDark,color:"#fff"}}>{t.count}</span></button>)}
+    </div>
+
+    {mainTab==="liste"&&<>
+      {/* FİLTRE BARI */}
+      <div style={{display:"flex",gap:"10px",marginBottom:"14px",flexWrap:"wrap",alignItems:"center"}}>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Ara: ad, pozisyon, grup, telefon..." onFocus={foc} onBlur={blr} style={{...iS,maxWidth:"300px",fontSize:"13px"}}/>
+        <div style={{display:"flex",gap:"4px"}}>
+          {[{id:"all",label:"Tümü"},...CALISMA_TIPLERI].map(d=>(
+            <button key={d.id} onClick={()=>setTipFiltre(d.id)} style={{padding:"7px 13px",borderRadius:T.r,border:`1px solid ${tipFiltre===d.id?T.primary:T.bDark}`,background:tipFiltre===d.id?T.pBg:"#fff",color:tipFiltre===d.id?T.primary:T.t2,fontSize:"13px",fontWeight:600,cursor:"pointer"}}>{d.label}</button>
+          ))}
+        </div>
+        <button onClick={acEkle} style={{marginLeft:"auto",padding:"8px 16px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>+ Yeni Personel</button>
+      </div>
+
+      {/* LİSTE */}
+      {filtreli.length===0
+        ?<div style={{padding:"48px",textAlign:"center",color:T.t3,border:`1px dashed ${T.border}`,borderRadius:T.r,background:"#fafafa",fontSize:"13px"}}>Personel bulunamadı. "+ Yeni Personel" ile ekleyin.</div>
+        :<div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden",background:"#fff"}}>
+          <div style={{display:"grid",gridTemplateColumns:cols,gap:"8px",padding:"10px 14px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
+            {["Ad Soyad","Pozisyon","Grup","Çalışma","Telefon","Hesap / Rol","Durum",""].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t3,textTransform:"uppercase"}}>{h}</div>)}
+          </div>
+          {filtreli.map(p=>(
+            <div key={p.id} style={{display:"grid",gridTemplateColumns:cols,gap:"8px",padding:"10px 14px",borderBottom:`1px solid ${T.border}`,alignItems:"center"}}>
+              <div style={{fontSize:"13px",color:T.text}}>
+                <div style={{fontWeight:600}}>{p.ad} {p.soyad}</div>
+                {p.tcKimlikNo?<div style={{fontSize:"11px",color:T.t3}}>TC {p.tcKimlikNo}</div>:null}
+              </div>
+              <div style={{fontSize:"13px",color:T.t2}}>{p.pozisyon||"—"}</div>
+              <div style={{fontSize:"12px",color:T.t2}}>{grupAd(p.gorevGrubuId)}</div>
+              <div>{calismaBadge(p.calismaTipi)}</div>
+              <div style={{fontSize:"12px",color:T.t2}}>{p.telefon||"—"}</div>
+              <div>{p.hesapVar?<span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:600,color:"#722ed1",background:"#f9f0ff",border:"1px solid #d3adf7"}}>{personelRolLabel(p.rol)}</span>:<span style={{fontSize:"12px",color:T.t3}}>— (hesap yok)</span>}</div>
+              <div>{p.aktif?<span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:600,color:"#52c41a",background:"#f6ffed",border:"1px solid #b7eb8f"}}>Aktif</span>:<span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:600,color:"#ff4d4f",background:"#fff1f0",border:"1px solid #ffa39e"}}>Pasif</span>}</div>
+              <div style={{display:"flex",gap:"6px",justifyContent:"flex-end"}}>
+                <button onClick={()=>acDuzenle(p)} style={{padding:"6px 10px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Düzenle</button>
+                <button onClick={()=>sil(p)} title="Sil" style={{padding:"6px 9px",borderRadius:T.r,border:`1px solid ${T.err}`,background:"#fff",color:T.err,fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Sil</button>
+              </div>
+            </div>
+          ))}
+        </div>}
+    </>}
+
+    {mainTab==="gruplar"&&<>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px",gap:"10px",flexWrap:"wrap"}}>
+        <div style={{fontSize:"13px",color:T.t2}}>Görev grupları — organizasyon birimleri (Saha, Ofis, Satınalma…). Üst grup ile hiyerarşi kurulur.</div>
+        <button onClick={()=>setGrupModal({...grupBos})} style={{padding:"8px 16px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"13px",fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>+ Yeni Grup</button>
+      </div>
+      {(gorevGruplari||[]).length===0
+        ?<div style={{padding:"48px",textAlign:"center",color:T.t3,border:`1px dashed ${T.border}`,borderRadius:T.r,background:"#fafafa",fontSize:"13px"}}>Grup yok. "+ Yeni Grup" ile ekleyin.</div>
+        :<div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden",background:"#fff"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1.2fr 1fr 2fr 90px",gap:"8px",padding:"10px 14px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
+            {["Grup","Üst Grup","Açıklama",""].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t3,textTransform:"uppercase"}}>{h}</div>)}
+          </div>
+          {(gorevGruplari||[]).map(g=>(
+            <div key={g.id} style={{display:"grid",gridTemplateColumns:"1.2fr 1fr 2fr 90px",gap:"8px",padding:"10px 14px",borderBottom:`1px solid ${T.border}`,alignItems:"center"}}>
+              <div style={{fontSize:"13px",fontWeight:600,color:T.text}}>{g.ad}</div>
+              <div style={{fontSize:"12px",color:T.t2}}>{grupAd(g.ustGrupId)}</div>
+              <div style={{fontSize:"12px",color:T.t2}}>{g.aciklama||"—"}</div>
+              <div style={{display:"flex",gap:"6px",justifyContent:"flex-end"}}>
+                <button onClick={()=>setGrupModal({...grupBos,...g})} style={{padding:"6px 10px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Düzenle</button>
+                <button onClick={()=>grupSil(g)} style={{padding:"6px 9px",borderRadius:T.r,border:`1px solid ${T.err}`,background:"#fff",color:T.err,fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Sil</button>
+              </div>
+            </div>
+          ))}
+        </div>}
+    </>}
+
+    {/* PERSONEL EKLE/DÜZENLE MODALI */}
+    {modal&&<div onClick={()=>setModal(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:"20px"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"560px",maxHeight:"90vh",overflow:"auto",boxShadow:T.shM}}>
+        <div style={{padding:"14px 18px",borderBottom:`1px solid ${T.border}`,fontSize:"15px",fontWeight:700,color:T.text,position:"sticky",top:0,background:"#fff",zIndex:1}}>{modal.id?"Personel Düzenle":"Yeni Personel"}</div>
+        <div style={{padding:"18px",display:"flex",flexDirection:"column",gap:"12px"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"}}>
+            <div><label style={lS2}>Ad *</label><input value={modal.ad} onChange={e=>setModal(p=>({...p,ad:e.target.value}))} onFocus={foc} onBlur={blr} style={{...iS,fontSize:"13px"}}/></div>
+            <div><label style={lS2}>Soyad *</label><input value={modal.soyad} onChange={e=>setModal(p=>({...p,soyad:e.target.value}))} onFocus={foc} onBlur={blr} style={{...iS,fontSize:"13px"}}/></div>
+            <div><label style={lS2}>TC Kimlik No</label><input value={modal.tcKimlikNo} onChange={e=>setModal(p=>({...p,tcKimlikNo:e.target.value.replace(/[^\d]/g,"").slice(0,11)}))} onFocus={foc} onBlur={blr} style={{...iS,fontSize:"13px"}}/></div>
+            <div><label style={lS2}>Telefon</label><input value={modal.telefon} onChange={e=>setModal(p=>({...p,telefon:e.target.value}))} onFocus={foc} onBlur={blr} style={{...iS,fontSize:"13px"}}/></div>
+            <div><label style={lS2}>E-posta</label><input value={modal.eposta} onChange={e=>setModal(p=>({...p,eposta:e.target.value}))} onFocus={foc} onBlur={blr} style={{...iS,fontSize:"13px"}}/></div>
+            <div><label style={lS2}>Pozisyon / Görev</label><input value={modal.pozisyon} onChange={e=>setModal(p=>({...p,pozisyon:e.target.value}))} onFocus={foc} onBlur={blr} placeholder="Saha Şefi, Kalıp Ustası…" style={{...iS,fontSize:"13px"}}/></div>
+            <div><label style={lS2}>Doğum Tarihi</label><input type="date" value={modal.dogumTarihi} onChange={e=>setModal(p=>({...p,dogumTarihi:e.target.value}))} style={{...iS,fontSize:"13px"}}/></div>
+            <div><label style={lS2}>İşe Başlama</label><input type="date" value={modal.iseBaslamaTarihi} onChange={e=>setModal(p=>({...p,iseBaslamaTarihi:e.target.value}))} style={{...iS,fontSize:"13px"}}/></div>
+            <div><label style={lS2}>Görev Grubu</label><select value={modal.gorevGrubuId} onChange={e=>setModal(p=>({...p,gorevGrubuId:e.target.value}))} style={{...iS,fontSize:"13px"}}><option value="">— Seçiniz —</option>{(gorevGruplari||[]).map(g=><option key={g.id} value={g.id}>{g.ad}</option>)}</select></div>
+            <div><label style={lS2}>Çalışma Tipi</label><select value={modal.calismaTipi} onChange={e=>setModal(p=>({...p,calismaTipi:e.target.value}))} style={{...iS,fontSize:"13px"}}>{CALISMA_TIPLERI.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></div>
+            <div><label style={lS2}>{ucretLbl}</label><NumInput value={modal.ucret} onChange={v=>setModal(p=>({...p,ucret:v}))} placeholder={modal.calismaTipi==="goturu"?"görev bazlı":"0"} style={{...iS,fontSize:"13px"}}/></div>
+            <div style={{display:"flex",alignItems:"flex-end"}}><label style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",fontSize:"13px",fontWeight:600,color:modal.aktif?"#52c41a":"#ff4d4f",height:"36px"}}><input type="checkbox" checked={modal.aktif} onChange={e=>setModal(p=>({...p,aktif:e.target.checked}))} style={{width:"16px",height:"16px",cursor:"pointer"}}/>{modal.aktif?"Aktif":"Pasif"}</label></div>
+          </div>
+          {/* HESAP / GİRİŞ */}
+          <div style={{padding:"12px 14px",borderRadius:T.r,background:"#f9f0ff",border:"1px solid #d3adf7"}}>
+            <label style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",fontSize:"13px",fontWeight:600,color:"#531dab"}}>
+              <input type="checkbox" checked={modal.hesapVar} onChange={e=>setModal(p=>({...p,hesapVar:e.target.checked,rol:e.target.checked?(p.rol||"taseron"):""}))} style={{width:"16px",height:"16px",cursor:"pointer"}}/>
+              Sisteme giriş hesabı var
+            </label>
+            {modal.hesapVar&&<div style={{marginTop:"10px"}}>
+              <label style={lS2}>Rol</label>
+              <select value={modal.rol} onChange={e=>setModal(p=>({...p,rol:e.target.value}))} style={{...iS,fontSize:"13px",maxWidth:"240px"}}>{PERSONEL_ROLLERI.map(r=><option key={r.id} value={r.id}>{r.label}</option>)}</select>
+              <div style={{fontSize:"11px",color:T.t3,marginTop:"6px"}}>Taşeron rolü yalnızca "Görevlerim" ekranını görür. (Giriş kullanıcısı bağlama SQL aşamasında yapılacak.)</div>
+            </div>}
+          </div>
+          <div><label style={lS2}>Açıklama</label><input value={modal.aciklama} onChange={e=>setModal(p=>({...p,aciklama:e.target.value}))} onFocus={foc} onBlur={blr} style={{...iS,fontSize:"13px"}}/></div>
+        </div>
+        <div style={{padding:"12px 18px",borderTop:`1px solid ${T.border}`,background:"#fafafa",display:"flex",gap:"8px",justifyContent:"flex-end",position:"sticky",bottom:0}}>
+          <button onClick={()=>setModal(null)} style={{padding:"8px 16px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>Vazgeç</button>
+          <button onClick={kaydet} style={{padding:"8px 20px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>Kaydet</button>
+        </div>
+      </div>
+    </div>}
+
+    {/* GRUP EKLE/DÜZENLE MODALI */}
+    {grupModal&&<div onClick={()=>setGrupModal(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:"20px"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"420px",boxShadow:T.shM,overflow:"hidden"}}>
+        <div style={{padding:"14px 18px",borderBottom:`1px solid ${T.border}`,fontSize:"15px",fontWeight:700,color:T.text}}>{grupModal.id?"Grup Düzenle":"Yeni Görev Grubu"}</div>
+        <div style={{padding:"18px",display:"flex",flexDirection:"column",gap:"12px"}}>
+          <div><label style={lS2}>Grup Adı *</label><input value={grupModal.ad} onChange={e=>setGrupModal(p=>({...p,ad:e.target.value}))} onFocus={foc} onBlur={blr} style={{...iS,fontSize:"13px"}}/></div>
+          <div><label style={lS2}>Üst Grup</label><select value={grupModal.ustGrupId||""} onChange={e=>setGrupModal(p=>({...p,ustGrupId:e.target.value||null}))} style={{...iS,fontSize:"13px"}}><option value="">— (en üst) —</option>{(gorevGruplari||[]).filter(g=>String(g.id)!==String(grupModal.id)).map(g=><option key={g.id} value={g.id}>{g.ad}</option>)}</select></div>
+          <div><label style={lS2}>Açıklama</label><input value={grupModal.aciklama} onChange={e=>setGrupModal(p=>({...p,aciklama:e.target.value}))} onFocus={foc} onBlur={blr} style={{...iS,fontSize:"13px"}}/></div>
+        </div>
+        <div style={{padding:"12px 18px",borderTop:`1px solid ${T.border}`,background:"#fafafa",display:"flex",gap:"8px",justifyContent:"flex-end"}}>
+          <button onClick={()=>setGrupModal(null)} style={{padding:"8px 16px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>Vazgeç</button>
+          <button onClick={grupKaydet} style={{padding:"8px 20px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>Kaydet</button>
+        </div>
+      </div>
+    </div>}
+  </div>;
+};
+
+const GorevlerPage=({gorevler=[],onSave,onDel,personeller=[],gorevGruplari=[],projeler=[],siparisler=[],firmalar=[],currentUser})=>{
+  const[search,setSearch]=useState("");
+  const[fDurum,setFDurum]=useState("all");
+  const[fAtanan,setFAtanan]=useState("all");
+  const[fGrup,setFGrup]=useState("all");
+  const[formModal,setFormModal]=useState(null);
+  const[detay,setDetay]=useState(null);
+  const lS2={display:"block",color:T.text,fontSize:"11px",fontWeight:500,marginBottom:"4px"};
+  const fmt=(v)=>{const n=parseFloat(v||0);return n.toLocaleString("tr-TR",{maximumFractionDigits:0});};
+  const bugun=new Date().toISOString().split("T")[0];
+
+  const kisiById=(id)=>(personeller||[]).find(x=>String(x.id)===String(id))||null;
+  const kisiAd=(id)=>{const k=kisiById(id);return k?`${k.ad} ${k.soyad}`:"—";};
+  const grupAd=(id)=>{const g=(gorevGruplari||[]).find(x=>String(x.id)===String(id));return g?g.ad:"—";};
+  const projeById=(id)=>(projeler||[]).find(x=>String(x.id)===String(id))||null;
+  const projeAd=(id)=>{const p=projeById(id);return p?p.ad:"";};
+  const firmaAd=(id)=>{const f=(firmalar||[]).find(x=>String(x.id)===String(id));return f?f.ad:"";};
+  const siparisById=(id)=>(siparisler||[]).find(x=>String(x.id)===String(id))||null;
+  const siparisLabel=(s)=>s?`${s.spNo||("Sipariş #"+s.id)}${s.firmaId?(" · "+firmaAd(s.firmaId)):""}`:"";
+  const daireList=(projeId)=>{const pr=projeById(projeId);return pr?(pr.bolumler||[]):[];};
+  const daireLabel=(projeId,bolumId)=>{const b=daireList(projeId).find(x=>String(x.id)===String(bolumId));return b?`${b.blok?b.blok+" • ":""}No ${b.no||"—"}`:"";};
+
+  const filtreli=useMemo(()=>{
+    const q=(search||"").toLocaleLowerCase("tr");
+    return (gorevler||[])
+      .filter(g=>fDurum==="all"||g.durum===fDurum)
+      .filter(g=>fAtanan==="all"||String(g.atananId)===String(fAtanan))
+      .filter(g=>fGrup==="all"||String(g.gorevGrubuId)===String(fGrup))
+      .filter(g=>{if(!q)return true;return (g.baslik||"").toLocaleLowerCase("tr").includes(q)||(g.aciklama||"").toLocaleLowerCase("tr").includes(q)||kisiAd(g.atananId).toLocaleLowerCase("tr").includes(q);})
+      .slice().sort((a,b)=>(b.id||0)-(a.id||0));
+  },[gorevler,search,fDurum,fAtanan,fGrup,personeller]);
+
+  const acik=(gorevler||[]).filter(g=>!["kapandi","iptal"].includes(g.durum)).length;
+  const onayBekleyen=(gorevler||[]).filter(g=>g.durum==="tamamlandi").length;
+
+  const bos={baslik:"",aciklama:"",gorevGrubuId:"",atayanId:"",atananId:"",tip:"genel",oncelik:"normal",baslamaTarihi:bugun,planlananBitis:"",durum:"atandi",malzemeListesi:[],tutar:"",geriBildirimNotu:"",projeId:"",bolumId:"",siparisId:""};
+  const acAta=()=>setFormModal({...bos,atayanId:""});
+  const acDuzenle=(g)=>{setDetay(null);setFormModal({...bos,...g,malzemeListesi:(g.malzemeListesi||[]).map(m=>({...m}))});};
+  const kaydet=()=>{
+    if(!formModal.baslik.trim()){alert("Görev başlığı zorunludur.");return;}
+    if(!formModal.atananId){alert("Görev bir KİŞİYE atanmalıdır (atanan zorunlu). Firmaya görev verilmez — firma süreci satınalma siparişiyle takip edilir.");return;}
+    onSave&&onSave({...formModal});
+    setFormModal(null);
+  };
+  const sil=(g)=>{if(confirm(`"${g.baslik}" görevi silinsin mi?`))onDel&&onDel(g.id);};
+  const detayKaydet=()=>{onSave&&onSave({...detay});setDetay(null);};
+
+  const setMal=(i,key,val)=>setFormModal(p=>({...p,malzemeListesi:p.malzemeListesi.map((m,idx)=>idx===i?{...m,[key]:val}:m)}));
+  const addMal=()=>setFormModal(p=>({...p,malzemeListesi:[...(p.malzemeListesi||[]),{ad:"",miktar:"",birim:""}]}));
+  const delMal=(i)=>setFormModal(p=>({...p,malzemeListesi:p.malzemeListesi.filter((m,idx)=>idx!==i)}));
+
+  const waTel=(tel)=>{let d=(tel||"").replace(/\D/g,"");if(!d)return"";if(d.startsWith("0"))d=d.slice(1);if(!d.startsWith("90"))d="90"+d;return d;};
+  const waLink=(g)=>{const t=waTel(kisiById(g.atananId)?.telefon);const metin=encodeURIComponent(`📋 Görev: ${g.baslik}\nAtanan: ${kisiAd(g.atananId)}\nÖncelik: ${oncelikInfo(g.oncelik).label}\nBaşlama: ${g.baslamaTarihi||"-"}  →  Bitiş: ${g.planlananBitis||"-"}\n${g.aciklama||""}`);return `https://wa.me/${t}?text=${metin}`;};
+
+  const chip=(label,val,renk)=><div style={{display:"flex",flexDirection:"column",gap:"2px",padding:"8px 14px",borderRadius:T.r,background:"#fff",border:`1px solid ${T.border}`,minWidth:"96px"}}><span style={{fontSize:"11px",color:T.t3,fontWeight:600,textTransform:"uppercase"}}>{label}</span><span style={{fontSize:"18px",fontWeight:700,color:renk}}>{val}</span></div>;
+  const dBadge=(id)=>{const d=durumInfo(id);return <span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:600,color:d.color,background:d.bg,border:`1px solid ${d.color}33`,whiteSpace:"nowrap"}}>{d.label}</span>;};
+  const oBadge=(id)=>{const o=oncelikInfo(id);return <span style={{padding:"2px 8px",borderRadius:"4px",fontSize:"11px",fontWeight:600,color:o.color,background:o.bg,border:`1px solid ${o.color}33`,whiteSpace:"nowrap"}}>{o.label}</span>;};
+  const cols="1.7fr 1fr 0.9fr 0.9fr 92px 150px 116px 96px";
+
+  return <div style={{padding:"4px"}}>
+    {/* BAŞLIK + ÖZET */}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"14px",flexWrap:"wrap",gap:"10px"}}>
+      <div>
+        <div style={{fontSize:"20px",fontWeight:700,color:T.text}}>Görevler</div>
+        <div style={{fontSize:"12px",color:T.t3,marginTop:"2px"}}>Görevler kişilere atanır; satınalma siparişi / proje / daire ile ilişkilendirilebilir. <span style={{color:"#fa8c16",fontWeight:600}}>(Test: veriler geçici.)</span></div>
+      </div>
+      <div style={{display:"flex",gap:"10px",alignItems:"center"}}>
+        {chip("Açık Görev",acik,T.primary)}
+        {chip("Onay Bekleyen",onayBekleyen,onayBekleyen>0?"#722ed1":T.t2)}
+        <button onClick={acAta} style={{padding:"10px 18px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"13px",fontWeight:600,cursor:"pointer",alignSelf:"stretch"}}>+ Görev Ata</button>
+      </div>
+    </div>
+
+    {/* FİLTRE BARI */}
+    <div style={{display:"flex",gap:"10px",marginBottom:"14px",flexWrap:"wrap",alignItems:"center"}}>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Ara: başlık, açıklama, atanan..." onFocus={foc} onBlur={blr} style={{...iS,maxWidth:"280px",fontSize:"13px"}}/>
+      <select value={fDurum} onChange={e=>setFDurum(e.target.value)} style={{...iS,maxWidth:"170px",fontSize:"13px"}}>
+        <option value="all">Tüm Durumlar</option>
+        {GOREV_DURUMLARI.map(d=><option key={d.id} value={d.id}>{d.label}</option>)}
+      </select>
+      <select value={fAtanan} onChange={e=>setFAtanan(e.target.value)} style={{...iS,maxWidth:"180px",fontSize:"13px"}}>
+        <option value="all">Tüm Kişiler</option>
+        {(personeller||[]).map(p=><option key={p.id} value={p.id}>{p.ad} {p.soyad}</option>)}
+      </select>
+      <select value={fGrup} onChange={e=>setFGrup(e.target.value)} style={{...iS,maxWidth:"160px",fontSize:"13px"}}>
+        <option value="all">Tüm Gruplar</option>
+        {(gorevGruplari||[]).map(g=><option key={g.id} value={g.id}>{g.ad}</option>)}
+      </select>
+    </div>
+
+    {/* LİSTE */}
+    {filtreli.length===0
+      ?<div style={{padding:"48px",textAlign:"center",color:T.t3,border:`1px dashed ${T.border}`,borderRadius:T.r,background:"#fafafa",fontSize:"13px"}}>Görev bulunamadı. "+ Görev Ata" ile başlayın.</div>
+      :<div style={{border:`1px solid ${T.border}`,borderRadius:T.r,overflow:"hidden",background:"#fff"}}>
+        <div style={{display:"grid",gridTemplateColumns:cols,gap:"8px",padding:"10px 14px",background:"#fafafa",borderBottom:`1px solid ${T.border}`}}>
+          {["Görev","Atanan","Grup","Tip","Öncelik","Plan (Başla → Bitiş)","Durum",""].map((h,i)=><div key={i} style={{fontSize:"11px",fontWeight:600,color:T.t3,textTransform:"uppercase"}}>{h}</div>)}
+        </div>
+        {filtreli.map(g=>(
+          <div key={g.id} onClick={()=>setDetay({...g,malzemeListesi:(g.malzemeListesi||[]).map(m=>({...m}))})} style={{display:"grid",gridTemplateColumns:cols,gap:"8px",padding:"10px 14px",borderBottom:`1px solid ${T.border}`,alignItems:"center",cursor:"pointer"}}>
+            <div style={{fontSize:"13px",color:T.text}}>
+              <div style={{fontWeight:600}}>{g.baslik}</div>
+              {(g.siparisId||g.projeId)?<div style={{fontSize:"11px",color:T.t3}}>{g.siparisId?`🔗 ${siparisLabel(siparisById(g.siparisId))}`:`${projeAd(g.projeId)}${g.bolumId?(" • "+daireLabel(g.projeId,g.bolumId)):""}`}</div>:null}
+            </div>
+            <div style={{fontSize:"13px",color:T.t2}}>{kisiAd(g.atananId)}</div>
+            <div style={{fontSize:"12px",color:T.t2}}>{grupAd(g.gorevGrubuId)}</div>
+            <div style={{fontSize:"12px",color:T.t2}}>{gorevTipLabel(g.tip)}</div>
+            <div>{oBadge(g.oncelik)}</div>
+            <div style={{fontSize:"12px",color:T.t2}}>{g.baslamaTarihi||"—"} <span style={{color:T.t3}}>→</span> {g.planlananBitis||"—"}</div>
+            <div>{dBadge(g.durum)}</div>
+            <div style={{display:"flex",gap:"6px",justifyContent:"flex-end"}} onClick={e=>e.stopPropagation()}>
+              <button onClick={()=>setDetay({...g,malzemeListesi:(g.malzemeListesi||[]).map(m=>({...m}))})} style={{padding:"6px 10px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Detay</button>
+            </div>
+          </div>
+        ))}
+      </div>}
+
+    {/* GÖREV ATA / DÜZENLE MODALI */}
+    {formModal&&<div onClick={()=>setFormModal(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:"20px"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"640px",maxHeight:"90vh",overflow:"auto",boxShadow:T.shM}}>
+        <div style={{padding:"14px 18px",borderBottom:`1px solid ${T.border}`,fontSize:"15px",fontWeight:700,color:T.text,position:"sticky",top:0,background:"#fff",zIndex:1}}>{formModal.id?"Görevi Düzenle":"Görev Ata"}</div>
+        <div style={{padding:"18px",display:"flex",flexDirection:"column",gap:"12px"}}>
+          <div><label style={lS2}>Görev Başlığı *</label><input value={formModal.baslik} onChange={e=>setFormModal(p=>({...p,baslik:e.target.value}))} onFocus={foc} onBlur={blr} placeholder="Duşakabin teslim takibi…" style={{...iS,fontSize:"13px"}}/></div>
+          <div><label style={lS2}>Açıklama</label><textarea value={formModal.aciklama} onChange={e=>setFormModal(p=>({...p,aciklama:e.target.value}))} onFocus={foc} onBlur={blr} rows={2} style={{...iS,height:"auto",minHeight:"54px",padding:"8px 11px",lineHeight:"1.4",resize:"vertical",fontSize:"13px"}}/></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"}}>
+            <div><label style={lS2}>Atanan Kişi *</label><select value={formModal.atananId} onChange={e=>setFormModal(p=>({...p,atananId:e.target.value}))} style={{...iS,fontSize:"13px"}}><option value="">— Kişi seçiniz —</option>{(personeller||[]).filter(p=>p.aktif!==false).map(p=><option key={p.id} value={p.id}>{p.ad} {p.soyad}{p.pozisyon?` (${p.pozisyon})`:""}</option>)}</select></div>
+            <div><label style={lS2}>Atayan</label><select value={formModal.atayanId} onChange={e=>setFormModal(p=>({...p,atayanId:e.target.value}))} style={{...iS,fontSize:"13px"}}><option value="">— Seçiniz —</option>{(personeller||[]).map(p=><option key={p.id} value={p.id}>{p.ad} {p.soyad}</option>)}</select></div>
+            <div><label style={lS2}>Görev Grubu</label><select value={formModal.gorevGrubuId} onChange={e=>setFormModal(p=>({...p,gorevGrubuId:e.target.value}))} style={{...iS,fontSize:"13px"}}><option value="">— Seçiniz —</option>{(gorevGruplari||[]).map(g=><option key={g.id} value={g.id}>{g.ad}</option>)}</select></div>
+            <div><label style={lS2}>Görev Tipi</label><select value={formModal.tip} onChange={e=>setFormModal(p=>({...p,tip:e.target.value}))} style={{...iS,fontSize:"13px"}}>{GOREV_TIPLERI.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select></div>
+            <div><label style={lS2}>Öncelik</label><select value={formModal.oncelik} onChange={e=>setFormModal(p=>({...p,oncelik:e.target.value}))} style={{...iS,fontSize:"13px"}}>{GOREV_ONCELIK.map(o=><option key={o.id} value={o.id}>{o.label}</option>)}</select></div>
+            <div><label style={lS2}>Durum</label><select value={formModal.durum} onChange={e=>setFormModal(p=>({...p,durum:e.target.value}))} style={{...iS,fontSize:"13px"}}>{GOREV_DURUMLARI.map(d=><option key={d.id} value={d.id}>{d.label}</option>)}</select></div>
+            <div><label style={lS2}>Başlama Tarihi</label><input type="date" value={formModal.baslamaTarihi} onChange={e=>setFormModal(p=>({...p,baslamaTarihi:e.target.value}))} style={{...iS,fontSize:"13px"}}/></div>
+            <div><label style={lS2}>Planlanan Bitiş</label><input type="date" value={formModal.planlananBitis} onChange={e=>setFormModal(p=>({...p,planlananBitis:e.target.value}))} style={{...iS,fontSize:"13px"}}/></div>
+          </div>
+
+          {/* BAĞLANTILAR */}
+          <div style={{padding:"12px 14px",borderRadius:T.r,background:"#f5f7fb",border:`1px solid ${T.border}`}}>
+            <div style={{fontSize:"11px",fontWeight:700,color:T.t2,textTransform:"uppercase",marginBottom:"8px"}}>İlişkilendir (opsiyonel)</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"}}>
+              <div><label style={lS2}>Proje</label><select value={formModal.projeId} onChange={e=>setFormModal(p=>({...p,projeId:e.target.value,bolumId:""}))} style={{...iS,fontSize:"13px"}}><option value="">— Yok —</option>{(projeler||[]).map(p=><option key={p.id} value={p.id}>{p.ad}</option>)}</select></div>
+              <div><label style={lS2}>Daire</label><select value={formModal.bolumId} onChange={e=>setFormModal(p=>({...p,bolumId:e.target.value}))} disabled={!formModal.projeId} style={{...iS,fontSize:"13px",opacity:formModal.projeId?1:0.5}}><option value="">— Yok —</option>{daireList(formModal.projeId).map(b=><option key={b.id} value={b.id}>{b.blok?b.blok+" • ":""}No {b.no||"—"}</option>)}</select></div>
+              <div style={{gridColumn:"1 / -1"}}><label style={lS2}>Satınalma Siparişi <span style={{color:T.t3,fontWeight:400}}>(firma süreci buradan takip edilir)</span></label><select value={formModal.siparisId} onChange={e=>setFormModal(p=>({...p,siparisId:e.target.value}))} style={{...iS,fontSize:"13px"}}><option value="">— Yok —</option>{(siparisler||[]).map(s=><option key={s.id} value={s.id}>{siparisLabel(s)}</option>)}</select></div>
+            </div>
+          </div>
+
+          {/* MALZEME LİSTESİ */}
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}}>
+              <label style={{...lS2,marginBottom:0}}>Kullanılacak Malzeme Listesi</label>
+              <button onClick={addMal} style={{padding:"4px 10px",borderRadius:T.r,border:`1px solid ${T.primary}`,background:T.pBg,color:T.primary,fontSize:"12px",fontWeight:600,cursor:"pointer"}}>+ Satır</button>
+            </div>
+            {(formModal.malzemeListesi||[]).length===0
+              ?<div style={{fontSize:"12px",color:T.t3,padding:"8px 0"}}>Malzeme eklenmedi.</div>
+              :(formModal.malzemeListesi||[]).map((m,i)=>(
+                <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 90px 90px 34px",gap:"6px",marginBottom:"6px"}}>
+                  <input value={m.ad} onChange={e=>setMal(i,"ad",e.target.value)} onFocus={foc} onBlur={blr} placeholder="Malzeme adı" style={{...iS,fontSize:"13px"}}/>
+                  <input value={m.miktar} onChange={e=>setMal(i,"miktar",e.target.value)} onFocus={foc} onBlur={blr} placeholder="Miktar" style={{...iS,fontSize:"13px"}}/>
+                  <input value={m.birim} onChange={e=>setMal(i,"birim",e.target.value)} onFocus={foc} onBlur={blr} placeholder="Birim" style={{...iS,fontSize:"13px"}}/>
+                  <button onClick={()=>delMal(i)} title="Satırı sil" style={{borderRadius:T.r,border:`1px solid ${T.err}`,background:"#fff",color:T.err,fontSize:"14px",cursor:"pointer"}}>×</button>
+                </div>
+              ))}
+          </div>
+
+          <div style={{maxWidth:"220px"}}><label style={lS2}>Tutar (₺) <span style={{color:T.t3,fontWeight:400}}>— götürü / taşeron</span></label><NumInput value={formModal.tutar} onChange={v=>setFormModal(p=>({...p,tutar:v}))} placeholder="0" style={{...iS,fontSize:"13px"}}/></div>
+        </div>
+        <div style={{padding:"12px 18px",borderTop:`1px solid ${T.border}`,background:"#fafafa",display:"flex",gap:"8px",justifyContent:"flex-end",position:"sticky",bottom:0}}>
+          <button onClick={()=>setFormModal(null)} style={{padding:"8px 16px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>Vazgeç</button>
+          <button onClick={kaydet} style={{padding:"8px 20px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>{formModal.id?"Kaydet":"Görevi Ata"}</button>
+        </div>
+      </div>
+    </div>}
+
+    {/* GÖREV DETAY MODALI */}
+    {detay&&<div onClick={()=>setDetay(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:"20px"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"560px",maxHeight:"90vh",overflow:"auto",boxShadow:T.shM}}>
+        <div style={{padding:"14px 18px",borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",gap:"10px",position:"sticky",top:0,background:"#fff",zIndex:1}}>
+          <span style={{fontSize:"15px",fontWeight:700,color:T.text}}>{detay.baslik}</span>
+          {oBadge(detay.oncelik)}
+        </div>
+        <div style={{padding:"18px",display:"flex",flexDirection:"column",gap:"12px"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",fontSize:"13px"}}>
+            <div style={{color:T.t2}}><strong style={{color:T.text}}>Atanan:</strong> {kisiAd(detay.atananId)}</div>
+            <div style={{color:T.t2}}><strong style={{color:T.text}}>Atayan:</strong> {kisiAd(detay.atayanId)}</div>
+            <div style={{color:T.t2}}><strong style={{color:T.text}}>Grup:</strong> {grupAd(detay.gorevGrubuId)}</div>
+            <div style={{color:T.t2}}><strong style={{color:T.text}}>Tip:</strong> {gorevTipLabel(detay.tip)}</div>
+            <div style={{color:T.t2}}><strong style={{color:T.text}}>Başlama:</strong> {detay.baslamaTarihi||"—"}</div>
+            <div style={{color:T.t2}}><strong style={{color:T.text}}>Bitiş:</strong> {detay.planlananBitis||"—"}</div>
+          </div>
+          {detay.aciklama&&<div style={{fontSize:"13px",color:T.t2,background:"#fafafa",border:`1px solid ${T.border}`,borderRadius:T.r,padding:"10px 12px"}}>{detay.aciklama}</div>}
+          {(detay.siparisId||detay.projeId)&&<div style={{fontSize:"12px",color:T.primary,background:T.pBg,border:`1px solid ${T.primary}33`,borderRadius:T.r,padding:"8px 12px"}}>🔗 {detay.siparisId?siparisLabel(siparisById(detay.siparisId)):`${projeAd(detay.projeId)}${detay.bolumId?(" • "+daireLabel(detay.projeId,detay.bolumId)):""}`}</div>}
+          {(detay.malzemeListesi||[]).length>0&&<div>
+            <div style={{fontSize:"11px",fontWeight:700,color:T.t2,textTransform:"uppercase",marginBottom:"6px"}}>Malzeme Listesi</div>
+            {(detay.malzemeListesi||[]).map((m,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:"13px",color:T.text,padding:"4px 0",borderBottom:`1px dashed ${T.border}`}}><span>{m.ad||"—"}</span><span style={{color:T.t2}}>{m.miktar||""} {m.birim||""}</span></div>)}
+          </div>}
+          {parseFloat(detay.tutar||0)>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:"14px",fontWeight:700,color:T.text,padding:"8px 12px",background:"#f6ffed",border:"1px solid #b7eb8f",borderRadius:T.r}}><span>Tutar (götürü/taşeron)</span><span>{fmt(detay.tutar)} ₺</span></div>}
+
+          {/* DURUM + GERİ BİLDİRİM */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px",alignItems:"end"}}>
+            <div><label style={lS2}>Durum</label><select value={detay.durum} onChange={e=>setDetay(p=>({...p,durum:e.target.value}))} style={{...iS,fontSize:"13px"}}>{GOREV_DURUMLARI.map(d=><option key={d.id} value={d.id}>{d.label}</option>)}</select></div>
+            <div style={{display:"flex",gap:"6px"}}>
+              {detay.durum==="tamamlandi"&&<button onClick={()=>setDetay(p=>({...p,durum:"onay"}))} style={{flex:1,padding:"8px 10px",borderRadius:T.r,border:"none",background:"#722ed1",color:"#fff",fontSize:"12px",fontWeight:600,cursor:"pointer"}}>✓ Mal Kabul / Onayla</button>}
+              {detay.durum==="onay"&&<button onClick={()=>setDetay(p=>({...p,durum:"kapandi"}))} style={{flex:1,padding:"8px 10px",borderRadius:T.r,border:"none",background:"#389e0d",color:"#fff",fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Kapat</button>}
+            </div>
+          </div>
+          <div><label style={lS2}>Geri Bildirim Notu (yöneticiye)</label><textarea value={detay.geriBildirimNotu||""} onChange={e=>setDetay(p=>({...p,geriBildirimNotu:e.target.value}))} onFocus={foc} onBlur={blr} rows={2} placeholder="İş ile ilgili not / durum…" style={{...iS,height:"auto",minHeight:"50px",padding:"8px 11px",lineHeight:"1.4",resize:"vertical",fontSize:"13px"}}/></div>
+        </div>
+        <div style={{padding:"12px 18px",borderTop:`1px solid ${T.border}`,background:"#fafafa",display:"flex",gap:"8px",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",position:"sticky",bottom:0}}>
+          <div style={{display:"flex",gap:"8px"}}>
+            <a href={waLink(detay)} target="_blank" rel="noreferrer" style={{padding:"8px 14px",borderRadius:T.r,border:"1px solid #25D366",background:"#f0fff4",color:"#128C4B",fontSize:"13px",fontWeight:600,cursor:"pointer",textDecoration:"none"}}>WhatsApp'tan Bildir</a>
+            <button onClick={()=>sil(detay)} style={{padding:"8px 12px",borderRadius:T.r,border:`1px solid ${T.err}`,background:"#fff",color:T.err,fontSize:"13px",fontWeight:600,cursor:"pointer"}}>Sil</button>
+          </div>
+          <div style={{display:"flex",gap:"8px"}}>
+            <button onClick={()=>acDuzenle(detay)} style={{padding:"8px 14px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"13px",fontWeight:600,cursor:"pointer"}}>Düzenle</button>
+            <button onClick={detayKaydet} style={{padding:"8px 20px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>Kaydet</button>
+          </div>
+        </div>
+      </div>
+    </div>}
+  </div>;
+};
+
+const GorevlerimPage=({gorevler=[],onSave,personeller=[],gorevGruplari=[],projeler=[],siparisler=[],firmalar=[],currentUser})=>{
+  const ilkHesap=(personeller||[]).find(p=>p.hesapVar)||(personeller||[])[0]||null;
+  const[benId,setBenId]=useState(ilkHesap?String(ilkHesap.id):"");
+  const[gizleKapali,setGizleKapali]=useState(true);
+  const[detay,setDetay]=useState(null);
+  const lS2={display:"block",color:T.text,fontSize:"11px",fontWeight:500,marginBottom:"4px"};
+  const fmt=(v)=>{const n=parseFloat(v||0);return n.toLocaleString("tr-TR",{maximumFractionDigits:0});};
+
+  const kisiById=(id)=>(personeller||[]).find(x=>String(x.id)===String(id))||null;
+  const kisiAd=(id)=>{const k=kisiById(id);return k?`${k.ad} ${k.soyad}`:"—";};
+  const grupAd=(id)=>{const g=(gorevGruplari||[]).find(x=>String(x.id)===String(id));return g?g.ad:"—";};
+  const projeById=(id)=>(projeler||[]).find(x=>String(x.id)===String(id))||null;
+  const projeAd=(id)=>{const p=projeById(id);return p?p.ad:"";};
+  const firmaAd=(id)=>{const f=(firmalar||[]).find(x=>String(x.id)===String(id));return f?f.ad:"";};
+  const siparisById=(id)=>(siparisler||[]).find(x=>String(x.id)===String(id))||null;
+  const siparisLabel=(s)=>s?`${s.spNo||("Sipariş #"+s.id)}${s.firmaId?(" · "+firmaAd(s.firmaId)):""}`:"";
+  const daireLabel=(projeId,bolumId)=>{const pr=projeById(projeId);if(!pr)return"";const b=(pr.bolumler||[]).find(x=>String(x.id)===String(bolumId));return b?`${b.blok?b.blok+" • ":""}No ${b.no||"—"}`:"";};
+
+  const benim=useMemo(()=>{
+    const oncSira={acil:0,yuksek:1,normal:2,dusuk:3};
+    return (gorevler||[])
+      .filter(g=>String(g.atananId)===String(benId))
+      .filter(g=>!gizleKapali||!["kapandi","iptal"].includes(g.durum))
+      .slice().sort((a,b)=>(oncSira[a.oncelik]??9)-(oncSira[b.oncelik]??9)||((a.planlananBitis||"")<(b.planlananBitis||"")?-1:1));
+  },[gorevler,benId,gizleKapali]);
+
+  const dBadge=(id)=>{const d=durumInfo(id);return <span style={{padding:"3px 10px",borderRadius:"4px",fontSize:"12px",fontWeight:600,color:d.color,background:d.bg,border:`1px solid ${d.color}33`,whiteSpace:"nowrap"}}>{d.label}</span>;};
+  const oBadge=(id)=>{const o=oncelikInfo(id);return <span style={{padding:"3px 10px",borderRadius:"4px",fontSize:"12px",fontWeight:600,color:o.color,background:o.bg,border:`1px solid ${o.color}33`,whiteSpace:"nowrap"}}>{o.label}</span>;};
+
+  // İşçi aksiyonu: atandı→devam (İşe Başla), devam→tamamlandı (Tamamladım). Onay/mal kabul yönetici işidir.
+  const sonrakiAksiyon=(g)=>g.durum==="atandi"?{durum:"devam",label:"İşe Başla",renk:"#1677ff"}:g.durum==="devam"?{durum:"tamamlandi",label:"Tamamladım",renk:"#13a8a8"}:null;
+  const ilerlet=(g)=>{const a=sonrakiAksiyon(g);if(!a)return;onSave&&onSave({...g,durum:a.durum});setDetay(d=>(d&&d.id===g.id)?{...d,durum:a.durum}:d);};
+  const detayKaydet=()=>{onSave&&onSave({...detay});setDetay(null);};
+  const waLink=(g)=>{const metin=encodeURIComponent(`📋 ${g.baslik}\nDurum: ${durumInfo(g.durum).label}\n${g.geriBildirimNotu?("Not: "+g.geriBildirimNotu):""}`);return `https://wa.me/?text=${metin}`;};
+
+  const benKisi=kisiById(benId);
+
+  return <div style={{padding:"4px",maxWidth:SATICI_UI.maxW,margin:"0 auto"}}>
+    {/* BAŞLIK */}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px",flexWrap:"wrap",gap:"10px"}}>
+      <div>
+        <div style={{fontSize:"22px",fontWeight:700,color:T.text}}>Görevlerim</div>
+        <div style={{fontSize:"13px",color:T.t3,marginTop:"2px"}}>{benKisi?`${benKisi.ad} ${benKisi.soyad}`:"—"} · {benim.length} görev</div>
+      </div>
+      <button onClick={()=>setGizleKapali(v=>!v)} style={{minHeight:"44px",padding:"0 16px",borderRadius:T.r,border:`1px solid ${gizleKapali?T.bDark:T.primary}`,background:gizleKapali?"#fff":T.pBg,color:gizleKapali?T.t2:T.primary,fontSize:"13px",fontWeight:600,cursor:"pointer"}}>{gizleKapali?"Tamamlananları Göster":"Sadece Açık Görevler"}</button>
+    </div>
+
+    {/* TEST: kişi seçici (giriş↔personel bağı SQL aşamasında kurulacak) */}
+    <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"14px",padding:"8px 12px",borderRadius:T.r,background:"#fff7e6",border:"1px solid #ffd591",flexWrap:"wrap"}}>
+      <span style={{fontSize:"12px",fontWeight:600,color:"#d46b08"}}>TEST — görüntülenen kişi:</span>
+      <select value={benId} onChange={e=>setBenId(e.target.value)} style={{...iS,maxWidth:"260px",height:"40px",fontSize:"14px"}}>
+        {(personeller||[]).map(p=><option key={p.id} value={p.id}>{p.ad} {p.soyad}{p.rol?` · ${personelRolLabel(p.rol)}`:""}</option>)}
+      </select>
+      <span style={{fontSize:"11px",color:T.t3}}>Gerçekte kişi yalnızca kendi görevlerini görür.</span>
+    </div>
+
+    {/* KARTLAR */}
+    {benim.length===0
+      ?<div style={{padding:"56px",textAlign:"center",color:T.t3,border:`1px dashed ${T.border}`,borderRadius:T.rl,background:"#fafafa",fontSize:"14px"}}>Görev yok. 🎉</div>
+      :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:"12px"}}>
+        {benim.map(g=>{
+          const a=sonrakiAksiyon(g);
+          return <div key={g.id} onClick={()=>setDetay({...g,malzemeListesi:(g.malzemeListesi||[]).map(m=>({...m}))})} style={{border:`1px solid ${T.border}`,borderRadius:T.rl,background:"#fff",boxShadow:T.sh,padding:"14px 16px",display:"flex",flexDirection:"column",gap:"10px",cursor:"pointer"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:"8px"}}>
+              <div style={{fontSize:"16px",fontWeight:700,color:T.text,lineHeight:1.25}}>{g.baslik}</div>
+              {oBadge(g.oncelik)}
+            </div>
+            <div style={{display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}}>{dBadge(g.durum)}<span style={{fontSize:"12px",color:T.t2}}>{grupAd(g.gorevGrubuId)} · {gorevTipLabel(g.tip)}</span></div>
+            {g.aciklama&&<div style={{fontSize:"13px",color:T.t2,lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{g.aciklama}</div>}
+            {(g.siparisId||g.projeId)&&<div style={{fontSize:"12px",color:T.primary}}>🔗 {g.siparisId?siparisLabel(siparisById(g.siparisId)):`${projeAd(g.projeId)}${g.bolumId?(" • "+daireLabel(g.projeId,g.bolumId)):""}`}</div>}
+            <div style={{fontSize:"12px",color:T.t3}}>📅 {g.baslamaTarihi||"—"} → {g.planlananBitis||"—"}</div>
+            {(g.malzemeListesi||[]).length>0&&<div style={{fontSize:"12px",color:T.t2}}>📦 {(g.malzemeListesi||[]).length} malzeme</div>}
+            {parseFloat(g.tutar||0)>0&&<div style={{fontSize:"13px",fontWeight:700,color:"#237804"}}>{fmt(g.tutar)} ₺</div>}
+            <div style={{marginTop:"2px",display:"flex",gap:"8px"}} onClick={e=>e.stopPropagation()}>
+              {a
+                ?<button onClick={()=>ilerlet(g)} style={{flex:1,minHeight:"44px",borderRadius:T.r,border:"none",background:a.renk,color:"#fff",fontSize:"14px",fontWeight:700,cursor:"pointer"}}>{a.label}</button>
+                :<div style={{flex:1,minHeight:"44px",display:"flex",alignItems:"center",justifyContent:"center",borderRadius:T.r,background:"#fafafa",border:`1px dashed ${T.border}`,color:T.t3,fontSize:"13px"}}>{g.durum==="tamamlandi"?"Onay bekleniyor":durumInfo(g.durum).label}</div>}
+              <button onClick={()=>setDetay({...g,malzemeListesi:(g.malzemeListesi||[]).map(m=>({...m}))})} style={{minHeight:"44px",padding:"0 16px",borderRadius:T.r,border:`1px solid ${T.bDark}`,background:"#fff",color:T.text,fontSize:"14px",fontWeight:600,cursor:"pointer"}}>Detay</button>
+            </div>
+          </div>;
+        })}
+      </div>}
+
+    {/* DETAY / GERİ BİLDİRİM MODALI */}
+    {detay&&<div onClick={()=>setDetay(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:"16px"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:T.rl,width:"100%",maxWidth:"520px",maxHeight:"92vh",overflow:"auto",boxShadow:T.shM}}>
+        <div style={{padding:"14px 18px",borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",gap:"10px",position:"sticky",top:0,background:"#fff",zIndex:1}}>
+          <span style={{fontSize:"16px",fontWeight:700,color:T.text}}>{detay.baslik}</span>
+          {dBadge(detay.durum)}
+        </div>
+        <div style={{padding:"18px",display:"flex",flexDirection:"column",gap:"12px"}}>
+          <div style={{display:"flex",gap:"8px",flexWrap:"wrap",fontSize:"13px",color:T.t2}}>
+            <span>{grupAd(detay.gorevGrubuId)}</span><span>·</span><span>{gorevTipLabel(detay.tip)}</span><span>·</span>{oBadge(detay.oncelik)}
+          </div>
+          <div style={{fontSize:"13px",color:T.t2}}>📅 {detay.baslamaTarihi||"—"} → {detay.planlananBitis||"—"} · Atayan: {kisiAd(detay.atayanId)}</div>
+          {detay.aciklama&&<div style={{fontSize:"14px",color:T.text,background:"#fafafa",border:`1px solid ${T.border}`,borderRadius:T.r,padding:"10px 12px",lineHeight:1.45}}>{detay.aciklama}</div>}
+          {(detay.siparisId||detay.projeId)&&<div style={{fontSize:"13px",color:T.primary,background:T.pBg,border:`1px solid ${T.primary}33`,borderRadius:T.r,padding:"8px 12px"}}>🔗 {detay.siparisId?siparisLabel(siparisById(detay.siparisId)):`${projeAd(detay.projeId)}${detay.bolumId?(" • "+daireLabel(detay.projeId,detay.bolumId)):""}`}</div>}
+          {(detay.malzemeListesi||[]).length>0&&<div>
+            <div style={{fontSize:"11px",fontWeight:700,color:T.t2,textTransform:"uppercase",marginBottom:"6px"}}>Kullanılacak Malzemeler</div>
+            {(detay.malzemeListesi||[]).map((m,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:"14px",color:T.text,padding:"6px 0",borderBottom:`1px dashed ${T.border}`}}><span>{m.ad||"—"}</span><span style={{color:T.t2}}>{m.miktar||""} {m.birim||""}</span></div>)}
+          </div>}
+          {parseFloat(detay.tutar||0)>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:"15px",fontWeight:700,color:"#237804",padding:"10px 12px",background:"#f6ffed",border:"1px solid #b7eb8f",borderRadius:T.r}}><span>Tutar</span><span>{fmt(detay.tutar)} ₺</span></div>}
+          {sonrakiAksiyon(detay)&&<button onClick={()=>ilerlet(detay)} style={{minHeight:"48px",borderRadius:T.r,border:"none",background:sonrakiAksiyon(detay).renk,color:"#fff",fontSize:"15px",fontWeight:700,cursor:"pointer"}}>{sonrakiAksiyon(detay).label}</button>}
+          {detay.durum==="tamamlandi"&&<div style={{padding:"10px 12px",borderRadius:T.r,background:"#f9f0ff",border:"1px solid #d3adf7",color:"#531dab",fontSize:"13px",textAlign:"center"}}>Tamamlandı — yönetici onayı (mal kabul) bekleniyor.</div>}
+          <div><label style={lS2}>Geri Bildirim Notu (yöneticiye)</label><textarea value={detay.geriBildirimNotu||""} onChange={e=>setDetay(p=>({...p,geriBildirimNotu:e.target.value}))} onFocus={foc} onBlur={blr} rows={3} placeholder="İş ile ilgili not / durum…" style={{...iS,height:"auto",minHeight:"64px",padding:"8px 11px",lineHeight:"1.4",resize:"vertical",fontSize:"14px"}}/></div>
+        </div>
+        <div style={{padding:"12px 18px",borderTop:`1px solid ${T.border}`,background:"#fafafa",display:"flex",gap:"8px",justifyContent:"space-between",alignItems:"center",position:"sticky",bottom:0}}>
+          <a href={waLink(detay)} target="_blank" rel="noreferrer" style={{minHeight:"44px",display:"flex",alignItems:"center",padding:"0 14px",borderRadius:T.r,border:"1px solid #25D366",background:"#f0fff4",color:"#128C4B",fontSize:"13px",fontWeight:600,textDecoration:"none"}}>WhatsApp'tan Bildir</a>
+          <div style={{display:"flex",gap:"8px"}}>
+            <button onClick={()=>setDetay(null)} style={{minHeight:"44px",padding:"0 14px",borderRadius:T.r,border:`1px solid ${T.border}`,background:"#fff",color:T.t2,fontSize:"13px",cursor:"pointer"}}>Kapat</button>
+            <button onClick={detayKaydet} style={{minHeight:"44px",padding:"0 20px",borderRadius:T.r,border:"none",background:T.primary,color:"#fff",fontSize:"14px",fontWeight:600,cursor:"pointer"}}>Notu Kaydet</button>
+          </div>
+        </div>
+      </div>
+    </div>}
   </div>;
 };
 
@@ -10999,6 +11572,17 @@ export default function App(){
   const[satisFaturalari,setSatisFaturalari]=useState([]);
   const[sunumlar,setSunumlar]=useState([]);
   const[hatirlatmalar,setHatirlatmalar]=useState([]);
+  // --- PERSONEL & GÖREV (GEÇİCİ: bellekte; Supabase bağı ekran onayından sonra SQL ile kurulacak) ---
+  const[personeller,setPersoneller]=useState(PERSONELLER_SEED);
+  const[gorevGruplari,setGorevGruplari]=useState(GOREV_GRUPLARI_SEED);
+  const[gorevler,setGorevler]=useState(GOREVLER_SEED);
+  const nextPgId=(arr)=>Math.max(0,...arr.map(x=>Number(x.id)||0))+1;
+  const savePersonel=(d)=>setPersoneller(prev=>d.id?prev.map(x=>x.id===d.id?{...x,...d}:x):[...prev,{...d,id:nextPgId(prev)}]);
+  const delPersonel=(id)=>setPersoneller(prev=>prev.filter(x=>x.id!==id));
+  const saveGorevGrubu=(d)=>setGorevGruplari(prev=>d.id?prev.map(x=>x.id===d.id?{...x,...d}:x):[...prev,{...d,id:nextPgId(prev)}]);
+  const delGorevGrubu=(id)=>setGorevGruplari(prev=>prev.filter(x=>x.id!==id));
+  const saveGorev=(d)=>setGorevler(prev=>d.id?prev.map(x=>x.id===d.id?{...x,...d}:x):[...prev,{...d,id:nextPgId(prev),createdAt:new Date().toISOString().split("T")[0]}]);
+  const delGorev=(id)=>setGorevler(prev=>prev.filter(x=>x.id!==id));
 
   /* ---- VERİTABANINDAN YÜKLEMELERi ---- */
   const loadAll = useCallback(async (ilkYukleme=false) => {
@@ -12237,6 +12821,9 @@ export default function App(){
         {page==="sunum_rapor"&&<SunumRaporPage sunumlar={sunumlar} projeler={projeler} currentUser={currentUser} saveSunum={saveSunum} delSunum={delSunum}/>}
         {page==="hatirlatmalar"&&<HatirlatmalarPage hatirlatmalar={hatirlatmalar} firmalar={firmalar} projeler={projeler} updateHatirlatma={updateHatirlatma} delHatirlatma={delHatirlatma} currentUser={currentUser} satici={satici} goToFirma={goToFirma} setPage={setPage}/>}
         {page==="kullanicilar"&&adminOnly&&<KullanicilarPage currentUser={currentUser}/>}
+        {page==="personel"&&<PersonelPage personeller={personeller} onSave={savePersonel} onDel={delPersonel} gorevGruplari={gorevGruplari} onSaveGrup={saveGorevGrubu} onDelGrup={delGorevGrubu}/>}
+        {page==="gorevler"&&<GorevlerPage gorevler={gorevler} onSave={saveGorev} onDel={delGorev} personeller={personeller} gorevGruplari={gorevGruplari} projeler={projeler} siparisler={siparisler} firmalar={firmalar} currentUser={currentUser}/>}
+        {page==="gorevlerim"&&<GorevlerimPage gorevler={gorevler} onSave={saveGorev} personeller={personeller} gorevGruplari={gorevGruplari} projeler={projeler} siparisler={siparisler} firmalar={firmalar} currentUser={currentUser}/>}
       </div>
     </div>
     {toast && <div style={{position:"fixed",bottom:"20px",right:"20px",background:"#384248",color:"#fff",padding:"10px 16px",borderRadius:"6px",boxShadow:"0 4px 12px rgba(0,0,0,0.25)",zIndex:9999,fontSize:"13px",fontWeight:500,maxWidth:"320px",animation:"toastIn .25s ease-out"}}>
