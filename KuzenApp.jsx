@@ -1208,8 +1208,8 @@ const KullanicilarPage = ({currentUser}) => {
 };
 
 const Sidebar=({page,setPage,open,editMode=false,currentUser=null})=>{
-  const[openGroups,setOpenGroups]=useState({siparisler:true,faturalar:true,satis:true,personel_gorev:true});
-  const toggleGroup=(g)=>setOpenGroups(p=>({...p,[g]:!p[g]}));
+  const[openGroup,setOpenGroup]=useState(null); // akordeon: aynı anda tek grup açık (null=hepsi kapalı)
+  const toggleGroup=(g)=>setOpenGroup(p=>p===g?null:g);
   const[uyariHedef,setUyariHedef]=useState(null);
   const sayfaDegistir=(hedef)=>{if(editMode){setUyariHedef(hedef);return;}setPage(hedef);};
 
@@ -1241,6 +1241,11 @@ const Sidebar=({page,setPage,open,editMode=false,currentUser=null})=>{
     ]},
     {id:"kullanicilar",label:"KULLANICILAR"},
   ];
+  // Akordeon: aktif sayfanın bulunduğu grubu otomatik aç (sayfa değişince diğerleri kapanır)
+  useEffect(()=>{
+    const grp=allItems.find(it=>it.type==="group"&&it.children.some(c=>c.id===page));
+    if(grp)setOpenGroup(grp.groupId);
+  },[page]);
   // Role bazlı filtre — yetkisi olmayan menü öğelerini gizle
   const items=allItems.map(it=>{
     if(it.type==="group"){
@@ -1288,7 +1293,7 @@ const Sidebar=({page,setPage,open,editMode=false,currentUser=null})=>{
     <nav style={{padding:"0 10px",flex:1,overflow:"auto",display:"flex",flexDirection:"column",gap:"4px"}}>
       {items.map((it,idx)=>{
         if(it.type==="group"){
-          const isOpen=openGroups[it.groupId]!==false;
+          const isOpen=openGroup===it.groupId;
           const childActive=it.children.some(c=>page===c.id);
           const grpDisabled=editMode&&!childActive;
           return <div key={it.groupId}>
