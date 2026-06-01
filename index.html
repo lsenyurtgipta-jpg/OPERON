@@ -10,8 +10,15 @@
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       html { height: 100vh; width: 100vw; overflow: hidden; margin: 0; padding: 0; }
-      body { width: calc(100vw / 0.9); height: calc(100vh / 0.9); overflow: hidden; margin: 0; padding: 0; zoom: 0.9; }
+      body { width: 100vw; height: 100vh; overflow: hidden; margin: 0; padding: 0; }
       #root { width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; }
+      /* Masaüstünde (fare + geniş ekran) %90 zoom ile ekrana daha çok içerik sığar.
+         iPad/tablet gibi dokunmatik cihazlarda devre dışı: orada `zoom` düzgün
+         çalışmadığı için gövde ekrandan ~%11 taşıp sağ kenarı (Ekle/Excel butonları,
+         tablo kolonları) kesiliyordu. Dokunmatikte gövde tam ekrana oturur. */
+      @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+        body { width: calc(100vw / 0.9); height: calc(100vh / 0.9); zoom: 0.9; }
+      }
     </style>
   </head>
   <body>

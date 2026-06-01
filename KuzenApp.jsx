@@ -5590,7 +5590,7 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
       </div>
       {filtered.length===0
         ?<div style={{padding:"60px",textAlign:"center",color:T.t3,fontSize:"14px",background:"#fff"}}>{search||fTur!=="all"?"Sonuç bulunamadı":"Henüz firma eklenmemiş."}</div>
-        :<>
+        :<div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><div style={{minWidth:"720px"}}>
           <div style={{display:"grid",gridTemplateColumns:"90px 1fr 120px 140px 140px 70px",background:"#fafafa",borderBottom:`1px solid ${T.border}`,padding:"8px 12px",gap:"8px"}}>
             {["Kod","Firma Adı","Tür","Telefon","Kişi","Durum"].map((h,i)=><div key={i} style={{fontSize:"12px",fontWeight:600,color:T.t2,textTransform:"uppercase",letterSpacing:"0.3px"}}>{h}</div>)}
           </div>
@@ -5608,7 +5608,7 @@ const FirmalarPage=({firmalar,setFirmalar,onSave,onDel,addNote,initialFirmaId,on
               <div style={{fontSize:"12px",fontWeight:600,color:isPasif?T.err:T.ok}}>{isPasif?"Pasif":"Aktif"}</div>
             </div>;
           })}
-        </>
+        </div></div>
       }
     </div>
     {showKod&&<FirmaKoduCreator firmalar={firmalar} onComplete={handleKodComplete} onClose={()=>setShowKod(false)} kisitliTurler={kisitliTurler}/>}
