@@ -5720,6 +5720,7 @@ const projeToLocal = (p) => ({
   karMarjiYuzde: p.kar_marji_yuzde!=null?String(p.kar_marji_yuzde):"",
   guncelKarMarjiYuzde: p.guncel_kar_marji_yuzde!=null?String(p.guncel_kar_marji_yuzde):"",
   varsayilanKdvOrani: p.varsayilan_kdv_orani||"20",
+  sabitKdvOrani: p.sabit_kdv_orani||"",
   krediyeUygun: p.krediye_uygun===true, krediFaizOrani: p.kredi_faiz_orani!=null?String(p.kredi_faiz_orani):"",
   bloklar: p.bloklar||[], bolumler: p.bolumler||[],
   firmaBaglantilari: p.firma_baglantilari||[],
@@ -5751,6 +5752,7 @@ const projeToDb = (p) => ({
   kar_marji_yuzde: p.karMarjiYuzde!==""&&p.karMarjiYuzde!=null?Number(p.karMarjiYuzde):null,
   guncel_kar_marji_yuzde: p.guncelKarMarjiYuzde!==""&&p.guncelKarMarjiYuzde!=null?Number(p.guncelKarMarjiYuzde):null,
   varsayilan_kdv_orani: p.varsayilanKdvOrani||"20",
+  sabit_kdv_orani: p.sabitKdvOrani||null,
   krediye_uygun: p.krediyeUygun===true, kredi_faiz_orani: p.krediFaizOrani!==""&&p.krediFaizOrani!=null?Number(p.krediFaizOrani):null,
   // bloklar ve bolumler ayrı tablolarda tutuluyor — JSONB sütunları paralel, bu sütunlara yazmıyoruz
   firma_baglantilari: p.firmaBaglantilari||[],
@@ -8886,8 +8888,8 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
       setDaireFiyatForm(m);
     }
   },[selProjeId,selProje?.bolumler?.length]);
-  // Yönetmelik: daire net m² < 150 → %10, ≥ 150 → %20
-  const daireKdvHesapla=(netM2)=>{const n=parseFloat(netM2);return !isNaN(n)&&n>=150?"20":"10";};
+  // Proje sabit KDV istisnası (ör. eski ruhsatlı proje → %1) varsa onu uygula; yoksa yönetmelik: net m² < 150 → %10, ≥ 150 → %20
+  const daireKdvHesapla=(netM2)=>{if(selProje?.sabitKdvOrani)return String(selProje.sabitKdvOrani);const n=parseFloat(netM2);return !isNaN(n)&&n>=150?"20":"10";};
   const daireEtkinKdv=(boId)=>{
     const bo=(selProje?.bolumler||[]).find(b=>b.id===boId);
     return parseFloat(daireKdvHesapla(bo?.netM2));
@@ -9976,7 +9978,7 @@ const DosyaKategoriYonetim=({dosyaKategorileri,setDosyaKategorileri})=>{
 /* ========== SATIŞ SUNUM MODÜLÜ ========== */
 
 /* ---- MÜŞTERİ PICKER MODAL ---- */
-const MusteriPickerModal=({firmalar,onSelect,onYeniMusteri,onClose,baslik="MÜŞTERİ SEÇ",pickerIslem="satildi",listeFiyatiOneri="",initialFirma=null,initialSatisBedeli="",initialPlus="",bolum=null,projeAd="",bolumler=[]})=>{
+const MusteriPickerModal=({firmalar,onSelect,onYeniMusteri,onClose,baslik="MÜŞTERİ SEÇ",pickerIslem="satildi",listeFiyatiOneri="",initialFirma=null,initialSatisBedeli="",initialPlus="",bolum=null,projeAd="",sabitKdvOrani="",bolumler=[]})=>{
   const[src,setSrc]=useState("");
   const[mode,setMode]=useState(initialFirma?"onay":"list"); // list | onay
   const[secilenFirma,setSecilenFirma]=useState(initialFirma||null);
@@ -9994,8 +9996,8 @@ const MusteriPickerModal=({firmalar,onSelect,onYeniMusteri,onClose,baslik="MÜŞ
   const[sunumEkDaireler,setSunumEkDaireler]=useState([]);
   const bugunStr=new Date().toISOString().split("T")[0];
   const fmtFiyat=(v)=>{const n=parseFloat(v||0);return n>0?n.toLocaleString("tr-TR",{maximumFractionDigits:0}):"";};
-  // KDV oranı daire net m² kuralından otomatik (<150 → %10, ≥150 → %20)
-  const kdvOran=(()=>{const n=parseFloat(bolum?.netM2);return !isNaN(n)&&n>=150?20:10;})();
+  // Proje sabit KDV istisnası varsa onu kullan; yoksa daire net m² kuralı (<150 → %10, ≥150 → %20)
+  const kdvOran=(()=>{if(sabitKdvOrani)return parseFloat(sabitKdvOrani);const n=parseFloat(bolum?.netM2);return !isNaN(n)&&n>=150?20:10;})();
   const firmaSeciminiOnayla=(firma)=>{
     setSecilenFirma(firma);
     // Opsiyondan satışa geçişte kullanıcı doğrulasın, otomatik doldurmaya dikkat
@@ -11057,7 +11059,7 @@ const SatisSunumPage=({projeler,setProjeler,firmalar,saveProje,saveFirma,setPage
       const mevcutFirma=opsiyonluSatisaCevir?firmalar.find(f=>String(f.id)===String(selBolum.aliciFirmaId)):null;
       const mevcutSatisBed=opsiyonluSatisaCevir?(selBolum.satisBedeli||""):"";
       const mevcutPlus=opsiyonluSatisaCevir?(selBolum.plus||""):"";
-      return <MusteriPickerModal firmalar={firmalar} onYeniMusteri={goToYeniFirma} onSelect={pickerIslem==="sunum"?sunumKaydet:musteriSec} onClose={()=>setPickerAcik(false)} baslik={pickerIslem==="sunum"?"SUNUM — MÜŞTERİ / İLETİŞİM":(pickerIslem==="opsiyonla"?"OPSİYONLA — MÜŞTERİ SEÇ":(opsiyonluSatisaCevir?"SATIŞA ÇEVİR — FİYAT ONAYI":"SATIŞ — MÜŞTERİ SEÇ"))} pickerIslem={pickerIslem} listeFiyatiOneri={selBolum?.listeFiyatiKdvDahil||""} initialFirma={mevcutFirma} initialSatisBedeli={mevcutSatisBed} initialPlus={mevcutPlus} bolum={selBolum} projeAd={selProje?.ad||""} bolumler={selProje?.bolumler||[]}/>;
+      return <MusteriPickerModal firmalar={firmalar} onYeniMusteri={goToYeniFirma} onSelect={pickerIslem==="sunum"?sunumKaydet:musteriSec} onClose={()=>setPickerAcik(false)} baslik={pickerIslem==="sunum"?"SUNUM — MÜŞTERİ / İLETİŞİM":(pickerIslem==="opsiyonla"?"OPSİYONLA — MÜŞTERİ SEÇ":(opsiyonluSatisaCevir?"SATIŞA ÇEVİR — FİYAT ONAYI":"SATIŞ — MÜŞTERİ SEÇ"))} pickerIslem={pickerIslem} listeFiyatiOneri={selBolum?.listeFiyatiKdvDahil||""} initialFirma={mevcutFirma} initialSatisBedeli={mevcutSatisBed} initialPlus={mevcutPlus} bolum={selBolum} projeAd={selProje?.ad||""} sabitKdvOrani={selProje?.sabitKdvOrani||""} bolumler={selProje?.bolumler||[]}/>;
     })()}
 
     {/* TAKSİT PLANI MODAL */}
