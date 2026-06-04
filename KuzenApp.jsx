@@ -127,6 +127,10 @@ const PARA_BIRIMLERI=[{id:"TL",label:"₺ Türk Lirası (TL)",kod:"1",symbol:"�
 const MLZ_TIPLER=[{id:"M",label:"Mamül",color:"#52c41a",bg:"#f6ffed",icon:"✅"},{id:"H",label:"Hizmet",color:"#f5222d",bg:"#fff1f0",icon:"🔧"},{id:"R",label:"Hammadde",color:"#1677ff",bg:"#e6f4ff",icon:"📦"},{id:"Y",label:"Yarı Mamül",color:"#fa8c16",bg:"#fff7e6",icon:"🔄"},{id:"B",label:"Bağımsız Bölüm",color:"#722ed1",bg:"#f9f0ff",icon:"🏠"}];
 const MLZ_BIRIMLER=["kg","ton","gr","m³","m²","m","adet","takım","paket","torba","lt","kova","rulo","levha","sefer","saat","gün","ay","götürü","daire"];
 const KDV_ORANLARI=[{id:"0",label:"%0"},{id:"1",label:"%1"},{id:"10",label:"%10"},{id:"20",label:"%20"}];
+// Daire KDV önerisi: proje sabit oranı (eski ruhsat istisnası) varsa onu, yoksa net m² yönetmeliği (<150 → %10, ≥150 → %20)
+const kdvOnerisi=(netM2,sabitKdvOrani)=>{if(sabitKdvOrani)return String(sabitKdvOrani);const n=parseFloat(netM2);return !isNaN(n)&&n>=150?"20":"10";};
+// Dairenin etkin KDV oranı: daireye yazılı (elle override edilmiş) değer varsa onu, yoksa öneriyi kullan
+const daireEtkinKdvOrani=(bolum,sabitKdvOrani)=>((bolum&&bolum.kdvOrani)?String(bolum.kdvOrani):kdvOnerisi(bolum?bolum.netM2:"",sabitKdvOrani));
 const PROJE_TURLERI_OMURGA=[{id:"konut",label:"Konut",icon:"🏘️",color:"#1677ff",bg:"#e6f4ff"},{id:"ticari",label:"Ticari",icon:"🏢",color:"#fa8c16",bg:"#fff7e6"},{id:"karma",label:"Karma",icon:"🏙️",color:"#722ed1",bg:"#f9f0ff"},{id:"altyapi",label:"Altyapı",icon:"🏗️",color:"#52c41a",bg:"#f6ffed"}];
 
 /* ========== YAPI SINIFLARI BİRİM MALİYET TABLOSU (Çevre ve Şehircilik Bakanlığı) ========== */
@@ -6851,7 +6855,7 @@ const SeviyeModal=({blokAd,sev,onSave,onClose,onDosyaEkle,ilgiliDosyalar=[]})=>{
 };
 
 /* --- Bağımsız Bölüm Detay Modal --- */
-const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[],anlasmaYontemi="",projeTumDosyalar=[],onProjeDosyaEkle,onProjeDosyaSil})=>{
+const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[],anlasmaYontemi="",projeTumDosyalar=[],onProjeDosyaEkle,onProjeDosyaSil,sabitKdvOrani=""})=>{
   const[form,setForm]=useState({...bolum});
   const u=(f,v)=>setForm(p=>({...p,[f]:v}));
   const[tab,setTab]=useState("bilgi");
@@ -6951,9 +6955,10 @@ const BolumModal=({bolum,onSave,onClose,onDel,firmalar,bloklar=[],anlasmaYontemi
             }
             {!onProjeDosyaEkle&&<div style={{fontSize:"11px",color:T.t3,marginTop:"6px"}}>ℹ️ Tapu yükleme yalnızca proje üzerinden açılan daire kartında kullanılabilir.</div>}
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px"}}>
             <div><label style={lS}>Durum</label><select style={iS} value={form.durum||"musait"} onChange={e=>u("durum",e.target.value)}>{BOLUM_DURUMLARI.map(d=><option key={d.id} value={d.id}>{d.label}</option>)}</select></div>
             <div><label style={lS}>Para Birimi</label><select style={iS} value={form.paraBirimi||"TL"} onChange={e=>u("paraBirimi",e.target.value)}>{PARA_BIRIMLERI.map(p=><option key={p.id} value={p.id}>{p.id}</option>)}</select></div>
+            <div><label style={lS}>KDV Oranı</label><select style={iS} value={form.kdvOrani||kdvOnerisi(form.netM2,sabitKdvOrani)} onChange={e=>u("kdvOrani",e.target.value)}>{KDV_ORANLARI.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select>{(()=>{const oneri=kdvOnerisi(form.netM2,sabitKdvOrani);const secili=form.kdvOrani||oneri;return secili!==oneri?<div style={{fontSize:"11px",color:"#d48806",marginTop:"4px",fontWeight:600}}>⚠ Öneri %{oneri} — elle değiştirildi</div>:<div style={{fontSize:"11px",color:T.t3,marginTop:"4px"}}>Otomatik öneri: %{oneri}</div>;})()}</div>
           </div>
           {/* SAHİPLİK - anlaşma yöntemi varsa göster */}
           {anlasmaYontemi&&<div>
@@ -7111,7 +7116,7 @@ const ProjeKarti=({proje,isNew,onSave,onDel,onBack,firmalar,setPage:setMainPage,
   const durumObj=PROJE_DURUMLARI.find(d=>d.label===form.durum)||null;
 
   return <div>
-    {bolumModal&&<BolumModal bolum={bolumModal} onSave={saveBolum} onDel={delBolum} onClose={()=>setBolumModal(null)} firmalar={firmalar} bloklar={form.bloklar||[]} anlasmaYontemi={form.anlasmaYontemi||""} projeTumDosyalar={form.tumDosyalar||[]} onProjeDosyaEkle={(d)=>setForm(p=>{const updated={...p,tumDosyalar:[...(p.tumDosyalar||[]),d]};setTimeout(()=>onSave(updated),0);return updated;})} onProjeDosyaSil={(id)=>setForm(p=>{const updated={...p,tumDosyalar:(p.tumDosyalar||[]).filter(x=>x.id!==id)};setTimeout(()=>onSave(updated),0);return updated;})}/>}
+    {bolumModal&&<BolumModal bolum={bolumModal} onSave={saveBolum} onDel={delBolum} onClose={()=>setBolumModal(null)} firmalar={firmalar} bloklar={form.bloklar||[]} anlasmaYontemi={form.anlasmaYontemi||""} projeTumDosyalar={form.tumDosyalar||[]} onProjeDosyaEkle={(d)=>setForm(p=>{const updated={...p,tumDosyalar:[...(p.tumDosyalar||[]),d]};setTimeout(()=>onSave(updated),0);return updated;})} onProjeDosyaSil={(id)=>setForm(p=>{const updated={...p,tumDosyalar:(p.tumDosyalar||[]).filter(x=>x.id!==id)};setTimeout(()=>onSave(updated),0);return updated;})} sabitKdvOrani={form.sabitKdvOrani||""}/>}
     {/* HEADER */}
     <div style={{display:"flex",alignItems:"center",gap:"16px",marginBottom:"0",padding:"12px 20px",background:"#384248",borderRadius:"8px 8px 0 0",paddingBottom:"8px"}}>
       <button onClick={onBack} title="Geri" style={{padding:"0",border:"none",background:"transparent",color:"#8799a3",cursor:"pointer",display:"flex",alignItems:"center"}}><MoveLeft size={32}/></button>
@@ -8881,18 +8886,16 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
           katSerefiyesiTl:bo.katSerefiyesiTl||"",
           cepheSerefiyesiTl:bo.cepheSerefiyesiTl||"",
           listeFiyatiKdvHaric:bo.listeFiyatiKdvHaric||"",
-          listeFiyatiKdvDahil:bo.listeFiyatiKdvDahil||"",
-          kdvOrani:bo.kdvOrani||""
+          listeFiyatiKdvDahil:bo.listeFiyatiKdvDahil||""
         };
       });
       setDaireFiyatForm(m);
     }
   },[selProjeId,selProje?.bolumler?.length]);
-  // Proje sabit KDV istisnası (ör. eski ruhsatlı proje → %1) varsa onu uygula; yoksa yönetmelik: net m² < 150 → %10, ≥ 150 → %20
-  const daireKdvHesapla=(netM2)=>{if(selProje?.sabitKdvOrani)return String(selProje.sabitKdvOrani);const n=parseFloat(netM2);return !isNaN(n)&&n>=150?"20":"10";};
+  // Dairenin etkin KDV oranı: elle girilmiş (override) değer varsa onu, yoksa öneriyi (proje sabit / net m²) kullan
   const daireEtkinKdv=(boId)=>{
     const bo=(selProje?.bolumler||[]).find(b=>b.id===boId);
-    return parseFloat(daireKdvHesapla(bo?.netM2));
+    return parseFloat(daireEtkinKdvOrani(bo,selProje?.sabitKdvOrani));
   };
   const daireListeHaricChange=(boId,v)=>{
     const cleaned=v.replace(/[^0-9]/g,"");
@@ -8921,17 +8924,15 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
   };
   const daireFiyatKaydet=async(boId)=>{
     const f=daireFiyatForm[boId];if(!f)return;
-    const bo=(selProje?.bolumler||[]).find(b=>b.id===boId);
-    const autoKdv=daireKdvHesapla(bo?.netM2);
+    // NOT: KDV oranı burada YAZILMAZ — daireye özel değer Bağımsız Bölüm formundan yönetilir (öneri + manuel override). Fiyat kaydı KDV'ye dokunmaz.
     try{
       await sbPatch('bolumler',boId,{
         kat_serefiyesi_tl:f.katSerefiyesiTl!==""&&f.katSerefiyesiTl!=null?Number(f.katSerefiyesiTl):null,
         cephe_serefiyesi_tl:f.cepheSerefiyesiTl!==""&&f.cepheSerefiyesiTl!=null?Number(f.cepheSerefiyesiTl):null,
         liste_fiyati_kdv_haric:f.listeFiyatiKdvHaric!==""&&f.listeFiyatiKdvHaric!=null?Number(f.listeFiyatiKdvHaric):null,
-        liste_fiyati_kdv_dahil:f.listeFiyatiKdvDahil!==""&&f.listeFiyatiKdvDahil!=null?Number(f.listeFiyatiKdvDahil):null,
-        kdv_orani:autoKdv
+        liste_fiyati_kdv_dahil:f.listeFiyatiKdvDahil!==""&&f.listeFiyatiKdvDahil!=null?Number(f.listeFiyatiKdvDahil):null
       });
-      setProjeler(prev=>prev.map(p=>p.id===selProjeId?{...p,bolumler:(p.bolumler||[]).map(b=>b.id===boId?{...b,...f,kdvOrani:autoKdv}:b)}:p));
+      setProjeler(prev=>prev.map(p=>p.id===selProjeId?{...p,bolumler:(p.bolumler||[]).map(b=>b.id===boId?{...b,...f}:b)}:p));
       setDaireFiyatSaved(p=>({...p,[boId]:true}));
       setTimeout(()=>setDaireFiyatSaved(p=>({...p,[boId]:false})),2000);
     }catch(e){console.error("Daire fiyat kayıt hatası:",e.message);alert("Kayıt başarısız: "+e.message);}
@@ -9759,7 +9760,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
                       const katSrf=parseFloat(f.katSerefiyesiTl)||0;
                       const cepheSrf=parseFloat(f.cepheSerefiyesiTl)||0;
                       const hesapSF=uretimSF+katSrf+cepheSrf;
-                      const autoKdv=daireKdvHesapla(bo.netM2);
+                      const autoKdv=daireEtkinKdvOrani(bo,selProje?.sabitKdvOrani);
                       const kdvDahilSatis=hesapSF*(1+parseInt(autoKdv)/100);
                       const listeTl=parseFloat(f.listeFiyatiKdvDahil)||0;
                       const gerceklesenSatis=(parseFloat(bo.satisBedeli)||0)+(parseFloat(bo.plus)||0);
@@ -9797,7 +9798,7 @@ const MaliyetPage=({projeler,setProjeler,malzemeler,faturalar=[],siparisler=[],f
                       const cepheSrf=parseFloat(f.cepheSerefiyesiTl)||0;
                       const hesapSF=uretimSF+katSrf+cepheSrf;
                       const durumMeta=BOLUM_DURUMLARI.find(d=>d.id===bo.durum)||BOLUM_DURUMLARI[0];
-                      const autoKdv=daireKdvHesapla(bo.netM2);
+                      const autoKdv=daireEtkinKdvOrani(bo,selProje?.sabitKdvOrani);
                       const autoKdvNum=parseInt(autoKdv);
                       const kdvDahilSatis=hesapSF*(1+autoKdvNum/100);
                       const satildi=bo.durum==="satildi";
@@ -9996,8 +9997,8 @@ const MusteriPickerModal=({firmalar,onSelect,onYeniMusteri,onClose,baslik="MÜŞ
   const[sunumEkDaireler,setSunumEkDaireler]=useState([]);
   const bugunStr=new Date().toISOString().split("T")[0];
   const fmtFiyat=(v)=>{const n=parseFloat(v||0);return n>0?n.toLocaleString("tr-TR",{maximumFractionDigits:0}):"";};
-  // Proje sabit KDV istisnası varsa onu kullan; yoksa daire net m² kuralı (<150 → %10, ≥150 → %20)
-  const kdvOran=(()=>{if(sabitKdvOrani)return parseFloat(sabitKdvOrani);const n=parseFloat(bolum?.netM2);return !isNaN(n)&&n>=150?20:10;})();
+  // Dairenin etkin KDV oranı: elle girilmiş (override) değer varsa onu, yoksa öneri (proje sabit / net m²)
+  const kdvOran=parseFloat(daireEtkinKdvOrani(bolum,sabitKdvOrani));
   const firmaSeciminiOnayla=(firma)=>{
     setSecilenFirma(firma);
     // Opsiyondan satışa geçişte kullanıcı doğrulasın, otomatik doldurmaya dikkat
