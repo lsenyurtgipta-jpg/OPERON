@@ -1452,8 +1452,8 @@ const FirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,projele
       alert("Alıcıya dönüştürmek için eksik/hatalı zorunlu alanlar:\n\n• "+eksik.join("\n• ")+"\n\nLütfen bu bilgileri tamamlayıp tekrar deneyin.");
       return;
     }
-    if(!confirm(`"${form.ad}" müşterisini ALICI statüsüne yükseltmek istiyor musunuz?\n\nPotansiyel rolü korunacak (izlenebilirlik için).`))return;
-    const yeniTurler=[...(form.turler||[]),"alici"];
+    if(!confirm(`"${form.ad}" müşterisini ALICI statüsüne yükseltmek istiyor musunuz?\n\nMüşteri artık Alıcı olacak ve Potansiyel listesinden çıkacak.`))return;
+    const yeniTurler=[...(form.turler||[]).filter(t=>t!=="potansiyel"),"alici"];
     const yeniForm={...form,turler:yeniTurler};
     u("turler",yeniTurler);
     onSave(yeniForm);
@@ -2205,8 +2205,8 @@ const SaticiFirmaKarti=({firma,initData,isNew,onSave,onBack,onAddNote,firmalar,p
   const aliciyaDonustur=()=>{
     const eksik=aliciValidasyon();
     if(eksik.length>0){setResmiOpen(true);alert("Alıcıya dönüştürmek için eksik/hatalı zorunlu alanlar:\n\n• "+eksik.join("\n• ")+"\n\nBilgileri tamamlayıp tekrar deneyin.");return;}
-    if(!confirm(`"${form.ad}" müşterisini ALICI statüsüne yükseltmek istiyor musunuz?\n\nPotansiyel rolü korunacak (izlenebilirlik için).`))return;
-    const yeniTurler=[...(form.turler||[]),"alici"];const yeniForm={...form,turler:yeniTurler};
+    if(!confirm(`"${form.ad}" müşterisini ALICI statüsüne yükseltmek istiyor musunuz?\n\nMüşteri artık Alıcı olacak ve Potansiyel listesinden çıkacak.`))return;
+    const yeniTurler=[...(form.turler||[]).filter(t=>t!=="potansiyel"),"alici"];const yeniForm={...form,turler:yeniTurler};
     u("turler",yeniTurler);onSave(yeniForm);
     alert("✓ Müşteri alıcı statüsüne geçirildi.");
   };
